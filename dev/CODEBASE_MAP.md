@@ -16,8 +16,8 @@ This document separates observed files from proposed
 | CK3 battle context | [Battle scripted GUI](reference/cw1/ck3%20mod/Crusader%20Wars/common/scripted_guis/01_battle_info.txt) emits a `CRUSADERWARS3` marker, participant and army IDs, and commander/knight `PROWESS` through `debug_log` | Available reference; the CW2 parser is not present. |
 | CK3 army state | [army-regiment extract](reference/cw1/data/save%20file/ArmyRegiments.txt) with sibling section extracts (Armies, Regiments, Units, Combats, BattleResults, Wars); the `edited/` folder shows the legacy write-back. The raw `gamestate` dump was deleted 2026-09-23 to reclaim space. | Fixtures for identities and starting strengths; current CW2 extraction is unverified. |
 | Legacy units and engine | [Attila unit mapper](reference/unit_mappers/OfficialCW_HighMedieval_MK1212Mod/Factions/OfficialCW_HighMedieval_MK1212Mod_Units.xml) and [Attila schema](reference/cw1/attila/schema_att.ron) | Reference only; no Attila asset IDs or mappings in the V1 3K roster. |
-| 3K backend | Installed build `20435474`; [native XML and Lua evidence](spikes/g1_3k_io/evidence/native_findings.md) | Probe pack generated; real externally staged battle and result comparison pending. First feasibility gate. |
-| CK3 return path | No CW2 result applicator or round-trip test in `dev/` | Second feasibility gate. |
+| 3K backend | Installed build `25370317`; [native XML and Lua evidence](spikes/g1_3k_io/evidence/native_findings.md) and [completed Records run](spikes/g1_3k_io/evidence/records_completed_observed.json) | Generated armies and 143/106 survivors verified in-game. The result callback did not export the winner; a changed-unit repeat remains for integration. |
+| CK3 return path | G2 save intake and synthetic plan exist; the first AFTER artifact [failed audit](spikes/g2_ck3_writeback/evidence/AFTER_SAVE_REVIEW.md) | No engine-verified write-back or externally resolved CK3 battle. Second feasibility gate remains open. |
 
 ## Proposed V1 flow
 
@@ -32,8 +32,9 @@ flowchart LR
 ```
 
 CK3 reference inputs, native 3K historical roster XML, script-name access,
-soldier-count methods and result callbacks are observed locally. Their combined
-runtime behaviour, general roster limits and CK3 resolution remain **unproven**.
+and soldier-count methods are observed locally. A real G1 run proved the staged
+roster and attributable survivor counts; machine-readable victory, general
+roster limits and CK3 resolution remain **unproven**.
 The probe uses installed 3K XML as its source, not an assumed Attila format.
 
 ## Implemented G1 experiment
@@ -78,8 +79,8 @@ archetypes, commander traits, terrain, and dual-engine support; these are
 
 ## First evidence to collect
 
-1. Prove a tiny battle with two legal vanilla 3K rosters can be staged and its
-   final surviving soldier counts read back through the chosen launch path.
+1. Capture the 3K engine's winner and repeat with one changed unit. Staging and
+   survivor counts work; neither remaining check should be inferred from them.
 2. On a disposable CK3 save, apply a synthetic result, reload, advance time,
    and verify losses persist, the battle resolves once, and replay is rejected.
 3. After both gates pass, promote the proven probe interfaces into the planned
