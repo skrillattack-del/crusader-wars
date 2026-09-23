@@ -199,7 +199,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['build', 'install', 'uninstall', 'read'])
     parser.add_argument('--game', type=Path, default=GAME)
-    parser.add_argument('--cli', type=Path, default=HERE.parents[2] / 'Crusader Wars v1.4.2/data/rpfm/rpfm_cli.exe')
+    parser.add_argument('--cli', type=Path, default=HERE.parents[1] / 'tools/rpfm/rpfm_cli.exe')
     parser.add_argument('--output', type=Path, default=HERE / 'generated')
     parser.add_argument('--native', type=Path)
     args = parser.parse_args()

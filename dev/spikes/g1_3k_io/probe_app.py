@@ -16,8 +16,8 @@ def main():
     app.title('Crusader Wars → Three Kingdoms | G1 experiment')
     app.geometry('850x650')
     base = Path(sys.executable).parent if getattr(sys, 'frozen', False) else probe.HERE
-    project = next((p for p in (base, *base.parents) if (p / 'Crusader Wars v1.4.2').is_dir()), None)
-    cli_default = project / 'Crusader Wars v1.4.2/data/rpfm/rpfm_cli.exe' if project else Path('rpfm_cli.exe')
+    cli_default = next((p / 'tools/rpfm/rpfm_cli.exe' for p in (base, *base.parents)
+                        if (p / 'tools/rpfm/rpfm_cli.exe').is_file()), Path('rpfm_cli.exe'))
     game = tk.StringVar(value=str(probe.GAME))
     cli = tk.StringVar(value=str(cli_default))
     state_file = base / 'cw2-probe-session.json'
