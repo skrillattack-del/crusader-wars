@@ -19,6 +19,8 @@ game files. No build step or server is needed. See the [frontend notes](dev/fron
 for the file formats and focused tests.
 
 For the mod-pack probe, see [the G1 runbook](dev/spikes/g1_3k_io/RUNBOOK.md).
-The probe still uses RPFM from the locally installed Crusader Wars v1.4.2
-folder. The [codebase map](dev/CODEBASE_MAP.md), [burndown](dev/BURNDOWN.md),
-and [G2 notes](dev/spikes/g2_ck3_writeback/README.md) track the gates.
+The probe expects a local, git-ignored RPFM CLI at
+`dev/tools/rpfm/rpfm_cli.exe` and reads native files from the installed 3K
+game. Neither is bundled in git. The [codebase map](dev/CODEBASE_MAP.md),
+[burndown](dev/BURNDOWN.md), and [G2 notes](dev/spikes/g2_ck3_writeback/README.md)
+track the gates.

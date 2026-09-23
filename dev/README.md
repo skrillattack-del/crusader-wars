@@ -12,7 +12,8 @@ mods or editing saves. No build step is required for this frontend stub.
 Double-click [CW2-G1-Probe.exe](dist/CW2-G1-Probe.exe). It prepares a separate
 3K mod pack from two XML files in your installed game, installs that pack,
 opens 3K on request, validates captured results, and removes its own pack.
-Python is bundled; the local RPFM CLI is still required for pack operations.
+Python is bundled; pack operations expect a local, git-ignored RPFM CLI under
+`tools/rpfm/` (or an explicitly selected CLI path).
 The [G2 spike](spikes/g2_ck3_writeback/README.md) now provides CK3 save intake
 and synthetic-result preflight. Actual write-back remains unimplemented.
 
