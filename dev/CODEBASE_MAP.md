@@ -1,0 +1,86 @@
+# Crusader Wars 2: codebase map
+
+`dev/` contains a G1 native battle generator, Lua logger, result validator and
+double-click probe as of 2026-09-23. Full CK3 integration is not implemented.
+The neighboring legacy executable is a compiled Crusader Wars 1.4.2
+installation for Attila. This document separates observed files from proposed
+3K components.
+
+## Sources and boundaries
+
+| Surface | Evidence | Status for CW2 |
+| --- | --- | --- |
+| Project scope | [WarHammer World brief](../4ead3b48-2348-46cf-8eba-3d49e5441a5b_WarHammer_World.pdf), especially its final boundary-first build order | Design input, not proof that any integration works. |
+| CK3 battle context | [Battle scripted GUI](../Crusader%20Wars%20v1.4.2/ck3%20mod/Crusader%20Wars/common/scripted_guis/01_battle_info.txt) emits a `CRUSADERWARS3` marker, participant and army IDs, and commander/knight `PROWESS` through `debug_log` | Available reference; the CW2 parser is not present. |
+| CK3 army state | [Gamestate sample](../Crusader%20Wars%20v1.4.2/data/save%20file/gamestate%20file/gamestate) and [army-regiment extract](../Crusader%20Wars%20v1.4.2/data/save%20file/ArmyRegiments.txt) | Fixtures for identities and starting strengths; current CW2 extraction is unverified. |
+| Legacy units and engine | [Attila unit mapper](../Unit%20Mappers%20v1.5.4/OfficialCW_HighMedieval_MK1212Mod/Factions/OfficialCW_HighMedieval_MK1212Mod_Units.xml) and [Attila schema](../Crusader%20Wars%20v1.4.2/data/attila/schema_att.ron) | Reference only; no Attila asset IDs or mappings in the V1 3K roster. |
+| 3K backend | Installed build `20435474`; [native XML and Lua evidence](spikes/g1_3k_io/evidence/native_findings.md) | Probe pack generated; real externally staged battle and result comparison pending. First feasibility gate. |
+| CK3 return path | No CW2 result applicator or round-trip test in `dev/` | Second feasibility gate. |
+
+## Proposed V1 flow
+
+```mermaid
+flowchart LR
+    CK3[CK3 encounter] --> EXPORT[Export battle context and save snapshot]
+    EXPORT --> MANIFEST[Manifest: army IDs, strengths, sides, prowess, seed]
+    MANIFEST --> ROLL[Shared size scaling and prowess-biased vanilla 3K roll]
+    ROLL --> LAUNCH[Stage and fight a 3K battle]
+    LAUNCH --> RESULT[Read surviving soldier counts and outcome]
+    RESULT --> APPLY[Apply once to the same CK3 save and verify resolution]
+```
+
+CK3 reference inputs, native 3K historical roster XML, script-name access,
+soldier-count methods and result callbacks are observed locally. Their combined
+runtime behaviour, general roster limits and CK3 resolution remain **unproven**.
+The probe uses installed 3K XML as its source, not an assumed Attila format.
+
+## Implemented G1 experiment
+
+- [probe.py](spikes/g1_3k_io/probe.py): native XML cloning, pack build/install/
+  removal, run manifest and strict runtime-log validation.
+- [probe.lua](spikes/g1_3k_io/probe.lua): initial/final soldier snapshots,
+  unique script names and player-result callback.
+- [probe_app.py](spikes/g1_3k_io/probe_app.py): Windows operator UI, packaged by
+  [build_probe.ps1](build_probe.ps1) as `dist/CW2-G1-Probe.exe`.
+- [test_probe.py](spikes/g1_3k_io/test_probe.py) and
+  [test_lua.py](spikes/g1_3k_io/test_lua.py): negative result validation and
+  Lua 5.1 mock-runtime checks. [Live runbook](spikes/g1_3k_io/RUNBOOK.md).
+
+## Planned production ownership (G1 probe is separate)
+
+G2 now has [save intake and synthetic-result preflight](spikes/g2_ck3_writeback/patcher/preflight.py).
+It preserves and fingerprints an existing archive, inventories active combats,
+and binds a 38/75-loss plan to combat `2717908992`. Save mutation and engine
+reload verification are still pending; this is not the production extractor.
+
+| Interface | Future owner | Minimum contract |
+| --- | --- | --- |
+| CK3 -> manifest | `ck3_extractor` | Battle/army identities, sides, starting strengths, prowess source and source-save fingerprint. |
+| Manifest -> 3K | `roster_engine`, then `three_kingdoms_adapter` | Shared size scale and deterministic vanilla-unit choices; *only after G1 proves a launch path*. |
+| 3K -> result | `result_reader` | Winner plus starting/surviving soldiers correlated to the launched armies; *only after G1 proves access*. |
+| Result -> CK3 | `ck3_applicator` | Check source-save fingerprint, encounter and result identity; apply losses and resolve once, with a durable duplicate guard. |
+
+`BattleManifest` and `BattleResult` are proposed versioned file contracts, not
+current on-disk game formats. Carry `save_fingerprint`, `encounter_id`, `seed`,
+`side` and `source_army_ids` through the manifest; a result adds a unique
+`result_id` tied back to that encounter. The CK3 and 3K adapters do not parse
+each other's native files.
+
+V1 follows the current design: participating CK3 army sizes determine relative
+force size; prowess biases random selection from native 3K units. Preserve CK3
+army IDs and a source-save fingerprint so a result can be attributed and not
+applied twice. Decide whose prowess to use and how to seed rolls when the port
+source and a battle fixture are available. The PDF also explores Men-at-Arms
+archetypes, commander traits, terrain, and dual-engine support; these are
+**later options**, not prerequisites for the first playable round-trip.
+
+## First evidence to collect
+
+1. Prove a tiny battle with two legal vanilla 3K rosters can be staged and its
+   final surviving soldier counts read back through the chosen launch path.
+2. On a disposable CK3 save, apply a synthetic result, reload, advance time,
+   and verify losses persist, the battle resolves once, and replay is rejected.
+3. After both gates pass, promote the proven probe interfaces into the planned
+   production modules and complete the CK3-to-3K round trip.
+
+See [the burndown](BURNDOWN.md) for the gated backlog and tracking baseline.

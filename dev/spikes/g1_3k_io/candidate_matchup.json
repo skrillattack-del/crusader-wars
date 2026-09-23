@@ -1,0 +1,21 @@
+{
+  "kind": "candidate_only_not_game_loadable",
+  "steam_app_id": 779340,
+  "steam_build_id": "20435474",
+  "attacker": {
+    "faction": "3k_main_faction_cao_cao",
+    "candidate_general_unit": "3k_main_general_earth_cao_cao",
+    "unit_records": [
+      "3k_main_unit_wood_ji_militia",
+      "3k_main_unit_water_archer_militia"
+    ]
+  },
+  "defender": {
+    "faction": "3k_main_faction_liu_bei",
+    "candidate_general_unit": "3k_main_hero_earth_liu_bei",
+    "unit_records": [
+      "3k_main_unit_wood_ji_militia",
+      "3k_main_unit_water_archer_militia"
+    ]
+  }
+}

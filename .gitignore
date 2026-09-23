@@ -1,0 +1,14 @@
+# Local game installations, third-party assets, and personal saves.
+/Crusader Wars v1.4.2/
+/Unit Mappers v1.5.4/
+*.ck3
+*.pack
+*.pdf
+*.lnk
+*.url
+/error-report-*.toml
+
+# Local development environment and extracted game scripts.
+/.venv/
+/.pytest_cache/
+/dev/spikes/g1_3k_io/native_libs/

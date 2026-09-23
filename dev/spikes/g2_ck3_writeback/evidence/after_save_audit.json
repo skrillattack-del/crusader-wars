@@ -1,0 +1,31 @@
+{
+  "before_sha256": "dd278de2fb3522cb5833c4d1c3c532e54c26d1c56b5625f9b7f783cde8c93128",
+  "after_sha256": "5fd767982a81d1b4db148219948289beaafa4a15d1ba331979e07df492b1693f",
+  "armies_manager_byte_text_unchanged": true,
+  "combat_phase_before": "main",
+  "combat_phase_after": "main",
+  "sides": {
+    "attacker": {
+      "total_fighting_men": {
+        "before": "340.09632",
+        "after": "302.09632"
+      },
+      "total_levy_men": {
+        "before": "125.9898",
+        "after": "125.9898"
+      }
+    },
+    "defender": {
+      "total_fighting_men": {
+        "before": "421.48395",
+        "after": "346.48395"
+      },
+      "total_levy_men": {
+        "before": "216.43378",
+        "after": "216.43378"
+      }
+    }
+  },
+  "only_selected_combat_changed": true,
+  "verdict": "REJECT_FOR_G2_RUNTIME_TEST: partial combat-only mutation, no battle resolution, unsafe apply journal."
+}

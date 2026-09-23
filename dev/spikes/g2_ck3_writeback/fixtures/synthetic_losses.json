@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "kind": "unbound_synthetic_fixture_not_applicable",
+  "outcome": "attacker",
+  "outcome_source": "synthetic",
+  "attacker_casualties": 38,
+  "defender_casualties": 75,
+  "note": "Absolute test losses only. Actual CK3 strengths and IDs must come from the disposable save; do not assume 181 CK3 soldiers or apply 3K scaling here."
+}
