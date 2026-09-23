@@ -2,8 +2,10 @@
 
 `dev/` contains a G1 native battle generator, Lua logger, result validator and
 double-click probe as of 2026-09-23. Full CK3 integration is not implemented.
-Reference files copied from the Crusader Wars 1.4.2 installation (for Attila)
-live in the git-ignored `reference/`. This document separates observed files from proposed
+The deprecated Attila-era Crusader Wars 1.4.2 installation was removed from the
+workspace on 2026-09-23; only curated text fixtures survive in the git-ignored
+`reference/` (bulk logs and the raw 208 MB gamestate dump were dropped with it).
+This document separates observed files from proposed
 3K components.
 
 ## Sources and boundaries
@@ -12,7 +14,7 @@ live in the git-ignored `reference/`. This document separates observed files fro
 | --- | --- | --- |
 | Project scope | [WarHammer World brief](../4ead3b48-2348-46cf-8eba-3d49e5441a5b_WarHammer_World.pdf), especially its final boundary-first build order | Design input, not proof that any integration works. |
 | CK3 battle context | [Battle scripted GUI](reference/cw1/ck3%20mod/Crusader%20Wars/common/scripted_guis/01_battle_info.txt) emits a `CRUSADERWARS3` marker, participant and army IDs, and commander/knight `PROWESS` through `debug_log` | Available reference; the CW2 parser is not present. |
-| CK3 army state | [Gamestate sample](reference/cw1/data/save%20file/gamestate%20file/gamestate) and [army-regiment extract](reference/cw1/data/save%20file/ArmyRegiments.txt) | Fixtures for identities and starting strengths; current CW2 extraction is unverified. |
+| CK3 army state | [army-regiment extract](reference/cw1/data/save%20file/ArmyRegiments.txt) with sibling section extracts (Armies, Regiments, Units, Combats, BattleResults, Wars); the `edited/` folder shows the legacy write-back. The raw `gamestate` dump was deleted 2026-09-23 to reclaim space. | Fixtures for identities and starting strengths; current CW2 extraction is unverified. |
 | Legacy units and engine | [Attila unit mapper](reference/unit_mappers/OfficialCW_HighMedieval_MK1212Mod/Factions/OfficialCW_HighMedieval_MK1212Mod_Units.xml) and [Attila schema](reference/cw1/attila/schema_att.ron) | Reference only; no Attila asset IDs or mappings in the V1 3K roster. |
 | 3K backend | Installed build `20435474`; [native XML and Lua evidence](spikes/g1_3k_io/evidence/native_findings.md) | Probe pack generated; real externally staged battle and result comparison pending. First feasibility gate. |
 | CK3 return path | No CW2 result applicator or round-trip test in `dev/` | Second feasibility gate. |
