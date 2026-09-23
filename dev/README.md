@@ -5,6 +5,10 @@ a vanilla Three Kingdoms battle, and safely returns its result to CK3.
 
 **Current build is a G1 experiment, not the finished port.**
 
+For a source-only status view, open the offline [Bridge Lab](frontend/index.html).
+It inspects local G1 runtime logs and prepared G2 plans without installing
+mods or editing saves. No build step is required for this frontend stub.
+
 Double-click [CW2-G1-Probe.exe](dist/CW2-G1-Probe.exe). It prepares a separate
 3K mod pack from two XML files in your installed game, installs that pack,
 opens 3K on request, validates captured results, and removes its own pack.
