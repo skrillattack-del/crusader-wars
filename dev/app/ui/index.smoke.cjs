@@ -1,6 +1,6 @@
 /* DOM-stub smoke test for dev/app/ui/index.html.
    Loads the real inline script, fakes the pywebview bridge, and drives the
-   whole operator flow end to end, CK3 first. Run: node index.smoke.cjs */
+   whole player flow end to end. Run: node index.smoke.cjs */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ if (!match) throw new Error('no inline script found in index.html');
 const els = {};
 function el(id) {
   if (!els[id]) els[id] = {innerHTML: '', textContent: '', scrollTop: 0, scrollHeight: 1,
-    style: {}, classList: {toggle() {}, contains() { return true; }}, focus() {}, appendChild() {}, addEventListener() {}};
+    style: {}, classList: {toggle() {}}, focus() {}, appendChild() {}, addEventListener() {}};
   return els[id];
 }
 const docHandlers = {};
@@ -22,62 +22,51 @@ const winHandlers = {};
 global.window = global;
 global.addEventListener = (type, fn) => { winHandlers[type] = fn; };
 
-let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null;
+let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0;
 const side = (role, fighting, initial, armies, yours) => ({role, name: `${role} · army ${armies}`,
   army_ids: [armies], fighting, initial, yours});
 const battles = {
   '1728053261': [side('Attacker', 666.2, 700, '111', true), side('Defender', 19.4, 60, '222', false)],
   '2717908992': [side('Attacker', 340.09632, 571, '570426519', false), side('Defender', 421.48395, 528, '503317436', false)]};
-const encounter = id => ({ok: true, id: `ck3:${id}`, combat_id: id, save: 'C:/saves/CW2_G2_BEFORE.ck3',
-  save_name: 'CW2_G2_BEFORE.ck3', date: '908.8.27', phase: 'main', yours: battles[id][0].yours,
+const encounter = id => ({ok: true, id: `ck3:${id}`, combat_id: id, save: 'C:/saves/latest.ck3',
+  save_name: 'latest.ck3', date: '908.8.27', phase: 'main', yours: battles[id][0].yours,
   battles: [{combat_id: '1728053261', yours: true, phase: 'main', men: [666, 19]},
             {combat_id: '2717908992', yours: false, phase: 'main', men: [340, 421]}],
   sides: battles[id]});
-const u = (name, tier, men, proven) => ({key: `3k_main_unit_${name}`, name, tier, men, proven});
-const unit = (name, type, initial, survivors, routing) =>
-  ({script_name: name, unit_type: type, initial, survivors, lost: initial - survivors, routing});
-const resultSides = [
-  {role: 'attacker', name: 'Cao Cao', men: 300, lost: 150, units: [
-    unit('cw2_attacker_0', '3k_main_general_earth_cao_cao', 100, 50, false),
-    unit('cw2_attacker_1', '3k_main_unit_wood_ji_militia', 100, 50, false),
-    unit('cw2_attacker_2', '3k_main_unit_water_archer_militia', 100, 50, false)]},
-  {role: 'defender', name: 'Liu Bei', men: 300, lost: 300, units: [
-    unit('cw2_defender_0', '3k_main_general_earth_liu_bei', 100, 0, true),
-    unit('cw2_defender_1', '3k_main_unit_wood_ji_militia', 100, 0, true),
-    unit('cw2_defender_2', '3k_main_unit_water_archer_militia', 100, 0, true)]}];
+const u = (name, tier, men) => ({key: `3k_main_unit_${name}`, name, tier, men, proven: false});
+const general = (hero, units) => ({key: 'g', role: 'Commander', name: 'Captain 1', kind: hero ? 'hero' : 'bodyguard',
+  men: hero ? 1 : 21, units});
 const api = {
   async get_health() { return {ok: true, ck3_running: false, tk_running: false, probe_installed: true,
+    ck3_mod: modInstalled, mod_source: true, cw1_installed: true,
     paths: [{key: 'ck3_exe', label: 'Crusader Kings III', value: 'C:/ck3.exe', ok: true},
             {key: 'tk_exe', label: 'Three Kingdoms', value: 'C:/3k.exe', ok: true},
             {key: 'ck3_saves', label: 'CK3 save folder', value: 'C:/saves', ok: true},
             {key: 'rpfm_cli', label: 'RPFM command line', value: 'tools/rpfm/rpfm_cli.exe', ok: true}],
     gates: {ck3: true, probe: true}}; },
+  async install_ck3_mod() { modInstalled = true; return {ok: true, mod_file: 'C:/mod/cw2_ck3_bridge.mod'}; },
+  async open_cw1_page() { cw1Pages += 1; return {ok: true}; },
   async launch_ck3() { ck3Launches += 1; return {ok: true}; },
   async get_encounter(save, id) { return encounter(id || '1728053261'); },
   async roll_roster(enc, s, mode) { seed += 1; lastMode = mode; const hero = mode === 'romance';
     return {ok: true, seed, mode, deterministic: false, scale: 1,
-    note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
-    sides: [{role: 'Attacker', fighting: 340.09, men: 340, trim: 1, cards: 5, retinue: 4, generals: [
-              {key: 'g', role: 'Commander', kind: hero ? 'hero' : 'bodyguard', men: hero ? 1 : 21,
-               units: [u('Jian Swordguards', 'line', 80, false),
-                u('Ji Militia', 'militia', 80, true), u('Raider Cavalry', 'line', 80, false), u('Axe Band', 'militia', 79, false)]}]},
-            {role: 'Defender', fighting: 421.48, men: 421, trim: 0, cards: 6, retinue: 5, generals: [
-              {key: 'g', role: 'Commander', men: 21, units: [u('Pearl Dragons', 'elite', 80, false),
-                u('Archer Militia', 'militia', 80, true), u('Ji Militia', 'militia', 80, true),
-                u('Spear Warriors', 'militia', 80, false), u('Sabre Cavalry', 'line', 80, false)]}]}]}; },
+      note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
+      sides: [{role: 'Attacker', fighting: 340.09, men: 340, trim: 1, cards: 5, retinue: 4, generals: [general(hero,
+                [u('Jian Swordguards', 'line', 80), u('Ji Militia', 'militia', 80), u('Raider Cavalry', 'line', 80), u('Axe Band', 'militia', 79)])]},
+              {role: 'Defender', fighting: 421.48, men: 421, trim: 0, cards: 6, retinue: 5, generals: [general(hero,
+                [u('Pearl Dragons', 'elite', 80), u('Archer Militia', 'militia', 80), u('Ji Militia', 'militia', 80),
+                 u('Spear Warriors', 'militia', 80), u('Sabre Cavalry', 'line', 80)])]}]}; },
   async prepare_and_install() { return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
-    removed_previous: 'C:/dist/runs/20260923-175132-201712'}; },
+    removed_previous: 'C:/dist/runs/old'}; },
   async launch_3k() { return {ok: true, pid: null}; },
   async read_result() {
     readAttempts += 1;
-    if (readAttempts === 1) return {error: 'Need exactly one start and one result; rebuild for each battle attempt.'};
+    if (readAttempts === 1) return {error: 'No runtime log yet. The probe has not demonstrated that it loaded.'};
     return {ok: true, winner: 0, player_side: 0, player_outcome: 'victory', result_source: 'routing_state',
-      note: 'derived from unit state at Complete', battle: 'b', run_id: 'r', sides: resultSides}; },
-  async remove_probe() { return {ok: true, removed: 'crusader_wars_2.pack', was_installed: true, run: 'C:/runs/x'}; },
-  async preview_writeback() {
-    return {error: 'Writing results into CK3 saves is off in this build.'};
-  },
-  async apply_writeback() { return {error: 'CK3 write-back is disabled.'}; }
+      note: 'derived from unit state', battle: 'b', run_id: 'r',
+      sides: [{role: 'attacker', name: 'Cao Cao', men: 181, lost: 18, units: []},
+              {role: 'defender', name: 'Liu Bei', men: 181, lost: 113, units: []}]}; },
+  async remove_probe() { return {ok: true, removed: 'crusader_wars_2.pack', was_installed: true, run: 'C:/runs/x'}; }
 };
 window.pywebview = {api};
 vm.runInThisContext(match[1]);
@@ -99,47 +88,47 @@ async function click(action, data = {}) {
   await settle();
   const main = () => els.main.innerHTML;
   const log = () => els.log.textContent;
-  expect('CK3 is the starting point', main().includes('Start in Crusader Kings III')
-    && main().includes('Load my latest CK3 save') && main().includes('Open Crusader Kings III'));
+  expect('first screen is a plain checklist', main().includes('Get ready') && main().includes('Crusader Kings III is installed')
+    && main().includes('Find my battle'));
+  expect('missing CK3 mod offers Install', main().includes('The CW2 battle button is not installed in CK3') && main().includes('data-action="installMod"'));
+  expect('Crusader Wars 1 is flagged with a Remove button', main().includes('Crusader Wars 1 is still installed') && main().includes('data-action="removeCw1"'));
+  expect('file paths are tucked away', main().includes('<details class="more"><summary>File locations</summary>'));
+  await click('installMod');
+  expect('Install registers the CK3 mod', main().includes('The CW2 battle button is installed in CK3') && log().includes('CK3 mod registered'));
+  await click('removeCw1');
+  expect('Remove opens the Workshop page with an Unsubscribe hint', cw1Pages === 1 && main().includes('Unsubscribe'));
   await click('launchCk3');
-  expect('CK3 can be opened from the launcher', ck3Launches === 1 && log().includes('CK3 launch requested'));
+  expect('CK3 can be opened from the launcher', ck3Launches === 1);
   await click('toEncounter');
-  expect('latest save lists its battles and marks yours', main().includes('Pick the CK3 battle')
-    && main().includes('CW2_G2_BEFORE.ck3') && main().includes('666 v 19 · yours') && main().includes('340 v 421'));
+  expect('battles show as cards, yours marked', main().includes('Choose battle') && main().includes('666 v 19')
+    && main().includes('<span class="yours">yours</span>') && main().includes('340 v 421'));
   await click('pickBattle', {id: '2717908992'});
-  expect('picking a battle shows its fighting men', main().includes('421 fighting men') && main().includes('503317436'));
+  expect('picked battle shows men still fighting', main().includes('421') && main().includes('men still fighting'));
   await click('toRoster');
   const firstSeed = seed;
-  expect('roll shows cards, men and vanilla units', main().includes('Roll armies') && main().includes('Pearl Dragons')
-    && main().includes('5 cards') && main().includes('(1 trimmed)') && main().includes(`seed <code>${firstSeed}</code>`));
-  expect('roll is honest about what gets staged', main().includes('1 general + 2 units a side')
-    && main().includes('Prepare replaces it'));
-  await click('reroll');
-  expect('roll again draws a new seed', seed === firstSeed + 1 && main().includes(`seed <code>${seed}</code>`));
-  expect('Records mode is the default', lastMode === 'records' && main().includes('general with bodyguard, 21 men'));
+  expect('armies list units and men', main().includes('Your armies') && main().includes('Pearl Dragons') && main().includes('340 men · 5 unit cards'));
+  expect('Records is the default mode', lastMode === 'records' && main().includes('general and bodyguard, 21 men'));
   await click('setMode', {mode: 'romance'});
-  expect('Romance mode re-rolls with hero generals', lastMode === 'romance' && main().includes('hero, 1 man')
-    && main().includes('Romance battles are not staged yet') && log().includes('rolled romance'));
+  expect('Romance shows hero generals', lastMode === 'romance' && main().includes('<span>hero</span>') && main().includes('Romance battles are not staged yet'));
   await click('setMode', {mode: 'records'});
+  await click('reroll');
+  expect('Shuffle draws new units', seed === firstSeed + 3);
   await click('install');
-  expect('install removes the recorded previous pack automatically', main().includes('Continue to battle')
-    && log().includes('replaced the previous battle pack') && log().includes('installed crusader_wars_2.pack'));
+  expect('Send to Three Kingdoms installs the pack', main().includes('Next: fight') && log().includes('installed crusader_wars_2.pack')
+    && log().includes('replaced the previous battle pack'));
   await click('toBattle');
-  expect('battle screen prompts the launch', main().includes('Fight in Three Kingdoms') && main().includes('Launch Three Kingdoms'));
+  expect('fight screen is a step-by-step checklist', main().includes('crusader_wars_2') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
   await click('launch');
-  expect('after launch the result can be read', main().includes('Read battle result'));
+  expect('after launch the checklist says so', main().includes('Three Kingdoms is starting.'));
   await click('readResult');
-  expect('first read fails with the real strict-reader message', main().includes('Need exactly one start and one result'));
+  expect('no battle yet reads as plain language', main().includes('No battle has been fought with this pack yet'));
   await click('readResult');
-  expect('decisive result renders outcome, source and survivors',
-    main().includes('victory') && main().includes('(won)') && main().includes('routing') && log().includes('source=routing_state'));
+  expect('result screen shows a victory banner and losses', main().includes('banner win') && main().includes('Victory')
+    && main().includes('(you)') && main().includes('113'));
   await click('removeProbe');
   expect('pack removal is confirmed', main().includes('Battle pack removed') && log().includes('removed crusader_wars_2.pack'));
-  await click('toReturn');
-  expect('write-back screen says it is off and where the result is', main().includes('off in this build') && main().includes('saved in the run folder'));
-  expect('write-back screen does not claim the result is sealed', !document.getElementById('stepline').innerHTML.includes('Sealed.'));
   await click('restart');
-  expect('restart returns to CK3', main().includes('Start in Crusader Kings III') && !main().includes('Roll armies'));
+  expect('Fight another battle returns to Get ready', main().includes('Get ready') && !main().includes('Your armies'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
   process.exit(failed ? 1 : 0);
 })().catch(error => { console.error('smoke crashed:', error); process.exit(1); });

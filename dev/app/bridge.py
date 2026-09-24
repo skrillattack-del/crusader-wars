@@ -41,6 +41,9 @@ def _ck3_saves():
 CK3_SAVES = _ck3_saves()
 STEAM_3K = 'steam://rungameid/779340'
 STEAM_CK3 = 'steam://rungameid/1158310'
+CW1_WORKSHOP_ID = '2977969008'  # Crusader Wars 'Ad Maiorem Gloriam' (Attila era)
+STEAM_CW1_PAGE = f'steam://url/CommunityFilePage/{CW1_WORKSHOP_ID}'
+CK3_MOD_FILE = 'cw2_ck3_bridge.mod'
 ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
 STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
                 'the rolled army above is what the next build stages.')
@@ -73,10 +76,17 @@ def _default_tasklist(cmd):
 class Bridge:
     """js_api for the launcher window. See dev/app/ui/index.html for callers."""
 
-    def __init__(self, base=None, game=None, cli=None, tasklist=None, saves=None):
+    def __init__(self, base=None, game=None, cli=None, tasklist=None, saves=None,
+                 ck3_mods=None, cw1_dir=None, mod_source=None):
         self.base = Path(base) if base else self._default_base()
         self.game = Path(game) if game else probe.GAME
         self.saves = Path(saves) if saves else CK3_SAVES
+        self.ck3_mods = Path(ck3_mods) if ck3_mods else self.saves.parent / 'mod'
+        self.cw1_dir = (Path(cw1_dir) if cw1_dir else CK3_EXE.parents[3] / 'workshop' / 'content'
+                        / '1158310' / CW1_WORKSHOP_ID)
+        self.mod_source = Path(mod_source) if mod_source else next(
+            (p / 'mod' / 'cw2_ck3_mod' for p in (self.base, *self.base.parents, _HERE.parent)
+             if (p / 'mod' / 'cw2_ck3_mod' / 'descriptor.mod').is_file()), None)
         self._save_cache = None
         self.cli = Path(cli) if cli else self._find_cli()
         self._tasklist = tasklist or _default_tasklist
@@ -157,6 +167,10 @@ class Bridge:
                     'ck3_running': self._process_running('ck3.exe'),
                     'tk_running': self._process_running('Three_Kingdoms.exe'),
                     'probe_installed': (self.game / 'data' / probe.PACK_NAME).exists(),
+                    'ck3_mod': (self.ck3_mods / CK3_MOD_FILE).is_file(),
+                    'mod_source': self.mod_source is not None,
+                    'cw1_installed': self.cw1_dir.is_dir()
+                                     or (self.ck3_mods / f'ugc_{CW1_WORKSHOP_ID}.mod').is_file(),
                     'paths': paths,
                     'gates': {'ck3': self.saves.is_dir(),
                               'probe': all(p['ok'] for p in paths
@@ -274,6 +288,28 @@ class Bridge:
                                    if mode == 'romance' else '')
             return {'ok': True, 'seed': seed, 'mode': mode, 'deterministic': False, 'scale': scale,
                     'note': note, 'sides': sides}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def install_ck3_mod(self):
+        """Register the CW2 CK3 mod with the Paradox launcher; the mod files stay where they are."""
+        try:
+            if self.mod_source is None:
+                raise ValueError('The CW2 CK3 mod files are missing (expected dev/mod/cw2_ck3_mod).')
+            self.ck3_mods.mkdir(parents=True, exist_ok=True)
+            descriptor = (self.mod_source / 'descriptor.mod').read_text(encoding='utf-8')
+            descriptor = re.sub(r'(?m)^path=.*\n?', '', descriptor).rstrip('\n')
+            target = self.ck3_mods / CK3_MOD_FILE
+            target.write_text(f'{descriptor}\npath="{self.mod_source.as_posix()}"\n', encoding='utf-8')
+            return {'ok': True, 'mod_file': str(target)}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def open_cw1_page(self):
+        """Open Crusader Wars 1's Workshop page; unsubscribing there makes Steam delete it."""
+        try:
+            os.startfile(STEAM_CW1_PAGE)
+            return {'ok': True}
         except Exception as exc:
             return {'error': str(exc)}
 

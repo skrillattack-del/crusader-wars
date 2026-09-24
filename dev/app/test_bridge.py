@@ -94,6 +94,41 @@ class BridgeTests(unittest.TestCase):
 
     # ---- staged encounter and roster ----
 
+    # ---- CK3 mod and Crusader Wars 1 ----
+
+    def test_install_ck3_mod_registers_it_and_health_sees_it(self):
+        source = self.root / 'mod_src' / 'cw2_ck3_mod'
+        source.mkdir(parents=True)
+        (source / 'descriptor.mod').write_text(
+            'version="1.0"\nname="Crusader Wars 2: CK3 Bridge"\nsupported_version="1.19.*"\n')
+        mods = self.root / 'ck3' / 'mod'
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=self.root / 'ck3' / 'save games',
+                        cw1_dir=self.root / 'no_cw1', mod_source=source)
+        self.assertFalse(bridge.get_health()['ck3_mod'])
+        result = bridge.install_ck3_mod()
+        self.assertTrue(result['ok'], result)
+        text = (mods / 'cw2_ck3_bridge.mod').read_text()
+        self.assertIn('name="Crusader Wars 2: CK3 Bridge"', text)
+        self.assertIn(f'path="{source.as_posix()}"', text)
+        self.assertTrue(bridge.get_health()['ck3_mod'])
+
+    def test_crusader_wars_1_is_detected(self):
+        cw1 = self.root / 'workshop' / '2977969008'
+        mods = self.root / 'mods'
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), cw1_dir=cw1, ck3_mods=mods)
+        self.assertFalse(bridge.get_health()['cw1_installed'])
+        cw1.mkdir(parents=True)
+        self.assertTrue(bridge.get_health()['cw1_installed'])
+        cw1.rmdir()
+        mods.mkdir()
+        (mods / 'ugc_2977969008.mod').write_text('name="Crusader Wars"\n')  # launcher descriptor alone counts too
+        self.assertTrue(bridge.get_health()['cw1_installed'])
+
+    def test_install_ck3_mod_without_files_explains(self):
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), mod_source=self.root / 'x')
+        bridge.mod_source = None
+        self.assertIn('mod files are missing', bridge.install_ck3_mod()['error'])
+
     # ---- CK3 encounter and roll ----
 
     def write_save(self, name='battle.ck3'):
