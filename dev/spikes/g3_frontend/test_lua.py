@@ -46,7 +46,10 @@ def load(temp):
     lua = LuaRuntime()
     lua.execute(MOCK_ENV)
     script = (probe.HERE / 'probe.lua').read_text(encoding='utf-8')
-    script = script.replace('@@RUN_ID@@', 'mock-only').replace('@@BATTLE@@', probe.BATTLE).replace('@@OUTPUT_PATH@@', path.as_posix())
+    script = (script.replace('@@RUN_ID@@', 'mock-only')
+              .replace('@@BATTLE@@', probe.BATTLE)
+              .replace('@@OUTPUT_PATH@@', path.as_posix())
+              .replace('@@TRIM_LOGIC@@', ''))
     lua.execute(script)
     return lua, path
 
