@@ -1,11 +1,12 @@
 -- CW2 G1 experiment. Loaded only by our replacement historical battle XML.
 -- API evidence: installed 3K lib_battle_manager, lib_battle_script_unit,
 -- lib_generated_battle and lib_mod_loader. Runtime verification is still required.
--- Result capture (build 25370317): the engine sends a "Battle Results" command
--- once the results screen is shown (lib_battle_manager.lua:1063-1076); it never
--- arrived during the first live run, so a deferred Complete-phase fallback reads
--- the manager's engine-set battle_is_won flag (line 535). Each result records
--- its result_source; a late engine result becomes an engine_result event.
+-- Result capture: the engine's "Battle Results" command (lib_battle_manager.lua:
+-- 1067) never arrived in three live runs. battle_is_won (line 535) only means a
+-- VictoryCountdown began, for either side, and bm:callback timers stop at
+-- Complete, so neither can serve as a fallback. At Complete we derive the outcome
+-- from unit state: the side whose every unit is routing or dead lost. Anything
+-- else stays undetermined (null). A late engine result becomes engine_result.
 load_script_libraries();
 bm = battle_manager:new(empire_battle:new());
 local run_id = "@@RUN_ID@@";
@@ -66,11 +67,32 @@ bm:register_results_callbacks(
     function() record_result(true, 'engine_callback'); end,
     function() record_result(false, 'engine_callback'); end
 );
+local function broken(alliance)
+    local armies = alliance:armies();
+    for r = 1, armies:count() do
+        local units = armies:item(r):units();
+        for u = 1, units:count() do
+            local unit = units:item(u);
+            if unit:number_of_men_alive() > 0 and not unit:is_routing() then return false; end;
+        end;
+    end;
+    return true;
+end;
+local function routing_outcome()
+    local alliances = bm:alliances();
+    local losers = {};
+    for a = 1, alliances:count() do
+        if broken(alliances:item(a)) then losers[#losers + 1] = a; end;
+    end;
+    if #losers ~= 1 then return nil; end;
+    return losers[1] ~= bm:get_player_alliance_num();
+end;
 bm:register_phase_change_callback('Complete', function()
     safe_emit('complete');
-    -- Give a genuine results-screen Battle Results command the first chance; the
-    -- engine sent none during our first live run on build 25370317.
-    bm:callback(function()
-        if not result_emitted then record_result(bm.battle_is_won == true, 'victory_countdown_fallback'); end;
-    end, 5000);
+    -- Decide synchronously: battle timers no longer run once the battle is complete.
+    if not result_emitted then
+        local ok, won = pcall(routing_outcome);
+        if not ok then ModLog('CW2_G1_ERROR ' .. tostring(won)); won = nil; end;
+        record_result(won, 'routing_state');
+    end;
 end);

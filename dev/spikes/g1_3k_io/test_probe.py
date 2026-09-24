@@ -49,12 +49,23 @@ class ResultValidationTests(unittest.TestCase):
         self.assertEqual(result['result_source'], 'engine_callback')
         self.assertEqual(result['battle'], probe.BATTLE)
 
-    def test_fallback_source_is_labelled_not_authoritative(self):
-        self.final['result_source'] = 'victory_countdown_fallback'
+    def test_routing_source_is_labelled_not_authoritative(self):
+        self.final['result_source'] = 'routing_state'
         self.write([self.start, self.final])
         result = probe.read_result(self.root)
-        self.assertEqual(result['result_source'], 'victory_countdown_fallback')
-        self.assertIn('VictoryCountdown flag', result['limitation'])
+        self.assertEqual(result['result_source'], 'routing_state')
+        self.assertIn('routing or dead', result['limitation'])
+
+    def test_rejects_side_agnostic_countdown_flag(self):
+        # battle_is_won is set when either side's VictoryCountdown begins.
+        self.final['result_source'] = 'victory_countdown_fallback'
+        self.write([self.start, self.final])
+        with self.assertRaises(ValueError): probe.read_result(self.root)
+
+    def test_undetermined_outcome_is_rejected(self):
+        self.final.update(player_won=None, result_source='routing_state')
+        self.write([self.start, self.final])
+        with self.assertRaisesRegex(ValueError, 'undetermined'): probe.read_result(self.root)
 
     def test_late_engine_result_is_cross_checked(self):
         late = copy.deepcopy(self.final)

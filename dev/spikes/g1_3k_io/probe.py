@@ -173,9 +173,9 @@ def read_result(output):
                 raise ValueError('Starting count changed between captures.')
     won = finals[0].get('player_won')
     if type(won) is not bool:
-        raise ValueError('Missing engine result callback.')
+        raise ValueError('Outcome undetermined: no engine result and no single fully broken side.')
     source = finals[0].get('result_source')
-    if source not in ('engine_callback', 'victory_countdown_fallback'):
+    if source not in ('engine_callback', 'routing_state'):
         raise ValueError('Unknown or missing result source.')
     late = [e for e in events if e.get('phase') == 'engine_result']
     if late and (len(late) > 1 or late[0].get('player_won') != won
@@ -183,8 +183,8 @@ def read_result(output):
         raise ValueError('Late engine result contradicts the recorded outcome.')
     # The engine reports a bool, not a draw enum. Preserve that limitation.
     limitation = 'Non-victory does not distinguish defeat, draw or abandonment.'
-    if source == 'victory_countdown_fallback':
-        limitation += ' Outcome came from the engine-set VictoryCountdown flag, not the Battle Results command.'
+    if source == 'routing_state':
+        limitation += ' Outcome derived from unit state at Complete (every unit of one side routing or dead), not the Battle Results command.'
     result = {'kind': 'g1_observation_not_ck3_result', 'run_id': manifest['run_id'],
               'battle': manifest['entry'],
               'player_outcome': 'victory' if won else 'non_victory',

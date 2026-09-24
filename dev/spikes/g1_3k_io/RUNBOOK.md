@@ -49,14 +49,16 @@ probe produces multiple starts/results and is deliberately rejected.
 
 - No JSONL: the script has not proved it loaded. Inspect `lua_mod_log.txt` in
   the game folder for `CW2_G1_ERROR`. Retain the pack and run manifest.
-- No result event (runs before 2026-09-23): the engine `Battle Results` command
-  never fired. The probe now also emits a fallback result ~5s after the
-  `Complete` phase from the engine-set `VictoryCountdown` flag, labelled
-  `result_source: victory_countdown_fallback`. The engine callback, when it
-  fires, is recorded as `engine_callback`, and a late duplicate becomes a
-  cross-checked `engine_result` event. A validated fallback is accepted but
-  remains weaker evidence than the engine callback; the reader records which
-  source produced the outcome.
+- No result event (all three runs on 2026-09-23): the engine `Battle Results`
+  command never fired. The 5s `victory_countdown_fallback` also never fired,
+  because battle timers stop at `Complete`, and it was unsound anyway:
+  `battle_is_won` is set when either side's countdown begins. The probe now
+  decides at `Complete` with no timer, from unit state: the side whose every
+  unit is routing or dead lost (`result_source: routing_state`). If neither or
+  both sides meet that, `player_won` is null and the reader rejects the run. The
+  engine callback, when it fires first, is recorded as `engine_callback`; a late
+  one becomes a cross-checked `engine_result` event. Replaying this rule on the
+  three archived logs gives player victory each time, matching the result screen.
 - Vanilla roster: likely wrong mode, inactive pack or override conflict.
 - Native DB `release`/`singleplayer` flags for this battle are false, but the
   game also ships a dedicated historical UI. These flags alone do not establish
