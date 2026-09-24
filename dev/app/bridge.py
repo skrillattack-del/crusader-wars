@@ -212,23 +212,19 @@ class Bridge:
             sides = []
             for role in ('attacker', 'defender'):
                 data = row[role]
-                commander_id = data.get('commander')
-                char_ids = data.get('characters', [])
-                knights = []
-                for cid in char_ids:
-                    if cid == commander_id: continue
-                    rng = random.Random(int(cid))
-                    knights.append({'name': f'Knight {cid}', 'prowess': rng.randint(5, 25)})
-                commander = None
-                if commander_id:
-                    rng = random.Random(int(commander_id))
-                    commander = {'name': f'Commander {commander_id}', 'prowess': rng.randint(10, 30)}
                 sides.append({'role': role.title(), 'army_ids': data['army_ids'],
                               'name': f"{role.title()} · army {', '.join(data['army_ids'])}",
                               'initial': float(data['initial_men']),
                               'fighting': float(data['total_fighting_men']),
-                              'commander': commander,
-                              'knights': knights,
+                              # A save identifies the commander/leader, but its combat
+                              # contribution rows do not identify knights. Until the CK3
+                              # mod export is ingested, roll neutral captains instead of
+                              # inventing names or prowess values.
+                              'commander': None,
+                              'knights': [],
+                              'commander_id': data.get('commander'),
+                              'leader_id': data.get('leader'),
+                              'participant_ids': data.get('characters', []),
                               'yours': any(owner.get(a) in players for a in data['army_ids'])})
             battles.append({'combat_id': row['combat_id'], 'phase': row['phase'], 'sides': sides,
                             'yours': any(s['yours'] for s in sides)})

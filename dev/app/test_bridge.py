@@ -131,6 +131,8 @@ class BridgeTests(unittest.TestCase):
         picked = bridge.get_encounter(combat_id='500')
         self.assertEqual([s['fighting'] for s in picked['sides']], [340.09632, 421.48395])
         self.assertFalse(picked['yours'])  # a vassal's army is not detected as yours
+        self.assertTrue(all(side['commander'] is None and side['knights'] == []
+                            for side in picked['sides']))
         self.assertIn('not in', bridge.get_encounter(combat_id='999')['error'])
 
     def test_encounter_without_saves_or_battles_explains(self):

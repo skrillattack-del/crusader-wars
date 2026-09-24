@@ -96,12 +96,15 @@ def combat_rows(combat):
             
             commander_match = re.search(r'(?m)^\s*commander=(\d+)', body)
             commander = commander_match.group(1) if commander_match else None
+            leader_match = re.search(r'(?m)^\s*leader=(\d+)', body)
+            leader = leader_match.group(1) if leader_match else None
             char_ids = re.findall(r'(?m)character=\{\s*character=(\d+)', body)
             
             row[side] = {'army_ids': army_ids,
                          'initial_men': scalar(body, 'initial_men'),
                          'total_fighting_men': scalar(body, 'total_fighting_men'),
                          'commander': commander,
+                         'leader': leader,
                          'characters': char_ids}
         row['phase'] = scalar(record, 'phase')
         records.append(row)

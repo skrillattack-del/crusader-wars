@@ -69,6 +69,7 @@ def extract_encounter(save_path, output_manifest, combat_id=None):
     for side_name in ('attacker', 'defender'):
         side_data = chosen[side_name]
         prowess_sources = []
+        classified = set()
         
         commander = side_data.get('commander')
         if commander:
@@ -77,15 +78,28 @@ def extract_encounter(save_path, output_manifest, combat_id=None):
                 'role': 'commander',
                 'prowess': extract_prowess(text, commander)
             })
+            classified.add(commander)
+
+        leader = side_data.get('leader')
+        if leader and leader not in classified:
+            prowess_sources.append({
+                'id': leader,
+                'role': 'leader',
+                'prowess': extract_prowess(text, leader)
+            })
+            classified.add(leader)
             
         for cid in side_data.get('characters', []):
-            if cid == commander:
+            if cid in classified:
                 continue
             prowess_sources.append({
                 'id': cid,
-                'role': 'knight',
+                # Save combat contribution records do not prove knight status.
+                # The CW2 CK3 mod exports actual every_side_knight identities.
+                'role': 'combat_participant_unclassified',
                 'prowess': extract_prowess(text, cid)
             })
+            classified.add(cid)
             
         sides.append({
             'role': side_name,

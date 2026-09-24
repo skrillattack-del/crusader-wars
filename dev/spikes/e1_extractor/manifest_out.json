@@ -12,7 +12,13 @@
         "788529835"
       ],
       "starting_strengths": 666.0,
-      "prowess": []
+      "prowess": [
+        {
+          "id": "82407",
+          "role": "leader",
+          "prowess": 5
+        }
+      ]
     },
     {
       "role": "defender",
@@ -27,7 +33,12 @@
         {
           "id": "71827",
           "role": "commander",
-          "prowess": 0
+          "prowess": 7
+        },
+        {
+          "id": "15638",
+          "role": "leader",
+          "prowess": 3
         }
       ]
     }
