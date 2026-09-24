@@ -8,3 +8,5 @@ app/runs/
 app/cw2-launcher-session.json
 tools/
 reference/
+spikes/g3_frontend/generated/
+spikes/g3_frontend/native_libs/
