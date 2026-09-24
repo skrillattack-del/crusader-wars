@@ -129,6 +129,61 @@ class BridgeTests(unittest.TestCase):
         bridge.mod_source = None
         self.assertIn('mod files are missing', bridge.install_ck3_mod()['error'])
 
+    def make_launcher_db(self, with_cw2=True):
+        """Minimal copy of the Paradox launcher's playset tables, plus dlc_load.json."""
+        import sqlite3
+        docs = self.root / 'ck3docs'
+        (docs / 'mod').mkdir(parents=True)
+        con = sqlite3.connect(docs / 'launcher-v2.sqlite')
+        con.executescript("""
+            create table playsets (id text primary key, name text, isActive boolean);
+            create table mods (id text primary key, gameRegistryId text, steamId text, displayName text);
+            create table playsets_mods (playsetId text, modId text, enabled boolean, position integer);
+            insert into playsets values ('p1', 'Initial playset', 1), ('p2', 'Other', 0);
+            insert into mods values ('m1', 'mod/ugc_1.mod', '1', 'Some mod'),
+                                    ('cw1', 'mod/ugc_2977969008.mod', '2977969008', 'Crusader Wars');
+            insert into playsets_mods values ('p1', 'm1', 1, 0), ('p1', 'cw1', 1, 1);""")
+        if with_cw2:
+            con.execute("insert into mods values ('cw2', 'mod/cw2_ck3_bridge.mod', null, 'Crusader Wars 2: CK3 Bridge')")
+        con.commit(); con.close()
+        (docs / 'dlc_load.json').write_text('{"enabled_mods":["mod/ugc_1.mod","mod/ugc_2977969008.mod"],"disabled_dlcs":[]}')
+        return docs
+
+    def playset_rows(self, docs):
+        import sqlite3
+        con = sqlite3.connect(docs / 'launcher-v2.sqlite')
+        rows = con.execute("select modId, enabled, position from playsets_mods where playsetId='p1' order by position").fetchall()
+        con.close()
+        return rows
+
+    def test_add_to_playset_enables_cw2_last_and_turns_cw1_off(self):
+        docs = self.make_launcher_db()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), ck3_mods=docs / 'mod')
+        self.assertFalse(bridge.get_health()['in_playset'])
+        result = bridge.add_to_playset()
+        self.assertTrue(result['ok'], result)
+        self.assertEqual((result['playset'], result['cw1_disabled']), ('Initial playset', 1))
+        self.assertEqual(self.playset_rows(docs), [('m1', 1, 0), ('cw1', 0, 1), ('cw2', 1, 2)])
+        self.assertTrue(Path(result['backup']).is_file())
+        load = json.loads((docs / 'dlc_load.json').read_text())
+        self.assertEqual(load['enabled_mods'], ['mod/ugc_1.mod', 'mod/cw2_ck3_bridge.mod'])
+        self.assertTrue(bridge.get_health()['in_playset'])
+        bridge.add_to_playset()  # a second run changes nothing
+        self.assertEqual(self.playset_rows(docs), [('m1', 1, 0), ('cw1', 0, 1), ('cw2', 1, 2)])
+
+    def test_add_to_playset_refuses_while_paradox_launcher_runs(self):
+        docs = self.make_launcher_db()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(['Paradox Launcher.exe']),
+                        ck3_mods=docs / 'mod')
+        self.assertIn('Close the Paradox launcher', bridge.add_to_playset()['error'])
+        self.assertEqual(self.playset_rows(docs), [('m1', 1, 0), ('cw1', 1, 1)])
+
+    def test_add_to_playset_waits_for_the_launcher_to_list_the_mod(self):
+        docs = self.make_launcher_db(with_cw2=False)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), ck3_mods=docs / 'mod')
+        self.assertIn('has not listed the CW2 mod yet', bridge.add_to_playset()['error'])
+        self.assertEqual(self.playset_rows(docs), [('m1', 1, 0), ('cw1', 1, 1)])
+
     # ---- CK3 encounter and roll ----
 
     def write_save(self, name='battle.ck3'):

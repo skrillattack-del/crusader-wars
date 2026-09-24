@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 import random
 import re
+import shutil
+import sqlite3
 import subprocess
 import sys
 from datetime import datetime
@@ -44,6 +46,8 @@ STEAM_CK3 = 'steam://rungameid/1158310'
 CW1_WORKSHOP_ID = '2977969008'  # Crusader Wars 'Ad Maiorem Gloriam' (Attila era)
 STEAM_CW1_PAGE = f'steam://url/CommunityFilePage/{CW1_WORKSHOP_ID}'
 CK3_MOD_FILE = 'cw2_ck3_bridge.mod'
+CK3_MOD_ID = f'mod/{CK3_MOD_FILE}'  # the Paradox launcher's gameRegistryId
+PARADOX_LAUNCHER = 'Paradox Launcher.exe'
 ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
 STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
                 'the rolled army above is what the next build stages.')
@@ -168,6 +172,7 @@ class Bridge:
                     'tk_running': self._process_running('Three_Kingdoms.exe'),
                     'probe_installed': (self.game / 'data' / probe.PACK_NAME).exists(),
                     'ck3_mod': (self.ck3_mods / CK3_MOD_FILE).is_file(),
+                    'in_playset': self._mod_in_playset(),
                     'mod_source': self.mod_source is not None,
                     'cw1_installed': self.cw1_dir.is_dir()
                                      or (self.ck3_mods / f'ugc_{CW1_WORKSHOP_ID}.mod').is_file(),
@@ -302,6 +307,83 @@ class Bridge:
             target = self.ck3_mods / CK3_MOD_FILE
             target.write_text(f'{descriptor}\npath="{self.mod_source.as_posix()}"\n', encoding='utf-8')
             return {'ok': True, 'mod_file': str(target)}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    @property
+    def _launcher_db(self):
+        return self.ck3_mods.parent / 'launcher-v2.sqlite'
+
+    def _mod_in_playset(self):
+        """True when the CW2 mod is enabled in the Paradox launcher's active playset (read-only)."""
+        if not self._launcher_db.is_file():
+            return False
+        try:
+            con = sqlite3.connect(f'file:{self._launcher_db.as_posix()}?mode=ro', uri=True)
+            try:
+                row = con.execute(
+                    'select pm.enabled from playsets_mods pm join mods m on m.id = pm.modId '
+                    'join playsets p on p.id = pm.playsetId where p.isActive = 1 and m.gameRegistryId = ?',
+                    (CK3_MOD_ID,)).fetchone()
+            finally:
+                con.close()
+            return bool(row and row[0])
+        except sqlite3.Error:
+            return False
+
+    def add_to_playset(self):
+        """Enable the CW2 mod last in the active playset and switch Crusader Wars 1 off.
+
+        Edits the Paradox launcher's database only while the launcher is closed, after a
+        timestamped backup, and mirrors the change into dlc_load.json. Nothing is deleted.
+        """
+        try:
+            if self._process_running(PARADOX_LAUNCHER):
+                raise ValueError('Close the Paradox launcher first; it rewrites playsets while open.')
+            db = self._launcher_db
+            if not db.is_file():
+                raise ValueError('The Paradox launcher database was not found. Open the Paradox launcher once, then try again.')
+            backups = self.base / 'backups'
+            backups.mkdir(parents=True, exist_ok=True)
+            backup = backups / f"launcher-v2-{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.sqlite"
+            shutil.copy2(db, backup)
+            con = sqlite3.connect(db)
+            try:
+                with con:
+                    playsets = con.execute('select id, name from playsets where isActive = 1').fetchall()
+                    if len(playsets) != 1:
+                        raise ValueError('Expected exactly one active playset in the Paradox launcher.')
+                    playset, playset_name = playsets[0]
+                    mod = con.execute('select id from mods where gameRegistryId = ?', (CK3_MOD_ID,)).fetchone()
+                    if mod is None:
+                        raise ValueError('The Paradox launcher has not listed the CW2 mod yet. '
+                                         'Open it once so it scans your mods, close it, then try again.')
+                    row = con.execute('select 1 from playsets_mods where playsetId = ? and modId = ?',
+                                      (playset, mod[0])).fetchone()
+                    if row:
+                        con.execute('update playsets_mods set enabled = 1 where playsetId = ? and modId = ?',
+                                    (playset, mod[0]))
+                    else:
+                        last = con.execute('select coalesce(max(position), -1) from playsets_mods where playsetId = ?',
+                                           (playset,)).fetchone()[0]
+                        con.execute('insert into playsets_mods (playsetId, modId, enabled, position) values (?, ?, 1, ?)',
+                                    (playset, mod[0], last + 1))
+                    cw1 = con.execute(
+                        'update playsets_mods set enabled = 0 where playsetId = ? and modId in '
+                        '(select id from mods where steamId = ? or gameRegistryId = ?)',
+                        (playset, CW1_WORKSHOP_ID, f'mod/ugc_{CW1_WORKSHOP_ID}.mod')).rowcount
+            finally:
+                con.close()
+            load = self.ck3_mods.parent / 'dlc_load.json'
+            data = json.loads(load.read_text(encoding='utf-8')) if load.is_file() else {}
+            enabled = [m for m in data.get('enabled_mods', [])
+                       if m not in (CK3_MOD_ID, f'mod/ugc_{CW1_WORKSHOP_ID}.mod')]
+            data['enabled_mods'] = enabled + [CK3_MOD_ID]
+            data.setdefault('disabled_dlcs', [])
+            tmp = load.with_suffix('.json.tmp')
+            tmp.write_text(json.dumps(data, separators=(',', ':')), encoding='utf-8')
+            os.replace(tmp, load)
+            return {'ok': True, 'playset': playset_name, 'cw1_disabled': cw1, 'backup': str(backup)}
         except Exception as exc:
             return {'error': str(exc)}
 

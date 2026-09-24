@@ -22,7 +22,7 @@ const winHandlers = {};
 global.window = global;
 global.addEventListener = (type, fn) => { winHandlers[type] = fn; };
 
-let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0;
+let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
 const side = (role, fighting, initial, armies, yours) => ({role, name: `${role} · army ${armies}`,
   army_ids: [armies], fighting, initial, yours});
 const battles = {
@@ -38,13 +38,14 @@ const general = (hero, units) => ({key: 'g', role: 'Commander', name: 'Captain 1
   men: hero ? 1 : 21, units});
 const api = {
   async get_health() { return {ok: true, ck3_running: false, tk_running: false, probe_installed: true,
-    ck3_mod: modInstalled, mod_source: true, cw1_installed: true,
+    ck3_mod: modInstalled, in_playset: inPlayset, mod_source: true, cw1_installed: true,
     paths: [{key: 'ck3_exe', label: 'Crusader Kings III', value: 'C:/ck3.exe', ok: true},
             {key: 'tk_exe', label: 'Three Kingdoms', value: 'C:/3k.exe', ok: true},
             {key: 'ck3_saves', label: 'CK3 save folder', value: 'C:/saves', ok: true},
             {key: 'rpfm_cli', label: 'RPFM command line', value: 'tools/rpfm/rpfm_cli.exe', ok: true}],
     gates: {ck3: true, probe: true}}; },
   async install_ck3_mod() { modInstalled = true; return {ok: true, mod_file: 'C:/mod/cw2_ck3_bridge.mod'}; },
+  async add_to_playset() { inPlayset = true; return {ok: true, playset: 'Initial playset', cw1_disabled: 1, backup: 'C:/dist/backups/x.sqlite'}; },
   async open_cw1_page() { cw1Pages += 1; return {ok: true}; },
   async launch_ck3() { ck3Launches += 1; return {ok: true}; },
   async get_encounter(save, id) { return encounter(id || '1728053261'); },
@@ -94,7 +95,9 @@ async function click(action, data = {}) {
   expect('Crusader Wars 1 is flagged with a Remove button', main().includes('Crusader Wars 1 is still installed') && main().includes('data-action="removeCw1"'));
   expect('file paths are tucked away', main().includes('<details class="more"><summary>File locations</summary>'));
   await click('installMod');
-  expect('Install registers the CK3 mod', main().includes('The CW2 battle button is installed in CK3') && log().includes('CK3 mod registered'));
+  expect('Install registers the CK3 mod, then offers Add to playset', main().includes('not in your CK3 playset') && main().includes('data-action="addToPlayset"') && log().includes('CK3 mod registered'));
+  await click('addToPlayset');
+  expect('Add to playset finishes the CK3 setup', main().includes('installed and in your CK3 playset') && log().includes('added to playset "Initial playset"'));
   await click('removeCw1');
   expect('Remove opens the Workshop page with an Unsubscribe hint', cw1Pages === 1 && main().includes('Unsubscribe'));
   await click('launchCk3');

@@ -306,10 +306,13 @@ const V={
     const items=[
       check(ok("ck3_exe")?"":"bad", ok("ck3_exe")?"Crusader Kings III is installed":"Crusader Kings III was not found"),
       check(ok("tk_exe")?"":"bad", ok("tk_exe")?"Three Kingdoms is installed":"Three Kingdoms was not found"),
-      h.ck3_mod
-        ? check("", "The CW2 battle button is installed in CK3")
-        : check("bad", "The CW2 battle button is not installed in CK3",
-            h.mod_source?`<button class="btn-quiet btn-sm" data-action="installMod" ${S.busy?"disabled":""}>Install</button>`:`<span class="muted">mod files missing</span>`),
+      !h.ck3_mod
+        ? check("bad", "The CW2 battle button is not installed in CK3",
+            h.mod_source?`<button class="btn-quiet btn-sm" data-action="installMod" ${S.busy?"disabled":""}>Install</button>`:`<span class="muted">mod files missing</span>`)
+        : h.in_playset
+          ? check("", "The CW2 battle button is installed and in your CK3 playset")
+          : check("bad", "The CW2 battle button is installed but not in your CK3 playset. Close the Paradox launcher, then add it.",
+              `<button class="btn-quiet btn-sm" data-action="addToPlayset" ${S.busy?"disabled":""}>Add to playset</button>`),
       h.cw1_installed
         ? check("warn", "Crusader Wars 1 is still installed. It replaces the same CK3 battle window, so the CW2 button won't show while it's on.",
             `<button class="btn-quiet btn-sm" data-action="removeCw1">Remove it</button>`)
@@ -322,7 +325,7 @@ const V={
     ${h.tk_running?`<p class="notice" style="margin-top:16px">Three Kingdoms is running. Close it before sending a battle.</p>`:""}
     <section class="panel" style="margin-top:16px"><h3 class="panel-title">How a battle starts</h3>
       <ol class="howto">
-        <li>In the Paradox launcher, add <b>Crusader Wars 2: CK3 Bridge</b> to your playset.</li>
+        <li>Get every line above ready. <b>Add to playset</b> puts the CW2 mod last in your active playset for you.</li>
         <li>Play CK3. When your armies meet, open the battle and press the <b>crossed swords</b>. The game pauses and saves.</li>
         <li>Come back here and press <b>Find my battle</b>.</li>
       </ol></section>
@@ -440,6 +443,12 @@ const A={
     catch(e){S.error=fail(e);} render();},
   async installMod(){S.busy=true; S.error=null; render();
     try{const r=await call("install_ck3_mod"); log(`CK3 mod registered: ${r.mod_file}`); await A.recheck();}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();},
+  async addToPlayset(){S.busy=true; S.error=null; render();
+    try{const r=await call("add_to_playset");
+      log(`added to playset "${r.playset}"${r.cw1_disabled?", Crusader Wars 1 switched off":""}; backup: ${r.backup}`);
+      await A.recheck();}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
   async removeCw1(){S.error=null;
