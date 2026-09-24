@@ -1,0 +1,104 @@
+clear_log = {
+    effect = {
+        debug_log = "CW2_BRIDGE"
+    }
+    
+}
+
+CW2_MainParticipants = {
+    effect = {
+        root = {
+            debug_log = "PLAYER_CHARACTER:[GetPlayer.GetID]"
+            debug_log = "LEFT_MAIN_PARTICIPANT:[THIS.Char.GetID]"
+        }
+        
+        scope:rightLeader = { 
+            debug_log = "RIGHT_MAIN_PARTICIPANT:[THIS.Char.GetID]" 
+        }
+
+        scope:leftCommander = {
+            debug_log = "LEFT_COMMANDER:[THIS.Char.GetID]" 
+        }
+
+        scope:rightCommander = {
+            debug_log = "RIGHT_COMMANDER:[THIS.Char.GetID]" 
+        }
+
+        if = {
+            limit = { scope:playerSide = yes }
+              debug_log = "PLAYER_SIDE:Attacker"
+        }
+        else = {
+              debug_log = "PLAYER_SIDE:Defender"
+        }
+
+    }
+}
+
+CW2_Armies = {
+    effect = {
+        root = {
+            every_army_in_location = {
+                debug_log = "ID:[THIS.Army.GetArmyId]|||NAME:[THIS.Army.GetNameNoTooltip]|||OWNER_ID:[THIS.Army.GetOwner.GetID]|||OWNER_CULTURE_ID:[THIS.Army.GetOwner.GetCulture.GetID]|||OWNER_PRIMARY_TITLE_NAME:[THIS.Army.GetOwner.GetPrimaryTitle.GetNameNoTooltip]|||COMMANDER_NAME:[THIS.Army.GetCommander.GetNameNoTooltip]|||OWNER_KNIGHT_EFFECTIVENESS:[THIS.Army.GetOwner.GetKnightEffectiveness]" 
+            }
+        }
+    }
+}
+
+# DIAGNOSTIC (temporary — remove after the culture test): the DBG_* fields below compare
+# culture accessors so we can see which one yields the character's TRUE culture in-game.
+# DBG_CULT_Char     = current accessor (THIS.Char.GetCulture) — readable name
+# DBG_CULT_GetCharacter = candidate accessor (THIS.GetCharacter.GetCulture) — matches cw_scripted_effect helper
+# DBG_LIEGE_CULT    = the character's liege culture (should be the realm culture)
+# The C# parser reads only known field prefixes, so these extra fields are ignored by it.
+CW2_Defender_Characters = {
+    effect = {
+        combat_defender = {
+            every_side_commander = {
+                debug_log = "ID:[THIS.Char.GetID]|||NAME:[THIS.Char.GetNameNoTooltip]|||CULTURE_ID:[THIS.Char.GetCulture.GetID]|||PROWESS:[THIS.Char.GetProwess]|||MARTIAL:[THIS.Char.GetSkill( 'martial' )]|||OWNER_ID:[THIS.Char.GetLiege.GetID]|||TYPE:Commander|||FEUDAL_RANK:[THIS.Char.GetPrimaryTitle.GetTierFrame]|||PRIMARY_TITLE:[THIS.Char.GetPrimaryTitle.GetKey]|||PRIMARY_TITLE_NAME:[THIS.Char.GetPrimaryTitle.GetNameNoTooltip]|||DBG_CULT_Char:[THIS.Char.GetCulture.GetNameNoTooltip]|||DBG_CULT_GetCharacter:[THIS.GetCharacter.GetCulture.GetNameNoTooltip]|||DBG_LIEGE_CULT:[THIS.Char.GetLiege.GetCulture.GetNameNoTooltip]"
+            }
+            every_side_knight = {
+                debug_log = "ID:[THIS.Char.GetID]|||NAME:[THIS.Char.GetNameNoTooltip]|||CULTURE_ID:[THIS.Char.GetCulture.GetID]|||PROWESS:[THIS.Char.GetProwess]|||MARTIAL:[THIS.Char.GetSkill( 'martial' )]|||OWNER_ID:[THIS.Char.GetLiege.GetID]|||TYPE:Knight|||FEUDAL_RANK:[THIS.Char.GetPrimaryTitle.GetTierFrame]|||PRIMARY_TITLE:[THIS.Char.GetPrimaryTitle.GetKey]|||PRIMARY_TITLE_NAME:[THIS.Char.GetPrimaryTitle.GetNameNoTooltip]|||DBG_CULT_Char:[THIS.Char.GetCulture.GetNameNoTooltip]|||DBG_CULT_GetCharacter:[THIS.GetCharacter.GetCulture.GetNameNoTooltip]|||DBG_LIEGE_CULT:[THIS.Char.GetLiege.GetCulture.GetNameNoTooltip]"
+            }  
+        }
+    }
+}
+
+CW2_Attacker_Characters = {
+    effect = {
+        combat_attacker = {
+            every_side_commander = {
+                debug_log = "ID:[THIS.Char.GetID]|||NAME:[THIS.Char.GetNameNoTooltip]|||CULTURE_ID:[THIS.Char.GetCulture.GetID]|||PROWESS:[THIS.Char.GetProwess]|||MARTIAL:[THIS.Char.GetSkill( 'martial' )]|||OWNER_ID:[THIS.Char.GetLiege.GetID]|||TYPE:Commander|||FEUDAL_RANK:[THIS.Char.GetPrimaryTitle.GetTierFrame]|||PRIMARY_TITLE:[THIS.Char.GetPrimaryTitle.GetKey]|||PRIMARY_TITLE_NAME:[THIS.Char.GetPrimaryTitle.GetNameNoTooltip]|||DBG_CULT_Char:[THIS.Char.GetCulture.GetNameNoTooltip]|||DBG_CULT_GetCharacter:[THIS.GetCharacter.GetCulture.GetNameNoTooltip]|||DBG_LIEGE_CULT:[THIS.Char.GetLiege.GetCulture.GetNameNoTooltip]"
+            }
+            every_side_knight = {
+                debug_log = "ID:[THIS.Char.GetID]|||NAME:[THIS.Char.GetNameNoTooltip]|||CULTURE_ID:[THIS.Char.GetCulture.GetID]|||PROWESS:[THIS.Char.GetProwess]|||MARTIAL:[THIS.Char.GetSkill( 'martial' )]|||OWNER_ID:[THIS.Char.GetLiege.GetID]|||TYPE:Knight|||FEUDAL_RANK:[THIS.Char.GetPrimaryTitle.GetTierFrame]|||PRIMARY_TITLE:[THIS.Char.GetPrimaryTitle.GetKey]|||PRIMARY_TITLE_NAME:[THIS.Char.GetPrimaryTitle.GetNameNoTooltip]|||DBG_CULT_Char:[THIS.Char.GetCulture.GetNameNoTooltip]|||DBG_CULT_GetCharacter:[THIS.GetCharacter.GetCulture.GetNameNoTooltip]|||DBG_LIEGE_CULT:[THIS.Char.GetLiege.GetCulture.GetNameNoTooltip]"
+            }  
+        }
+    }
+}
+
+CW2_Battle = {
+    effect = {
+        debug_log = "BATTLE_NAME:[THIS.Combat.GetName]"
+        debug_log = "YEAR:[GetCurrentDate.GetYear]"
+        debug_log = "MONTH:[GetCurrentDate.GetMonthOfYear]"
+    }
+}
+
+CW2_Terrain = {
+    effect = {
+        debug_log = "REGION:[THIS.Combat.GetProvince.Custom('GetProvinceRegion')]"
+        debug_log = "TERRAIN:[THIS.Combat.GetProvince.GetTerrain.GetName]"
+        debug_log = "WINTER:[THIS.Combat.GetProvince.GetWinterSeverityName]"
+        debug_log = "PROVINCE_ID:[THIS.Combat.GetProvince.GetID]"
+        debug_log = "SPECIAL_BUILDING:[THIS.Combat.GetProvince.GetHolding.GetSpecialBuildingType.GetKey]"
+    }
+}
+
+
+CW2_Keyword = {
+    effect = {
+        debug_log = "CW2_BRIDGE"
+    }
+}
+
