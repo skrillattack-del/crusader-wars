@@ -166,7 +166,10 @@ const V={
   },
   return(){
     const d=S.diff;
-    if(!d) return `<h2>Write back to your save</h2>${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Planning mutations...</p>`}`;
+    if(!d) return `<h2>Write back to your save</h2>
+      ${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Checking the G2 write-back gate...</p>`}
+      <p class="lede">Your Three Kingdoms result remains recorded. CK3 save mutation stays disabled until reload and time-advance verification passes.</p>
+      <div class="actions"><button class="btn-primary" data-action="restart">Start a new battle</button></div>`;
     const cas=d.casualties;
     const diff_table=d.changes.length?`<div class="panel" style="margin-top:16px"><table class="diff">
       <thead><tr><th>Path</th><th class="num">Before</th><th class="num">After</th></tr></thead>

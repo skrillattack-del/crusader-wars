@@ -314,8 +314,14 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(result['was_installed'])
         self.assertIsNone(result['run'])
 
-    # ---- not integrated ----
+    # ---- write-back safety gate ----
 
+    def test_writeback_is_disabled_until_g2_is_verified(self):
+        preview = self.bridge.preview_writeback()
+        apply = self.bridge.apply_writeback()
+        self.assertIn('disabled', preview['error'])
+        self.assertIn('disabled', apply['error'])
+        self.assertFalse(list(self.root.rglob('CW2_*_AFTER.ck3')))
 
 
     # ---- session and assets ----

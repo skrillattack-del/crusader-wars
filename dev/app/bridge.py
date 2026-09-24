@@ -425,125 +425,16 @@ class Bridge:
         return max(dirs, key=lambda d: d.stat().st_mtime)
 
     def preview_writeback(self):
-        """Build ck3_casualties, generate a synthetic_result structure, and plan mutations."""
-        run_dir = self._get_run_dir()
-        if not run_dir:
-            return {'error': 'No run found.'}
-        
-        obs_path = run_dir / 'observed_result.json'
-        if not obs_path.exists():
-            return {'error': 'No observed result found.'}
-        obs = json.loads(obs_path.read_text(encoding='utf-8'))
-        
-        from result_to_ck3 import ck3_casualties
-        
-        # We need the original CK3 side info from the encounter
-        if not self._encounter:
-            return {'error': 'No encounter loaded.'}
-            
-        encounter = self._encounter
-        
-        # Build the side data for ck3_casualties
-        # It expects {'attacker': ck3_men, 'defender': ck3_men}
-        # And {'attacker': (staged_initial, staged_survivors), ...}
-        ck3_men = {s['role'].lower(): s['fighting'] for s in encounter['sides']}
-        
-        staged = {}
-        for s in obs['units']:
-            side_key = 'attacker' if s['alliance'] == 1 else 'defender'
-            if side_key not in staged:
-                staged[side_key] = [0, 0]
-            staged[side_key][0] += s['initial']
-            staged[side_key][1] += s['survivors']
-            
-        staged_tuples = {k: (v[0], v[1]) for k, v in staged.items()}
-        winner = obs.get('winner')
-        
-        casualties = ck3_casualties(ck3_men, staged_tuples, winner)
-        
-        # Create a synthetic result for apply.py
-        synthetic_result = {
-            'result_id': obs['run_id'],
-            'battle_id': encounter['combat_id'],
-            'sides': {
-                'attacker': {'synthetic_casualties': casualties.get('attacker', {}).get('dead', 0)},
-                'defender': {'synthetic_casualties': casualties.get('defender', {}).get('dead', 0)}
-            }
+        return {
+            'error': ('CK3 write-back is disabled until G2 verifies save fingerprints, exact '
+                      'casualty conservation, duplicate rejection, and reload persistence.')
         }
-        
-        # Save synthetic_result to run folder for apply.py to use
-        (run_dir / 'synthetic_result.json').write_text(json.dumps(synthetic_result, indent=2))
-        
-        try:
-            import apply
-            import preflight
-            before_path = encounter['save']
-            gamestate_text, kind = preflight.read_gamestate(before_path)
-            
-            # Write linked_records.json using preflight logic if it's missing
-            linked_records_path = run_dir / 'linked_records.json'
-            if not linked_records_path.exists():
-                _, linked_records = preflight.intake(before_path, encounter['combat_id'])
-                linked_records_path.write_text(json.dumps(linked_records, indent=2))
-            else:
-                linked_records = json.loads(linked_records_path.read_text(encoding='utf-8'))
-                
-            changes = apply.plan_mutations(gamestate_text, synthetic_result, linked_records)
-            self._cached_changes = changes
-            self._cached_gamestate = gamestate_text
-            self._cached_kind = kind
-            self._cached_run_dir = run_dir
-            
-            return {
-                'casualties': casualties,
-                'changes': [{'path': c.path, 'before': c.before, 'after': c.after} for c in changes]
-            }
-        except Exception as e:
-            return {'error': str(e)}
 
     def apply_writeback(self):
-        if not hasattr(self, '_cached_changes'):
-            return {'error': 'Must preview writeback first.'}
-            
-        try:
-            import apply
-            import zipfile
-            import json
-            
-            new_gamestate = apply.apply_mutations(self._cached_gamestate, self._cached_changes)
-            
-            out_name = f"CW2_{self._encounter['combat_id']}_AFTER.ck3"
-            save_dir = Path(self._encounter['save']).parent
-            final_out_path = save_dir / out_name
-            tmp_out_path = self._cached_run_dir / 'tmp.ck3'
-            
-            if final_out_path.exists():
-                return {'error': f'Output file {out_name} already exists.'}
-            
-            if self._cached_kind == 'zip':
-                with zipfile.ZipFile(tmp_out_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-                    zf.writestr('gamestate', new_gamestate.encode('utf-8'))
-            else:
-                tmp_out_path.write_bytes(new_gamestate.encode('utf-8'))
-                
-            tmp_out_path.replace(final_out_path)
-            
-            # Seal journal
-            journal_path = self._cached_run_dir / 'journal.json'
-            journal = {}
-            if journal_path.exists():
-                journal = json.loads(journal_path.read_text(encoding='utf-8'))
-            synthetic_result = json.loads((self._cached_run_dir / 'synthetic_result.json').read_text())
-            
-            journal[synthetic_result['result_id']] = {
-                'battle_id': synthetic_result['battle_id'],
-                'status': 'applied'
-            }
-            journal_path.write_text(json.dumps(journal, indent=2))
-            
-            return {'status': 'success', 'after_save': str(final_out_path)}
-        except Exception as e:
-            return {'error': str(e)}
+        return {
+            'error': ('CK3 write-back is disabled until a generated save has passed the G2 '
+                      'reload and time-advance acceptance test.')
+        }
 
 
 

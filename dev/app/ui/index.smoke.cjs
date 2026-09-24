@@ -74,13 +74,10 @@ const api = {
     return {ok: true, winner: 0, player_side: 0, player_outcome: 'victory', result_source: 'routing_state',
       note: 'derived from unit state at Complete', battle: 'b', run_id: 'r', sides: resultSides}; },
   async remove_probe() { return {ok: true, removed: 'cw2_g1_probe.pack', was_installed: true, run: 'C:/runs/x'}; },
-  async preview_writeback() { 
-    return {
-      casualties: {attacker: {dead: 150}, defender: {dead: 300}},
-      changes: [{path: 'combats › 2717908992 › attacker', before: 500, after: 350}]
-    }; 
+  async preview_writeback() {
+    return {error: 'CK3 write-back is disabled until G2 reload persistence is verified.'};
   },
-  async apply_writeback() { return {status: 'success', after_save: 'C:/saves/CW2_2717908992_AFTER.ck3'}; }
+  async apply_writeback() { return {error: 'CK3 write-back is disabled.'}; }
 };
 window.pywebview = {api};
 vm.runInThisContext(match[1]);
@@ -139,9 +136,8 @@ async function click(action, data = {}) {
   await click('removeProbe');
   expect('probe removal is confirmed', main().includes('Probe pack removed') && log().includes('removed cw2_g1_probe.pack'));
   await click('toReturn');
-  expect('preview writeback calculates casualties and plans mutations', main().includes('150') && main().includes('300') && main().includes('combats › 2717908992 › attacker'));
-  await click('applyWriteback');
-  expect('apply writeback seals the tally and writes the save', log().includes('writeback applied: C:/saves/CW2_2717908992_AFTER.ck3') && document.getElementById('seal').classList.contains('on') === true);
+  expect('writeback gate explains why CK3 mutation is disabled', main().includes('write-back is disabled') && main().includes('reload and time-advance'));
+  expect('writeback gate does not claim the result is sealed', !document.getElementById('stepline').innerHTML.includes('Sealed.'));
   await click('restart');
   expect('restart returns to CK3', main().includes('Start in Crusader Kings III') && !main().includes('Roll armies'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
