@@ -67,6 +67,21 @@ class ResultValidationTests(unittest.TestCase):
         self.write([self.start, self.final])
         with self.assertRaisesRegex(ValueError, 'undetermined'): probe.read_result(self.root)
 
+    def test_routing_defeat_names_the_enemy_winner(self):
+        self.final.update(player_won=False, result_source='routing_state')
+        self.write([self.start, self.final])
+        self.assertEqual(probe.read_result(self.root)['winner'], 'defender')
+
+    def test_player_side_comes_from_the_manifest(self):
+        # CW2 seats a defending CK3 player in alliance 1, as at Kasr al-Kabir.
+        manifest = json.loads((self.root / 'run.json').read_text())
+        for unit in manifest['expected_units']:
+            unit['side'] = 'defender' if unit['alliance'] == 1 else 'attacker'
+        (self.root / 'run.json').write_text(json.dumps(manifest))
+        self.write([self.start, self.final])
+        result = probe.read_result(self.root)
+        self.assertEqual((result['player_side'], result['winner']), ('defender', 'defender'))
+
     def test_late_engine_result_is_cross_checked(self):
         late = copy.deepcopy(self.final)
         late['phase'] = 'engine_result'

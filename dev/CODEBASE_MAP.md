@@ -49,6 +49,15 @@ The probe uses installed 3K XML as its source, not an assumed Attila format.
   [test_lua.py](spikes/g1_3k_io/test_lua.py): negative result validation and
   Lua 5.1 mock-runtime checks. [Live runbook](spikes/g1_3k_io/RUNBOOK.md).
 
+## Battle math (pure, no game needed)
+
+- [battle_math/](battle_math/): [scale.py](battle_math/scale.py) stages both
+  sides at one shared scale (1 : 1 up to 1,503 men a side, fewest generals,
+  trim to exact strength); [result_to_ck3.py](battle_math/result_to_ck3.py)
+  carries 3K casualty rates back to CK3 men per side. Regiment splits stay in
+  the G2 patcher. Rule and examples:
+  [bridge blueprint](../docs/design/cw2_bridge_blueprint.html#army).
+
 ## Planned production ownership (G1 probe is separate)
 
 G2 now has [save intake and synthetic-result preflight](spikes/g2_ck3_writeback/patcher/preflight.py).

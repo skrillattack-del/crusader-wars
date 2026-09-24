@@ -181,14 +181,23 @@ def read_result(output):
     if late and (len(late) > 1 or late[0].get('player_won') != won
                  or late[0].get('battle') != manifest['entry']):
         raise ValueError('Late engine result contradicts the recorded outcome.')
-    # The engine reports a bool, not a draw enum. Preserve that limitation.
-    limitation = 'Non-victory does not distinguish defeat, draw or abandonment.'
+    # The historical slot seats the player in alliance 1; the manifest says which side that is.
+    side_of = {1: 'attacker', 2: 'defender'}
+    side_of.update({u['alliance']: u['side'] for u in manifest['expected_units'] if 'side' in u})
+    player, enemy = side_of[1], side_of[2]
     if source == 'routing_state':
-        limitation += ' Outcome derived from unit state at Complete (every unit of one side routing or dead), not the Battle Results command.'
+        # Non-victory here means the player's side was the one fully broken.
+        limitation = 'Outcome derived from unit state at Complete (every unit of one side routing or dead), not the Battle Results command.'
+        winner = player if won else enemy
+    else:
+        # The engine reports a bool, not a draw enum. Preserve that limitation.
+        limitation = 'Non-victory does not distinguish defeat, draw or abandonment.'
+        winner = player if won else None
     result = {'kind': 'g1_observation_not_ck3_result', 'run_id': manifest['run_id'],
               'battle': manifest['entry'],
+              'player_side': player,
               'player_outcome': 'victory' if won else 'non_victory',
-              'winner': 'attacker' if won else None,
+              'winner': winner,
               'result_source': source,
               'limitation': limitation,
               'units': finals[0]['units']}

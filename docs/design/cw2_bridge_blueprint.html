@@ -114,7 +114,7 @@ pre .k{color:var(--verd)} pre .s{color:#d9c79b} pre .c{color:var(--bone3)}
 .shot{margin:0 0 26px;display:grid;gap:10px;min-width:0}
 .shot figcaption{font-size:14px;color:var(--bone2);max-width:74ch}
 .shot figcaption b{color:var(--bone)}
-.step{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bronze);margin-right:6px}
+.step{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bronze);margin-right:2px}
 .stage{background:#0b1313;border:1px solid var(--rule);border-radius:8px;padding:22px 18px;min-width:0}
 .pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
 @media (max-width:820px){.pair{grid-template-columns:1fr}}
@@ -218,7 +218,7 @@ pre .k{color:var(--verd)} pre .s{color:#d9c79b} pre .c{color:var(--bone3)}
 .card.focus{outline:2px solid #e2bf6e;outline-offset:1px}
 .card svg{width:22px;height:22px}
 .card em{position:absolute;right:3px;bottom:1px;font-style:normal;font-size:11px;font-weight:600;color:#fff}
-.card small{position:absolute;left:3px;top:0;font-size:10px;color:#9fd29f;font-weight:600}
+.card[data-rank]::before{content:attr(data-rank);position:absolute;left:3px;top:0;font-size:10px;color:#9fd29f;font-weight:600}
 .card-tip{position:absolute;left:52px;bottom:calc(100% + 10px);width:min(250px,64vw);background:#0b0b0b;border:1px solid #6d6653;color:#fff;padding:8px 10px;display:grid;gap:2px;font-size:12.5px;line-height:1.35;z-index:2}
 .card-tip b{font-size:13.5px;text-transform:uppercase;letter-spacing:.03em}
 .card-tip span{color:#d8d2c4}
@@ -296,7 +296,7 @@ footer code{font-size:12px}
   <dl class="rules">
     <dt>Measure</dt><dd>Take fighting men <code>F</code> per side from the CK3 battle record at export. Kasr al-Kabir: <strong>340.10</strong> attacking, <strong>421.48</strong> defending (of 571 and 528 at the start).</dd>
     <dt>Shrink</dt><dd><code>s = min(1, 1503 ÷ F_att, 1503 ÷ F_def)</code>. Both sides use the same <code>s</code>, so the odds survive. Below 1,503 men a side, nothing shrinks.</dd>
-    <dt>Fill</dt><dd>Target <code>T = round(F × s)</code>. Add a general for every six units needed: commander first, then the highest-prowess knights, three at most. Units <code>n = ceil((T − 21g) ÷ 80)</code>. Trim the surplus (under 80 men) at deployment with <code>unit:kill_number_of_men</code>. The game's own battle library calls it (<code>lib_battle_script_unit.lua:1334</code>); we haven't tested it.</dd>
+    <dt>Fill</dt><dd>Target <code>T = round(F × s)</code>. Use the fewest generals whose retinues (six units each) can hold the side: commander first, then the highest-prowess knights, three at most. Units <code>n = ceil((T − 21g) ÷ 80)</code>. Trim the surplus (under 80 men) at deployment with <code>unit:kill_number_of_men</code>. The game's own battle library calls it (<code>lib_battle_script_unit.lua:1334</code>); we haven't tested it.</dd>
     <dt>Return</dt><dd>CK3 dead per side = <code>round(F × lost ÷ started)</code>. The <strong>casualty rate</strong> crosses, not the head count. <code>started</code> is the count logged at battle start, not the planned one, because unit size follows the player's graphics setting. Split the total across regiments by current strength with largest-remainder rounding so the side's total is exact (G2 chunk attribution).</dd>
     <dt>Resolve</dt><dd><strong>Proposal for Defect 6.</strong> The loser's surviving 3K men were routing. Record them as CK3 soft casualties so the loser has no fighting men left and CK3 ends the battle for the 3K winner. Test this on the G2 fixture before building on it.</dd>
   </dl>
@@ -318,8 +318,8 @@ footer code{font-size:12px}
       <label for="sd">Defender survivors in 3K<input id="sd" type="number" min="0" step="1" value="356"></label>
     </div>
     <div class="sides">
-      <div class="sidecard"><h4>Attacker</h4><div class="big" id="o-am">340<small>3K men</small></div><div class="deck" id="o-adeck" aria-hidden="true"></div><div class="kv" id="o-akv"></div></div>
-      <div class="sidecard"><h4>Defender</h4><div class="big" id="o-dm">421<small>3K men</small></div><div class="deck" id="o-ddeck" aria-hidden="true"></div><div class="kv" id="o-dkv"></div></div>
+      <div class="sidecard"><h4>Attacker</h4><div class="big" id="o-am">340<small>men in 3K</small></div><div class="deck" id="o-adeck" aria-hidden="true"></div><div class="kv" id="o-akv"></div></div>
+      <div class="sidecard"><h4>Defender</h4><div class="big" id="o-dm">421<small>men in 3K</small></div><div class="deck" id="o-ddeck" aria-hidden="true"></div><div class="kv" id="o-dkv"></div></div>
     </div>
     <div class="summary" id="o-sum" aria-live="polite"></div>
   </div>
@@ -419,7 +419,7 @@ footer code{font-size:12px}
         <div class="ck3-bar" aria-hidden="true"><i></i></div>
       </div>
     </div>
-    <figcaption><span class="step">Step 1 of 6</span><b>Battle window.</b> Same place and gate as CW1's button in <code>gui/window_combat.gui</code>: until the player's side takes its first casualties the tooltip reads “Wait just a few more days…”. Composition comes from CW1's log of this battle; the counts come from the save.</figcaption>
+    <figcaption><span class="step">Step 1 of 6</span> <b>Battle window.</b> Same place and gate as CW1's button in <code>gui/window_combat.gui</code>: until the player's side takes its first casualties the tooltip reads “Wait just a few more days…”. Composition comes from CW1's log of this battle; the counts come from the save.</figcaption>
   </figure>
 
   <div class="pair">
@@ -431,7 +431,7 @@ footer code{font-size:12px}
           <ul class="ck3-menu"><li class="off">Resume</li><li>Save Game</li><li class="hl">Load Game</li><li>Settings</li><li>Exit to Main Menu</li></ul>
         </div>
       </div>
-      <figcaption><span class="step">Step 2 of 6</span><b>Pause menu.</b> CW1's chain already ends in the pause menu and a save. The note is static text, so the CK3 mod needs no link to the launcher. The AFTER save is a new file, so CK3 can stay open.</figcaption>
+      <figcaption><span class="step">Step 2 of 6</span> <b>Pause menu.</b> CW1's chain already ends in the pause menu and a save. The note is static text, so the CK3 mod needs no link to the launcher. The AFTER save is a new file, so CK3 can stay open.</figcaption>
     </figure>
     <figure class="shot">
       <div class="stage">
@@ -441,7 +441,7 @@ footer code{font-size:12px}
           <div class="ck3-option">The field is ours</div>
         </div>
       </div>
-      <figcaption><span class="step">Step 6 of 6</span><b>After loading the AFTER save.</b> This comes last: it can only fire once Defect 6 makes CK3 end the battle, from a combat-end hook that reads a CW2 flag written into the save. Unverified.</figcaption>
+      <figcaption><span class="step">Step 6 of 6</span> <b>After loading the AFTER save.</b> This comes last: it can only fire once Defect 6 makes CK3 end the battle, from a combat-end hook that reads a CW2 flag written into the save. Unverified.</figcaption>
     </figure>
   </div>
   <ul class="notes">
@@ -500,7 +500,7 @@ footer code{font-size:12px}
         </div>
       </div>
     </div>
-    <figcaption><span class="step">Step 3 of 6</span><b>Pending battle.</b> The same native screen the Historical Battles tab uses, with the tab row hidden, the text replaced through a localisation override (G3a), and the screen opened by a frontend script (G3b). None of these three is tested yet. Flags read 守 “defend” and 攻 “attack”.</figcaption>
+    <figcaption><span class="step">Step 3 of 6</span> <b>Pending battle.</b> The same native screen the Historical Battles tab uses, with the tab row hidden, the text replaced through a localisation override (G3a), and the screen opened by a frontend script (G3b). None of these three is tested yet. Flags read 守 “defend” and 攻 “attack”.</figcaption>
   </figure>
 
   <div class="pair">
@@ -513,16 +513,16 @@ footer code{font-size:12px}
             <div class="tk-cards">
               <div class="card-tip"><b>Ji Militia · 80</b><span>From CK3: Kru levies, melee card 1 of 3</span><span>Scale 1 : 1 · trimmed 0</span></div>
               <div class="card gen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l2.4 5.6L18 10l-5.6 2.4L10 18l-2.4-5.6L2 10l5.6-2.4Z" fill="#e2bf6e"/></svg><em>21</em></div>
-              <div class="card focus"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
-              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
-              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
-              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
-              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
+              <div class="card focus" data-rank="1"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card" data-rank="1"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card" data-rank="1"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card" data-rank="1"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
+              <div class="card" data-rank="1"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
             </div>
           </div>
         </div>
       </div>
-      <figcaption><span class="step">Step 4 of 6</span><b>Deployment.</b> Native HUD, native unit cards (Ji Militia and Archer Militia are the two keys G1 has proven). What's new is provenance: each card knows which CK3 regiment it stands for, recorded in the manifest.</figcaption>
+      <figcaption><span class="step">Step 4 of 6</span> <b>Deployment.</b> Native HUD, native unit cards (Ji Militia and Archer Militia are the two keys G1 has proven). What's new is provenance: each card knows which CK3 regiment it stands for, recorded in the manifest.</figcaption>
     </figure>
     <figure class="shot">
       <div class="stage">
@@ -534,7 +534,7 @@ footer code{font-size:12px}
           </div>
         </div>
       </div>
-      <figcaption><span class="step">Step 5 of 6</span><b>Result.</b> Native screen with Rematch locked (G3c): a rematch adds a second start line to the log, and the reader rejects the run. That already happened once, in G1 run 2.</figcaption>
+      <figcaption><span class="step">Step 5 of 6</span> <b>Result.</b> Native screen with Rematch locked (G3c): a rematch adds a second start line to the log, and the reader rejects the run. That already happened once, in G1 run 2.</figcaption>
     </figure>
   </div>
 
@@ -575,7 +575,7 @@ footer code{font-size:12px}
     <table>
       <thead><tr><th>Track</th><th>Needs</th><th>Next action</th><th>Done when</th></tr></thead>
       <tbody>
-        <tr><td><b>A · Bridge math</b></td><td>Nothing</td><td>Write <code>scale.py</code> and <code>result_to_ck3.py</code> as pure functions. Make <code>read_result</code> report the CK3 winner through the side map; it currently assumes the player attacked.</td><td>Tests reproduce both examples on this page and the 71 / 175 check</td></tr>
+        <tr><td><b>A · Bridge math</b></td><td>Nothing</td><td><span class="pill ok">Done</span> <code>dev/battle_math/</code> holds <code>scale.py</code> and <code>result_to_ck3.py</code>. <code>read_result</code> now reports <code>player_side</code> and names the winner through the manifest's side map.</td><td>Met: 8 tests reproduce both examples and the 71 / 175 check</td></tr>
         <tr><td><b>B · One 3K session</b></td><td>3K, rebuilt probe exe</td><td>Close G1: one Xingyang run, then Read result. Then one test pack covering G3a–e: localisation reskin, frontend opener, locked rematch, a 21-card army with generated positions across retinues 0–2, and trimming to exact men.</td><td>A 21 v 14 battle logs trimmed start counts and a result on a screen showing CK3 names</td></tr>
         <tr><td><b>C · One CK3 session</b></td><td>CK3, run-002 fixture</td><td>G2 reload proof on the AFTER save. Then Defect 6: record the loser's routing men as soft casualties.</td><td>CK3 ends the battle for the patched winner, and replaying the result is rejected</td></tr>
         <tr><td><b>D · Screens</b></td><td>A; results from B and C</td><td>Launcher per <code>FRONTEND_DESIGN.md</code> with the fixes below. Build the CK3 Swords button after C passes.</td><td>One click-through from the CK3 button to a loaded AFTER save</td></tr>
@@ -619,15 +619,18 @@ footer code{font-size:12px}
   };
 
   // Staging rule: shared scale, generals added per six units, units rounded up then trimmed.
+  // Mirrors dev/battle_math/scale.py: fewest generals whose six-unit retinues hold the side.
   function side(F, s, G, U) {
-    var T = Math.max(1, Math.round(F * s));
-    var need = Math.max(1, Math.ceil((T - G) / U));
-    var g = Math.min(3, Math.max(1, Math.ceil(need / 6)));
-    var n = Math.min(6 * g, Math.max(1, Math.ceil((T - g * G) / U)));
-    var full = g * G + n * U;
-    var trim = Math.max(0, full - T);
-    var nr = Math.min(6 * g, Math.max(1, Math.round((F * s - g * G) / U)));
-    return { T: T, g: g, n: n, men: full - trim, trim: trim, rounded: g * G + nr * U, small: T < G + 20 };
+    var T = Math.floor(F * s + 0.5);
+    if (T <= G) return { small: true };
+    var g, n;
+    for (g = 1; g <= 3; g++) {
+      n = Math.max(1, Math.ceil((T - g * G) / U));
+      if (n <= 6 * g) break;
+    }
+    if (g > 3) { g = 3; n = 18; }
+    var nr = Math.min(6 * g, Math.max(1, Math.floor((F * s - g * G) / U + 0.5)));
+    return { g: g, n: n, men: T, trim: g * G + n * U - T, rounded: g * G + nr * U, small: false };
   }
 
   function deck(el, g, n) {
@@ -640,10 +643,10 @@ footer code{font-size:12px}
   function kv(el, r, F, S) {
     var survived = Math.min(Math.max(0, S), r.men);
     var lost = r.men - survived;
-    var dead = Math.round(F * lost / r.men);
+    var dead = Math.min(Math.floor(F), Math.floor(F * lost / r.men + 0.5));
     el.innerHTML =
       '<span>Cards</span><span>' + r.g + (r.g > 1 ? ' generals + ' : ' general + ') + r.n + ' units</span>' +
-      '<span>Trimmed at deployment</span><span>' + fmt(r.trim) + ' men</span>' +
+      '<span>Trimmed at deployment</span><span>' + fmt(r.trim) + (r.trim === 1 ? ' man' : ' men') + '</span>' +
       '<span>Without trimming</span><span>' + fmt(r.rounded) + ' men</span>' +
       '<span>3K survivors</span><span>' + fmt(survived) + ' (' + (100 * lost / r.men).toFixed(1) + '% lost)</span>' +
       '<span>CK3 dead</span><span class="loss">' + fmt(dead) + ' of ' + fmt(F) + '</span>';
@@ -661,8 +664,17 @@ footer code{font-size:12px}
     var cap = 3 * G + 18 * U;
     var s = Math.min(1, cap / Fa, cap / Fd);
     var a = side(Fa, s, G, U), d = side(Fd, s, G, U);
-    $('o-am').innerHTML = fmt(a.men) + '<small>3K men</small>';
-    $('o-dm').innerHTML = fmt(d.men) + '<small>3K men</small>';
+    if (a.small || d.small) {
+      ['a', 'd'].forEach(function (k) {
+        $('o-' + k + 'm').innerHTML = '&mdash;<small>men in 3K</small>';
+        $('o-' + k + 'deck').innerHTML = '';
+        $('o-' + k + 'kv').innerHTML = '';
+      });
+      $('o-sum').innerHTML = '<span class="warn">After scaling, one side is no bigger than a general’s card (' + fmt(G) + ' men). Let CK3 resolve this battle.</span>';
+      return;
+    }
+    $('o-am').innerHTML = fmt(a.men) + '<small>men in 3K</small>';
+    $('o-dm').innerHTML = fmt(d.men) + '<small>men in 3K</small>';
     deck($('o-adeck'), a.g, a.n);
     deck($('o-ddeck'), d.g, d.n);
     kv($('o-akv'), a, Fa, Sa);
@@ -674,7 +686,6 @@ footer code{font-size:12px}
       'Army cap <b>' + fmt(cap) + '</b> men a side',
       'Odds drift without trimming <b>' + (drift >= 0 ? '+' : '') + drift.toFixed(1) + '%</b>, 0% with it'
     ];
-    if (a.small || d.small) parts.push('<span class="warn">A side is below one general plus 20 men; let CK3 resolve this one.</span>');
     $('o-sum').innerHTML = parts.join('<span aria-hidden="true"> · </span>');
   }
 
