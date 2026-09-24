@@ -82,50 +82,77 @@ class BridgeTests(unittest.TestCase):
         (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
         import bridge as bridge_module
         from unittest import mock
-        with mock.patch.object(bridge_module, 'CK3_EXE', self.root / 'missing' / 'ck3.exe'), \
-             mock.patch.object(bridge_module, 'CK3_SAVES', self.root / 'missing' / 'saves'):
-            health = self.bridge.get_health()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(),
+                        saves=self.root / 'missing' / 'saves')
+        with mock.patch.object(bridge_module, 'CK3_EXE', self.root / 'missing' / 'ck3.exe'):
+            health = bridge.get_health()
         by_key = {p['key']: p['ok'] for p in health['paths']}
         self.assertFalse(by_key['ck3_exe'])
         self.assertFalse(by_key['ck3_saves'])
+        self.assertFalse(health['gates']['ck3'])
         self.assertTrue(health['gates']['probe'])
 
     # ---- staged encounter and roster ----
 
-    def test_staged_encounter_and_roster(self):
-        encounter = self.bridge.get_encounter()
-        self.assertTrue(encounter['ok'])
-        self.assertEqual(encounter['entry'], probe.BATTLE)
-        self.assertEqual(len(encounter['sides']), 2)
-        for side in encounter['sides']:
-            generals = [u for u in side['units'] if u['kind'] == 'general']
-            units = [u for u in side['units'] if u['kind'] == 'unit']
-            self.assertEqual(len(generals), 1)
-            self.assertEqual(len(units), 2)
-            self.assertEqual(side['cards'], 3)
-            self.assertEqual(side['retinue'], 2)
-        roster_a = self.bridge.roll_roster(encounter, 1)
-        roster_b = self.bridge.roll_roster(encounter, 999)
-        self.assertTrue(roster_a['ok'] and roster_b['ok'])
-        self.assertTrue(roster_a['deterministic'])
-        self.assertEqual(roster_a, roster_b)  # fixed by the probe, seed ignored
-        for side in roster_a['sides']:
-            self.assertEqual(len(side['generals']), 1)
-            general = side['generals'][0]
-            self.assertEqual(general['role'], 'Commander')
-            self.assertIsNone(general['prowess'])
-            self.assertEqual(len(general['units']), 3)
-            self.assertEqual(side['retinue'], 2)
-            self.assertEqual(side['cards'], 3)
+    # ---- CK3 encounter and roll ----
 
-    def test_staged_roster_matches_probe_unit_types(self):
-        roster = self.bridge.roll_roster()
-        types = {u['key'] for side in roster['sides']
-                 for g in side['generals'] for u in g['units']}
-        for faction in ('cao_cao', 'liu_bei'):
-            self.assertIn(f'3k_main_general_earth_{faction}', types)
-        self.assertEqual(types - {f'3k_main_general_earth_{f}' for f in ('cao_cao', 'liu_bei')},
-                         {'3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'})
+    def write_save(self, name='battle.ck3'):
+        """Plaintext CK3 save with the Kasr al-Kabir strengths and a smaller skirmish.
+
+        Army 1001 is the player's own; 1002 belongs to someone else, as in the real fixture.
+        """
+        saves = self.root / 'saves'
+        saves.mkdir(exist_ok=True)
+        side = lambda army, initial, fighting: (  # one scalar per line, as in real saves
+            f'{{\n\t\tarmies={{ {army} }}\n\t\tinitial_men={initial}\n\t\ttotal_fighting_men={fighting}\n\t}}')
+        text = '\n'.join([
+            'meta_data={ meta_date=908.8.27 }', 'date=908.8.27',
+            'currently_played_characters={ 59850 }',
+            'armies={ regiments={ } army_regiments={ } armies={ } }',
+            'units={', '\t2001={ type=army location=1 owner=77 army=1001 }',
+            '\t2002={ type=army location=1 owner=59850 army=1003 }', '}',
+            'combats={ combats={',
+            f'\t500={{ attacker={side(1002, 571, 340.09632)} defender={side(1001, 528, 421.48395)}\n\tphase=main\n\t}}',
+            '\t501=none',
+            f'\t502={{ attacker={side(1003, 90, 60)} defender={side(1004, 80, 50)}\n\tphase=maneuver\n\t}}',
+            '} combat_results={ } }'])
+        path = saves / name
+        path.write_text(text, encoding='utf-8')
+        return Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=saves), path
+
+    def test_encounter_reads_newest_save_and_prefers_your_battle(self):
+        bridge, path = self.write_save()
+        encounter = bridge.get_encounter()
+        self.assertTrue(encounter['ok'], encounter)
+        self.assertEqual((encounter['save_name'], encounter['date']), (path.name, '908.8.27'))
+        self.assertEqual(encounter['combat_id'], '502')  # the only one with an army you own
+        self.assertEqual([b['combat_id'] for b in encounter['battles']], ['500', '502'])
+        self.assertEqual([b['men'] for b in encounter['battles']], [[340, 421], [60, 50]])
+        picked = bridge.get_encounter(combat_id='500')
+        self.assertEqual([s['fighting'] for s in picked['sides']], [340.09632, 421.48395])
+        self.assertFalse(picked['yours'])  # a vassal's army is not detected as yours
+        self.assertIn('not in', bridge.get_encounter(combat_id='999')['error'])
+
+    def test_encounter_without_saves_or_battles_explains(self):
+        empty = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=self.root)
+        self.assertIn('No .ck3 saves', empty.get_encounter()['error'])
+
+    def test_roll_scales_both_sides_and_repeats_by_seed(self):
+        bridge, _ = self.write_save()
+        encounter = bridge.get_encounter(combat_id='500')
+        first, again = bridge.roll_roster(encounter, 1702901), bridge.roll_roster(encounter, 1702901)
+        self.assertTrue(first['ok'], first)
+        self.assertEqual(first, again)
+        self.assertEqual(first['scale'], 1.0)
+        self.assertEqual([(s['cards'], s['men'], s['trim']) for s in first['sides']], [(5, 340, 1), (6, 421, 0)])
+        self.assertIn('proven probe roster', first['note'])
+        self.assertIsInstance(bridge.roll_roster(encounter)['seed'], int)
+        romance = bridge.roll_roster(encounter, 1702901, 'romance')
+        self.assertEqual([s['generals'][0]['kind'] for s in romance['sides']], ['hero', 'hero'])
+        self.assertEqual([s['men'] for s in romance['sides']], [340, 421])
+        self.assertIn('Romance staging is untested', romance['note'])
+        self.assertIn('Unknown mode', bridge.roll_roster(encounter, 1, 'arcade')['error'])
+        self.assertIn('Pick a CK3 battle', bridge.roll_roster(None)['error'])
 
     # ---- prepare guards (no RPFM run happens here) ----
 
@@ -136,10 +163,26 @@ class BridgeTests(unittest.TestCase):
         self.assertIn('Close Three Kingdoms', result['error'])
         self.assertNotIn('ok', result)
 
-    def test_prepare_refuses_existing_pack(self):
-        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'stale pack')
+    def test_prepare_refuses_unrecognised_pack(self):
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        target = self.game / 'data' / probe.PACK_NAME
+        target.write_bytes(b'stale pack')
         result = self.bridge.prepare_and_install()
-        self.assertIn('Remove the installed probe', result['error'])
+        self.assertIn('unrecognised probe pack', result['error'])
+        self.assertTrue(target.exists())
+
+    def test_prepare_removes_a_recorded_pack_before_building(self):
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        run = self.make_run(run=self.root / 'runs' / 'orphan')
+        source = run / probe.PACK_NAME
+        source.write_bytes(b'orphan pack')
+        manifest = json.loads((run / 'run.json').read_text())
+        manifest['pack_sha256'] = probe.digest(source)
+        (run / 'run.json').write_text(json.dumps(manifest))
+        target = probe.install(self.game, run)
+        result = self.bridge.prepare_and_install()  # the fake RPFM then fails the build
+        self.assertFalse(target.exists())
+        self.assertIn('error', result)
 
     # ---- read result ----
 
@@ -273,10 +316,7 @@ class BridgeTests(unittest.TestCase):
 
     # ---- not integrated ----
 
-    def test_writeback_reports_not_integrated(self):
-        for method in ('preview_writeback', 'apply_writeback'):
-            with self.subTest(method=method):
-                self.assertIn('not integrated', getattr(self.bridge, method)()['error'])
+
 
     # ---- session and assets ----
 

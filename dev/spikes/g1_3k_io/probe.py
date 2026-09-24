@@ -145,12 +145,12 @@ def read_result(output):
     if any(e.get('run_id') != manifest['run_id'] or e.get('schema') != 1 for e in events):
         raise ValueError('Foreign or unsupported runtime event.')
     starts = [e for e in events if e.get('phase') == 'start']
-    finals = [e for e in events if e.get('phase') == 'result']
-    if len(starts) != 1 or len(finals) != 1 or events.index(starts[0]) >= events.index(finals[0]):
+    finals = [e for e in events if e.get('phase') in ('result', 'complete', 'routing_state')]
+    if len(starts) != 1 or not finals or events.index(starts[0]) >= events.index(finals[-1]):
         raise ValueError('Need exactly one start and one result; rebuild for each battle attempt.')
     expected = {u['script_name']: u for u in manifest['expected_units']}
     start_counts = {}
-    for event in (starts[0], finals[0]):
+    for event in (starts[0], finals[-1]):
         if event.get('battle') != manifest['entry']:
             raise ValueError('Event battle identifier differs from the staged battle.')
         units = event['units']
@@ -171,10 +171,20 @@ def read_result(output):
                 start_counts[unit['script_name']] = initial
             elif initial != start_counts[unit['script_name']]:
                 raise ValueError('Starting count changed between captures.')
-    won = finals[0].get('player_won')
+    won = finals[-1].get('player_won')
+    source = finals[-1].get('result_source') or finals[-1].get('phase')
+    if source == 'complete':
+        source = 'routing_state'
+    if won is None:
+        alliance_1_routing = all(u['routing'] for u in finals[-1]['units'] if u['alliance'] == 1)
+        alliance_2_routing = all(u['routing'] for u in finals[-1]['units'] if u['alliance'] == 2)
+        if alliance_2_routing and not alliance_1_routing:
+            won = True
+        elif alliance_1_routing and not alliance_2_routing:
+            won = False
+    
     if type(won) is not bool:
         raise ValueError('Outcome undetermined: no engine result and no single fully broken side.')
-    source = finals[0].get('result_source')
     if source not in ('engine_callback', 'routing_state'):
         raise ValueError('Unknown or missing result source.')
     late = [e for e in events if e.get('phase') == 'engine_result']
@@ -200,7 +210,7 @@ def read_result(output):
               'winner': winner,
               'result_source': source,
               'limitation': limitation,
-              'units': finals[0]['units']}
+              'units': finals[-1]['units']}
     (Path(output) / 'observed_result.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
     return result
 
