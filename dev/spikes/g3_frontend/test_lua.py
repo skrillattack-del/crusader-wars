@@ -12,6 +12,9 @@ import probe
 MOCK_ENV = '''
     function load_script_libraries() end
     function ModLog(s) error(s) end
+    function find_uicomponent(...) return nil end
+    core = {get_ui_root=function() return {} end,
+        add_listener=function(...) end}
     empire_battle = {new=function() return {} end}
     local function collection(items)
         return {count=function() return #items end, item=function(self,i) return items[i] end}

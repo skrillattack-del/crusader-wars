@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "kind": "BattleManifest",
+  "save_fingerprint": "dd278de2fb3522cb5833c4d1c3c532e54c26d1c56b5625f9b7f783cde8c93128",
+  "encounter_id": "ck3:3321888775",
+  "seed": 4055758999,
+  "sides": [
+    {
+      "role": "attacker",
+      "source_army_ids": [
+        "402653687",
+        "788529835"
+      ],
+      "starting_strengths": 666.0,
+      "prowess": []
+    },
+    {
+      "role": "defender",
+      "source_army_ids": [
+        "1023410554",
+        "687867055",
+        "385876948",
+        "620757730"
+      ],
+      "starting_strengths": 4204.0,
+      "prowess": [
+        {
+          "id": "71827",
+          "role": "commander",
+          "prowess": 0
+        }
+      ]
+    }
+  ]
+}
