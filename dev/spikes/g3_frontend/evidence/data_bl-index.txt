@@ -1,0 +1,69 @@
+﻿art/projectiles/cow_01_projectile_dlc02.wsmodel
+art/vfx/models/blood/giblet_01.wsmodel
+art/vfx/models/blood/giblet_02.wsmodel
+commontextures/bloodmap.dds
+commontextures/dlc02map.dds
+commontextures/dlc02map_bc5.dds
+commontextures/dlc02map_dxt5.dds
+composite_scene/horseback_huntsmen_01.csc
+composite_scene/unit_light_peasant_1.csc
+composite_scene/unit_light_peasant_2.csc
+composite_scene/unit_light_peasant_3.csc
+composite_scene/unit_light_peasant_4.csc
+materials/ui/ink_default_blood.xml.material
+projectiles/cow_01_projectile_dlc02.wsmodel
+projectiles/materials/cow_01_projectile_dlc02_weighted2_alpha_off.xml
+projectiles/materials/cow_01_projectile_dlc02_weighted2_alpha_off.xml.material
+projectiles/materials/cow_01_projectile_dlc02_weighted4_alpha_off.xml
+projectiles/materials/cow_01_projectile_dlc02_weighted4_alpha_off.xml.material
+projectiles/tex/cow_01_projectile_dlc02_base_colour.dds
+projectiles/tex/cow_01_projectile_dlc02_material_map.dds
+projectiles/tex/cow_01_projectile_dlc02_normal.dds
+shaders/rigid_ink_alpha_blood.xml
+shaders/rigid_ink_alpha_blood.xml.shader
+shaders/techniques/weighted_cinematic_skin_with_blood_shader_forward_lighting_noclip_no_faction_colour_gamma_correct_ldr.technique
+shaders/techniques/weighted_cinematic_skin_with_decal_blood_shader_forward_lighting_noclip_no_faction_colour_gamma_correct_ldr.technique
+shaders/techniques/weighted_cinematic_skin_with_decal_dirt_blood_shader_forward_lighting_noclip_no_faction_colour_gamma_correct_ldr.technique
+shaders/techniques/weighted_cinematic_skin_with_dirt_blood_shader_forward_lighting_noclip_no_faction_colour_gamma_correct_ldr.technique
+ui/eventpics/3k_event_army_bad_blood.png
+ui/eventpics/3k_event_battle_bad_blood.png
+ui/eventpics/3k_event_character_executed_blood.png
+ui/eventpics/3k_event_faction_destroyed_blood.png
+ui/eventpics/3k_event_hero_wounded_blood.png
+ui/eventpics/3k_event_hist_dian_wei_dies_blood.png
+ui/eventpics/3k_event_hist_hua_tuo_healing_blood.png
+ui/eventpics/3k_event_people_bad_blood.png
+ui/ink/blood_1.dds
+ui/loading_ui/dynamic/03 - war circumstance - currently under siege_blood.png
+ui/loading_ui/dynamic/04 - war circumstance - currently performing siege _blood.png
+ui/loading_ui/dynamic/05 - character death - your faction - above rank 10 _blood.png
+ui/loading_ui/dynamic/07 - character death - your faction - character executed _blood.png
+ui/loading_ui/dynamic/17 - diplomacy - faction destroyed_blood.png
+ui/loading_ui/dynamic/large/03 - war circumstance - currently under siege_blood.png
+ui/loading_ui/dynamic/large/04 - war circumstance - currently performing siege _blood.png
+ui/loading_ui/dynamic/large/05 - character death - your faction - above rank 10 _blood.png
+ui/loading_ui/dynamic/large/07 - character death - your faction - character executed _blood.png
+ui/loading_ui/dynamic/large/17 - diplomacy - faction destroyed_blood.png
+vfx/3k_dlc02_arrow_impact_blood_small.xml
+vfx/3k_dlc02_blood_decal.xml
+vfx/3k_dlc02_blood_decapitation.xml
+vfx/3k_dlc02_blood_melee_hit.xml
+vfx/3k_dlc02_blood_melee_hit_severe.xml
+vfx/3k_dlc02_blood_parts_trail.xml
+vfx/3k_dlc02_blood_stab.xml
+vfx/3k_dlc02_blood_trail2__.xml
+vfx/3k_dlc02_blood_trail__.xml
+vfx/3k_dlc02_impact_bucket.xml
+vfx/3k_dlc02_impact_bucket_blood.xml
+vfx/3k_dlc02_impact_carcass.xml
+vfx/3k_dlc02_impact_carcass_blood.xml
+vfx/3k_dlc02_lib_weapon_bucket.xml
+vfx/3k_dlc02_lib_weapon_carcass.xml
+vfx/3k_dlc02_weapon_trail_bucket.xml
+vfx/3k_dlc02_weapon_trail_bucket_blood.xml
+vfx/3k_dlc02_weapon_trail_carcass.xml
+vfx/textures/3k_anim_blood_a_diffuse.dds
+vfx/textures/decals/3k_dlc02_decal_blood_set_a_diffuse.dds
+vfx/textures/decals/3k_dlc02_decal_blood_set_a_normal.dds
+vfx/textures/decals/3k_dlc02_decal_blood_set_diffuse.dds
+vfx/textures/decals/3k_dlc02_decal_blood_set_normal.dds

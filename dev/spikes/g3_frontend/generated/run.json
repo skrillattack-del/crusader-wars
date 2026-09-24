@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "kind": "g1_runtime_unverified",
+  "run_id": "9ce5f8c1f80046d392113783e6b9160b",
+  "mode": "Records",
+  "entry": "script/battle/historical_battle/historical_battle_xinyang",
+  "source_sha256": "77a3643b93a964dc83115296144e7e9b333035446ff7065f5fa5c51f1459dc55",
+  "log_path": "C:\\Users\\Matux\\OneDrive\\Desktop\\CANON-SCIENCE\\crusader wars\\dev\\spikes\\g1_3k_io\\generated\\9ce5f8c1f80046d392113783e6b9160b.jsonl",
+  "expected_units": [
+    {
+      "script_name": "cw2_attacker_0",
+      "unit_type": "3k_main_general_earth_cao_cao",
+      "alliance": 1,
+      "side": "attacker",
+      "general": true
+    },
+    {
+      "script_name": "cw2_attacker_1",
+      "unit_type": "3k_main_unit_wood_ji_militia",
+      "alliance": 1,
+      "side": "attacker",
+      "general": false
+    },
+    {
+      "script_name": "cw2_attacker_2",
+      "unit_type": "3k_main_unit_water_archer_militia",
+      "alliance": 1,
+      "side": "attacker",
+      "general": false
+    },
+    {
+      "script_name": "cw2_defender_0",
+      "unit_type": "3k_main_general_earth_liu_bei",
+      "alliance": 2,
+      "side": "defender",
+      "general": true
+    },
+    {
+      "script_name": "cw2_defender_1",
+      "unit_type": "3k_main_unit_wood_ji_militia",
+      "alliance": 2,
+      "side": "defender",
+      "general": false
+    },
+    {
+      "script_name": "cw2_defender_2",
+      "unit_type": "3k_main_unit_water_archer_militia",
+      "alliance": 2,
+      "side": "defender",
+      "general": false
+    }
+  ],
+  "candidate_change": "Liu Bei uses native Records general instead of original hero candidate.",
+  "pack_sha256": "af0f7d84903b38037692443f7edad3a1136738082bee410f168858483c646efb"
+}

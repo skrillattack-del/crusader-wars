@@ -1,0 +1,924 @@
+<?xml version="1.0"?>
+<battle>
+
+<!--     _    _     _     ___    _    _   _  ____ _____   _  -->
+<!--    / \  | |   | |   |_ _|  / \  | \ | |/ ___| ____| / | -->
+<!--   / _ \ | |   | |    | |  / _ \ |  \| | |   |  _|   | | -->
+<!--  / ___ \| |___| |___ | | / ___ \| |\  | |___| |___  | | -->
+<!-- /_/   \_\_____|_____|___/_/   \_\_| \_|\____|_____| |_| -->
+
+	<alliance id="0">
+		
+		<army>
+		
+			<!-- CAMERA START POSITION -->
+			<camera_start_position x="44.55" y="43.97" z="-49.60"/>
+			<camera_target_position x="-44.67" y="3.65" z="177.55"/>
+			
+			<!-- AI HINTS -->
+			<campaign_ai_battle_hints aggression="0.50"/>
+			
+			<!-- FACTION -->
+			<faction>3k_main_faction_sun_jian</faction>
+			
+			<!-- RETINUE 0 - ATTACKING CENTRE LANE - Sun Quan -->
+			<unit script_name="player_01">
+				<unit_type type="3k_main_general_earth_sun_quan"/>
+				<retinue id="0" />
+				<position x="6.0" y="20.0"/>
+				<orientation radians="0.23"/>
+				<width metres="30.0"/>
+				<unit_experience level="9"/>
+				<general>
+					<name>370710407</name>
+					<star_rating level="15"/>
+					<commander_type>commanding_general</commander_type>
+					<commander_id>0</commander_id>
+					<portrait>UI/units/icons/3k_main_general_earth_sun_quan.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_single_edged_sword_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_sun_quans_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_white_horse"/>
+					<art_set_key>1473873929</art_set_key>
+				</general>
+			</unit>
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_metal_mercenary_infantry"/>
+				<retinue id="0" />
+				<position x="-22.0" y="5.74"/>
+				<orientation radians="0.20"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_metal_mercenary_infantry"/>
+				<retinue id="0" />
+				<position x="7.0" y="0.79"/>
+				<orientation radians="0.20"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_fire_mercenary_cavalry"/>
+				<retinue id="0" />
+				<position x="40.5" y="13.0"/>
+				<orientation radians="0.29"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>				 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_fire_mercenary_cavalry"/>
+				<retinue id="0" />
+				<position x="-29.06" y="25.70"/>
+				<orientation radians="0.21"/>
+				<width metres="32.39"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>				 
+         </unit_capabilities>
+          </unit> 
+
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_mercenary_archers"/>
+				<retinue id="0" />
+				<position x="-50.39" y="12.08"/>
+				<orientation radians="0.22"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_mercenary_archers"/>
+				<retinue id="0" />
+				<position x="36.46" y="-5.24"/>
+				<orientation radians="0.24"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+		
+			<!-- RETINUE 1 - Zhou Yu - ATTACKING LEFT LANE-->
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_general_water_zhou_yu"/>
+				<retinue id="1" />
+				<position x="-290.55" y="-20.12"/>
+				<orientation radians="6.24"/>
+				<width metres="26.69"/>
+				<unit_experience level="9"/>
+				<general>
+					<name>1478000909</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>1</commander_id>
+					<portrait>UI/units/icons/3k_main_general_water_zhou_yu.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_ceremonial_sword_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_zhou_yus_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_black_horse"/>
+					<art_set_key>1094185794</art_set_key>
+				</general>
+			</unit>
+
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_earth_sabre_cavalry"/>
+				<retinue id="1" />
+				<position x="-290.0" y="26.0"/>
+				<orientation radians="0.00"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>				 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_earth_sabre_cavalry"/>
+				<retinue id="1" />
+				<position x="-318.97" y="27.75"/>
+				<orientation radians="0.01"/>
+				<width metres="23.84"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>				 
+         </unit_capabilities>
+          </unit> 
+
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_mercenary_archers"/>
+				<retinue id="1" />
+				<position x="-320.0" y="10.0"/>
+				<orientation radians="0.00"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 			
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_mercenary_archers"/>
+				<retinue id="1" />
+				<position x="-290.0" y="10.0"/>
+				<orientation radians="0.00"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_metal_pearl_dragons"/>
+				<retinue id="1" />
+				<position x="-320.0" y="-5.0"/>
+				<orientation radians="0.00"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>		
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_metal_pearl_dragons"/>
+				<retinue id="1" />
+				<position x="-290.0" y="-5.0"/>
+				<orientation radians="0.00"/>
+				<width metres="25.0"/>
+				<unit_experience level="9"/>
+          </unit> 
+			
+			<!-- RETINUE 2 - ATTACKING RIGHT LANE - Mainly Cavalry - Liu Bei -->
+			<unit script_name="player_01">
+				<unit_type type="3k_main_general_earth_liu_bei"/>
+				<retinue id="2" />
+				<position x="347.11" y="65.97"/>
+				<orientation radians="5.95"/>
+				<width metres="46.64"/>
+				<unit_experience level="9"/>
+				<general>
+					<name>1860221745</name>
+					<star_rating level="2"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>2</commander_id>
+					<portrait>UI/units/icons/3k_main_general_earth_liu_bei.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_shuang_gu_jian_faction"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_liu_beis_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_white_horse"/>
+					<art_set_key>1496655158</art_set_key>
+				</general>
+			</unit>
+
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_fire_jade_dragons"/>
+				<retinue id="2" />
+				<position x="403.40" y="17.62"/>
+				<orientation radians="5.27"/>
+				<width metres="26.69"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>				 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_fire_jade_dragons"/>
+				<retinue id="2" />
+				<position x="370.68" y="35.75"/>
+				<orientation radians="5.52"/>
+				<width metres="40.94"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_wood_heavy_spear_guards"/>
+				<retinue id="2" />
+				<position x="383.23" y="28.60"/>
+				<orientation radians="5.39"/>
+				<width metres="37.60"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_turtle</special_ability>
+		 <special_ability>3k_main_formation_spear_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_wood_heavy_spear_guards"/>
+				<retinue id="2" />
+				<position x="357.39" y="55.19"/>
+				<orientation radians="5.65"/>
+				<width metres="40.20"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_turtle</special_ability>
+		 <special_ability>3k_main_formation_spear_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_repeating_crossbowmen"/>
+				<retinue id="2" />
+				<position x="393.66" y="23.06"/>
+				<orientation radians="5.33"/>
+				<width metres="33.70"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="player_01">
+				<unit_type type="3k_main_unit_water_repeating_crossbowmen"/>
+				<retinue id="2" />
+				<position x="363.55" y="46.55"/>
+				<orientation radians="5.57"/>
+				<width metres="40.20"/>
+				<unit_experience level="9"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+		</army>		
+		
+		<!-- VICTORY CONDITIONS -->
+		<victory_condition>
+			<kill_or_rout_enemy></kill_or_rout_enemy>
+		</victory_condition>
+		<victory_condition>
+			<capture_settlement></capture_settlement>
+		</victory_condition>
+		
+		<!-- ROUT POSITION -->
+		<rout_position x="480.00" y="13.00"/>
+		
+	</alliance>
+
+<!--     _    _     _     ___    _    _   _  ____ _____   ____   -->
+<!--    / \  | |   | |   |_ _|  / \  | \ | |/ ___| ____| |___ \  -->
+<!--   / _ \ | |   | |    | |  / _ \ |  \| | |   |  _|     __) | -->
+<!--  / ___ \| |___| |___ | | / ___ \| |\  | |___| |___   / __/  -->
+<!-- /_/   \_\_____|_____|___/_/   \_\_| \_|\____|_____| |_____| -->
+
+	<alliance id="1">
+	
+		<!-- ARMY 1 - DEFEND THE ENCAMPMENT -->
+		<army>
+			
+			<!-- FACTION -->
+			<faction>3k_main_faction_cao_cao</faction>
+		
+			<!-- DEPLOYMENT -->
+			<not_allowed_to_choose_deployment />
+			<deployment_zone_army_index>2</deployment_zone_army_index>
+			
+			<!-- RETINUE 0 - Cao Cao -->
+		
+			<unit script_name="enemy_cao_cao">
+				<unit_type type="3k_main_general_earth_cao_cao"/>
+				<retinue id="0" />
+				<position x="428" y="15"/>
+				<orientation radians="0.01"/>
+				<width metres="10"/>
+				<unit_experience level="5"/>
+				<general>
+					<name>1025823522</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>3</commander_id>
+					<portrait>UI/units/icons/3k_main_general_earth_cao_cao.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_trust_of_god"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_cao_caos_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_shadow_runner"/>
+					<art_set_key>391535320</art_set_key>
+				</general>	
+			</unit>
+		
+		</army>
+		
+		<army>
+		
+			<!-- AI HINTS -->
+			<campaign_ai_battle_hints aggression="0.50"/>
+			
+			<!-- FACTION -->
+			<faction>3k_main_faction_cao_cao</faction>
+		
+			<!-- DEPLOYMENT -->
+			<not_allowed_to_choose_deployment />
+			<deployment_zone_army_index>0</deployment_zone_army_index>
+		
+		<!-- RETINUE 0 - DEFEND THE ENCAMPMENT Zao Wan -->
+		
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_general_wood_generic"/>
+				<position x="125.30" y="768.18"/>
+				<orientation radians="5.26"/>
+				<width metres="26.69"/>
+				<retinue id="0" />
+				<unit_experience level="2"/>
+				<general>
+					<name>1449254655</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>4</commander_id>
+					<portrait>UI/units/icons/3k_main_general_wood_generic.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_hook_sickle_sabre_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_heavy_armour_wood_and_fire_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_brown_horse"/>
+					<art_set_key>44788175</art_set_key>
+				</general>	
+			</unit>
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_wood_ji_militia"/>
+				<position x="-129.35" y="466.01"/>
+				<orientation radians="3.13"/>
+				<width metres="25.90"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_metal_sabre_militia"/>
+				<position x="-19.17" y="454.71"/>
+				<orientation radians="6.28"/>
+				<width metres="25.90"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<!--<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_earth_sabre_cavalry"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_fire_heavy_tiger_and_leopard_cavalry"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> -->
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_fire_tiger_and_leopard_cavalry"/>
+				<position x="-35.61" y="826.82"/>
+				<orientation radians="1.84"/>
+				<width metres="20.99"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_diamond</special_ability>
+         <special_ability>3k_main_formation_wedge</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_earth_yellow_dragons"/>
+				<position x="201.16" y="485.24"/>
+				<orientation radians="3.14"/>
+				<width metres="40.20"/>
+				<retinue id="0" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         <special_ability>3k_main_formation_turtle</special_ability>
+         <special_ability>3k_main_formation_circle</special_ability>			 
+         </unit_capabilities>
+          </unit> 
+			
+			
+		<!-- RETINUE 1 - DEFEND THE ENCAMPMENT Zhang Liao-->
+	
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_general_metal_zhang_liao"/>
+				<position x="-128.38" y="483.25"/>
+				<orientation radians="3.14"/>
+				<width metres="23.84"/>
+				<retinue id="1" />
+				<unit_experience level="5"/>
+				<general>
+					<name>631280170</name>
+					<star_rating level="9"/>
+					<commander_type>commanding_general</commander_type>
+					<commander_id>5</commander_id>
+					<portrait>UI/units/icons/3k_main_general_metal_zhang_liao.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_single_edged_sword_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_zhang_liaos_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_grey_horse"/>
+					<art_set_key>152891638</art_set_key>
+				</general>	
+			</unit>
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_metal_sabre_militia"/>
+				<position x="206.04" y="466.64"/>
+				<orientation radians="3.10"/>
+				<width metres="38.90"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_metal_axe_band"/>
+				<position x="72.77" y="434.72"/>
+				<orientation radians="1.62"/>
+				<width metres="27.20"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_wood_spear_warriors"/>
+				<position x="-124.72" y="648.82"/>
+				<orientation radians="2.74"/>
+				<width metres="33.70"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<!--<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_wood_peasant_band"/>
+				<retinue id="1" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> -->
+		
+		
+		<!-- RETINUE 2 - DEFEND THE ENCAMPMENT -->
+		
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_captain"/>
+				<position x="102.52" y="776.12"/>
+				<orientation radians="5.26"/>
+				<width metres="20.70"/>
+				<retinue id="2" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+		
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<position x="-91.31" y="788.96"/>
+				<orientation radians="0.69"/>
+				<width metres="20.70"/>
+				<retinue id="2" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<!--<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="2" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+		
+			<unit script_name="enemy_01">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="2" />
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> -->
+		
+		</army>
+		
+		
+		<!-- ARMY 2 - Defend the beach -->
+		<army>		
+		
+			<!-- FACTION -->
+			<faction>3k_main_faction_cao_cao</faction>
+		
+			<!-- DEPLOYMENT -->
+			<not_allowed_to_choose_deployment />
+			<deployment_zone_army_index>1</deployment_zone_army_index>
+			
+			<!-- RETINUE 0 Xu Huang-->
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_general_metal_xu_huang"/>
+				<retinue id="0" />
+				<position x="103.30" y="331.07"/>
+				<orientation radians="3.15"/>
+				<width metres="35.24"/>
+				<unit_experience level="5"/>
+				<general>
+					<name>1668912820</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>6</commander_id>
+					<portrait>UI/units/icons/3k_main_general_metal_xu_huang.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_cleaver_of_mountains_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_xu_huangs_armour_unique"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_grey_horse"/>
+					<art_set_key>276291771</art_set_key>
+				</general>	
+			</unit>
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_unit_fire_raider_cavalry"/>
+				<retinue id="0" />
+				<position x="22.98" y="324.89"/>
+				<orientation radians="2.94"/>
+				<width metres="35.24"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_unit_metal_jian_swordguards"/>
+				<retinue id="0" />
+				<position x="57.28" y="379.73"/>
+				<orientation radians="3.16"/>
+				<width metres="41.90"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="0" />
+				<position x="135.22" y="361.23"/>
+				<orientation radians="3.07"/>
+				<width metres="40.50"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_unit_metal_jian_swordguards"/>
+				<retinue id="0" />
+				<position x="136.46" y="307.16"/>
+				<orientation radians="3.01"/>
+				<width metres="44.70"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_centre">
+				<unit_type type="3k_main_unit_metal_axe_band"/>
+				<retinue id="0" />
+				<position x="-52.04" y="359.83"/>
+				<orientation radians="2.95"/>
+				<width metres="34.90"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			
+			<!-- RETINUE 1 Li Ba -->
+			
+			<unit script_name="enemy_02_east">
+				<unit_type type="3k_main_general_wood_generic"/>
+				<retinue id="1" />
+				<position x="233" y="390"/>
+				<orientation radians="3.19"/>
+				<width metres="44.70"/>
+				<unit_experience level="5"/>
+				<general>
+					<name>1752924950</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>7</commander_id>
+					<portrait>UI/units/icons/3k_main_general_wood_generic.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_two_handed_spear_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_heavy_armour_wood_and_fire_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_brown_horse"/>
+					<art_set_key>44788175</art_set_key>
+				</general>	
+			</unit>
+			
+			<unit script_name="enemy_02_east">
+				<unit_type type="3k_main_unit_earth_mounted_sabre_militia"/>
+				<retinue id="1" />
+				<position x="288.81" y="404.09"/>
+				<orientation radians="2.44"/>
+				<width metres="35.24"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_east">
+				<unit_type type="3k_main_unit_metal_axe_band"/>
+				<retinue id="1" />
+				<position x="312.57" y="346.29"/>
+				<orientation radians="3.32"/>
+				<width metres="41.90"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+		 <special_ability>3k_main_formation_shield_wall</special_ability>
+		 <special_ability>3k_main_formation_circle</special_ability>		 
+         </unit_capabilities>
+          </unit> 
+			
+			<unit script_name="enemy_02_east_missile">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="1" />
+				<position x="231.46" y="328.68"/>
+				<orientation radians="2.82"/>
+				<width metres="40.50"/>
+				<unit_experience level="0"/>
+			<unit_capabilities>
+         <firing_drill>fire_volley</firing_drill>
+         <special_ability>3k_main_formation_loose</special_ability>
+         </unit_capabilities>
+          </unit> 
+
+			<!-- RETINUE 2 Yuan Zhong-->
+			
+			<unit script_name="enemy_02_west">
+				<unit_type type="3k_main_general_earth_generic"/>
+				<retinue id="2" />
+				<position x="-159.30" y="384.20"/>
+				<orientation radians="3.15"/>
+				<width metres="32.39"/>
+				<unit_experience level="5"/>
+				<general>
+					<name>1060466670</name>
+					<star_rating level="9"/>
+					<commander_type>non_commanding_general</commander_type>
+					<commander_id>8</commander_id>
+					<portrait>UI/units/icons/3k_main_general_earth_generic.png</portrait>
+					<game_mode>historical</game_mode>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_weapon" ceo_key="3k_main_ancillary_weapon_dual_swords_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_armour" ceo_key="3k_main_ancillary_armour_light_armour_earth_metal_and_water_common"/>
+					<equipped_ceos category="3k_main_ceo_category_ancillary_mount" ceo_key="3k_main_ancillary_mount_white_horse"/>
+					<art_set_key>331501620</art_set_key>
+				</general>	
+			</unit>
+			
+			<unit script_name="enemy_02_west">
+				<unit_type type="3k_main_unit_metal_sabre_militia"/>
+				<retinue id="2" />
+				<position x="-155.40" y="299.28"/>
+				<orientation radians="3.26"/>
+				<width metres="44.70"/>
+				<unit_experience level="0"/>
+			</unit>
+			
+			<unit script_name="enemy_02_west">
+				<unit_type type="3k_main_unit_wood_ji_militia"/>
+				<retinue id="2" />
+				<position x="-158.92" y="335.44"/>
+				<orientation radians="3.25"/>
+				<width metres="44.70"/>
+				<unit_experience level="0"/>
+			</unit>
+			
+			<unit script_name="enemy_02_west_missile">
+				<unit_type type="3k_main_unit_water_archer_militia"/>
+				<retinue id="2" />
+				<position x="-258.60" y="318.55"/>
+				<orientation radians="3.20"/>
+				<width metres="44.70"/>
+				<unit_experience level="0"/>
+			</unit>
+			
+		</army>		
+		
+		<!-- VICTORY CONDITIONS -->
+		<victory_condition>
+			<kill_or_rout_enemy></kill_or_rout_enemy>
+		</victory_condition>
+		
+		<!-- ROUT POSITION -->
+		<rout_position x="23.00" y="964.00"/>
+
+		<!-- STARTING TICKETS -->
+		<starting_tickets>100</starting_tickets>
+		
+	</alliance>
+	
+	<!-- BATTLE SETUP -->
+	<battle_description>
+		<battle_script is_tutorial="false" prepare_for_fade_in="true">battle_script.lua</battle_script>
+		<battle_db_record>3k_main_historical_battle_red_cliff</battle_db_record>
+		<time_of_day>night</time_of_day>
+		<season>season_winter</season>
+		<precipitation_type>dry</precipitation_type>
+		<game_mode>historical</game_mode>
+		<duration>1200.00</duration>
+		<timeout_winning_alliance_index>1</timeout_winning_alliance_index>
+		<type>settlement_unfortified</type>
+	</battle_description>
+
+	<!-- WEATHER -->
+	<weather>
+		<prevailing_wind x="1.00" y="0.00"/>
+		<environment_key>Weather\evening_night_01_red_cliff.environment</environment_key>
+	</weather>
+
+	<sea_surface_name>wind_level_2</sea_surface_name>
+	
+	<can_chase_down_routers>"true"</can_chase_down_routers>
+
+	<!-- BATTLE MAP -->
+	<battle_map_definition>
+		<name>terrain\battles\historical_battle_red_cliff\</name>
+		
+		<tile_upgrade>tag:settlement_tower_level.settlement_tower_level_1</tile_upgrade>
+		
+	</battle_map_definition>
+	
+	<allow_auto_boundary_generation>false</allow_auto_boundary_generation>
+	
+	<fauna_config></fauna_config>
+	
+</battle>
