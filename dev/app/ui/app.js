@@ -1,11 +1,5 @@
-/* ============================================================
-   CW2 launcher, G1 scope. The screens are the V1 mockup's; the
-   bridge is the real Python side (pywebview js_api -> bridge.py).
-   CK3 first: read the latest save, pick a battle, roll both armies.
-   Integrated: pack build/install (auto-removing a recorded previous
-   pack), 3K launch, strict result read, probe removal. Not yet: the
-   pack stages the proven probe roster, not the roll; CK3 write-back.
-   ============================================================ */
+/* Crusader Wars 2 launcher UI. Python side: bridge.py via pywebview js_api.
+   Flow: CK3 save -> pick battle -> roll armies -> battle pack -> fight in 3K -> result. */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = n => Number(n||0).toLocaleString("en-CA");
 
@@ -36,7 +30,7 @@ const S={view:0, reached:0, sealed:false, busy:false, mode:"records",
 function log(msg){const el=document.getElementById("log");
   el.textContent+=`[${new Date().toLocaleTimeString("en-CA",{hour12:false})}] ${msg}\n`;el.scrollTop=el.scrollHeight;}
 
-/* tally gap: 5 finished steps closes it; seal only after write-back (not integrated yet) */
+/* tally gap: 5 finished steps closes it; seal after write-back */
 function setTally(){
   const done=S.sealed?5:S.reached; const g=(5-done)*7;
   document.getElementById("halfL").style.transform=`translateX(${-g}px)`;
@@ -75,7 +69,7 @@ const V={
     </div>
     <div class="stack" style="margin-top:16px">
       ${h.tk_running
-        ? `<p class="notice">Three Kingdoms is running. Close it before preparing or removing the probe pack.</p>`
+        ? `<p class="notice">Three Kingdoms is running. Close it before installing or removing the battle pack.</p>`
         : `<p class="notice ok">Three Kingdoms is closed. Pack operations are available.</p>`}
       ${h.ck3_running
         ? `<p class="notice ok">Crusader Kings III is running. Save while a battle is on, then load it here.</p>`
@@ -118,20 +112,20 @@ const V={
       <p style="color:var(--bone-dim);margin:2px 0 8px">${side.generals.length} general${side.generals.length>1?"s":""} + ${side.retinue} units = ${side.cards} cards · ${fmt(side.men)} men${side.trim?` (${side.trim} trimmed)`:""}</p>
       ${side.generals.map(g=>`<div class="general">
         <p class="gname"><b>${g.role==="Commander"?"Commander":"Knight"}</b> <span>${g.kind==="hero"?"hero":"general with bodyguard"}, ${g.men} ${g.men===1?"man":"men"}, leads ${g.units.length}</span></p>
-        <table><tbody>${g.units.map(u=>`<tr><td>${esc(u.name)}${u.proven?"":` <span title="Not yet staged by the probe" style="color:var(--bone-dim)">*</span>`}</td>
+        <table><tbody>${g.units.map(u=>`<tr><td>${esc(u.name)}${u.proven?"":` <span title="Not yet fought in a CW2 battle" style="color:var(--bone-dim)">*</span>`}</td>
           <td>${esc(u.tier)}</td><td class="num">${u.men}</td></tr>`).join("")}</tbody></table>
       </div>`).join("")}</section>`;
     const prog=S.install.length?`<ul class="progress">${S.install.map(x=>x?`<li data-s="${x.status}"><span class="dot"></span>${esc(x.label)}</li>`:"").join("")}</ul>`:"";
     const probeOk=S.health && S.health.gates && S.health.gates.probe;
     const scale=r.scale>=1?"1 : 1":`1 : ${(1/r.scale).toFixed(1)}`;
     return `<h2>Roll armies</h2>
-    <p class="lede">Scale ${scale}, seed <code>${r.seed}</code>. Units are drawn from vanilla Three Kingdoms units; * marks units the probe has not staged yet.</p>
+    <p class="lede">Scale ${scale}, seed <code>${r.seed}</code>. Units are drawn from vanilla Three Kingdoms units; * marks units not yet fought in a CW2 battle.</p>
     <div class="actions" role="group" aria-label="Game mode" style="margin-top:0">
       ${[["records","Records: generals lead bodyguards"],["romance","Romance: generals are heroes"]].map(([m,label])=>
         `<button class="${S.mode===m?"btn-primary":"btn-quiet"}" data-action="setMode" data-mode="${m}" aria-pressed="${S.mode===m}" ${S.installed||S.busy?"disabled":""}>${label}</button>`).join("")}
     </div>
     <div class="cols">${col(r.sides[0])}${col(r.sides[1])}</div>
-    <p class="notice" style="margin-top:16px">${esc(r.note)}${S.health&&S.health.probe_installed&&!S.installed?" An earlier probe pack is installed; Prepare removes it first if it matches a recorded run.":""}</p>
+    <p class="notice" style="margin-top:16px">${esc(r.note)}${S.health&&S.health.probe_installed&&!S.installed?" An earlier battle pack is installed; Prepare replaces it.":""}</p>
     ${prog}
     ${probeOk?"":`<p class="notice" style="margin-top:16px">Three Kingdoms or the RPFM tool is missing; go back to the first step.</p>`}
     ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
@@ -154,21 +148,21 @@ const V={
         <td class="num">${fmt(u.survivors)}</td><td>${u.routing?"routing":"steady"}</td></tr>`).join("")).join("")}</tbody></table></div>`:"";
     return `<h2>Fight in Three Kingdoms</h2>
     <p class="lede">${S.launched
-      ? "Three Kingdoms is launching. Enable cw2_g1_probe in its mod manager, select Historical Battles - Xingyang in Records mode, and fight to a decisive finish (fully rout the enemy). Come back once the results screen has appeared."
-      : "The probe pack is installed. Launch Three Kingdoms, enable cw2_g1_probe in the mod manager, then fight the Records Xingyang battle to a decisive finish."}</p>
+      ? "Three Kingdoms is launching. Enable crusader_wars_2 in the mod manager, open Historical Battles, pick Xingyang in Records mode and fight until one side breaks. Then come back and read the result."
+      : "The battle pack is installed. Launch Three Kingdoms, enable crusader_wars_2 in the mod manager, then fight Xingyang in Records mode until one side breaks."}</p>
     <div class="actions">
       ${S.launched?"":`<button class="btn-primary" data-action="launch">Launch Three Kingdoms</button>`}
       ${S.launched&&!r?`<button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Read battle result</button>`:""}
-      ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove probe pack</button>`:""}
+      ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
     </div>${res}
-    ${S.removed?`<p class="notice ok" style="margin-top:16px">Probe pack removed. Original CA packs were never modified.</p>`:""}
+    ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
     ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}`;
   },
   return(){
     const d=S.diff;
     if(!d) return `<h2>Write back to your save</h2>
-      ${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Checking the G2 write-back gate...</p>`}
-      <p class="lede">Your Three Kingdoms result remains recorded. CK3 save mutation stays disabled until reload and time-advance verification passes.</p>
+      ${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Checking write-back...</p>`}
+      <p class="lede">Your Three Kingdoms result is saved in the run folder.</p>
       <div class="actions"><button class="btn-primary" data-action="restart">Start a new battle</button></div>`;
     const cas=d.casualties;
     const diff_table=d.changes.length?`<div class="panel" style="margin-top:16px"><table class="diff">
@@ -229,7 +223,7 @@ const A={
   async setMode(b){S.mode=b.dataset.mode; await A.reroll();},
   async install(){S.busy=true;S.install=[];S.error=null;render();
     try{const r=await call("prepare_and_install",S.roster); S.installed=true;
-      if(r.removed_previous) log(`removed the previous probe pack (run: ${r.removed_previous})`);
+      if(r.removed_previous) log(`replaced the previous battle pack (run: ${r.removed_previous})`);
       log(`installed ${r.pack} sha256=${r.sha256}`); log(`run evidence: ${r.run}`);}
     catch(e){S.error=err(e); log(`install error: ${S.error}`);}
     S.busy=false; render();},

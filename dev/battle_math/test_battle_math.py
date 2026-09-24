@@ -1,4 +1,4 @@
-"""Reproduces docs/design/cw2_bridge_blueprint.html's worked examples, plus the rule's invariants."""
+"""Worked examples (Kasr al-Kabir, a large war, G2's synthetic plan) plus the rule's invariants."""
 import unittest
 from scale import GENERAL_SIZE, UNIT_SIZE, army_cap, round_half_up, shared_scale, stage, stage_side
 from result_to_ck3 import ck3_casualties, side_dead

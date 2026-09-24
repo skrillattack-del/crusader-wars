@@ -1,16 +1,12 @@
-"""CW2 launcher bridge: the real G1 probe pipeline behind the mockup screens.
+"""Crusader Wars 2 launcher bridge (pywebview js_api).
 
-CK3 comes first: the launcher reads the newest CK3 save (G2's read-only intake),
-lists the battles in progress, and rolls both armies from vanilla 3K units at
-the shared scale in dev/battle_math. Integrated from the G1 spike: build and
-install the probe pack (removing a previous pack only when it matches a
-recorded run), launch Three Kingdoms, read the strict result, remove the pack.
-Not yet: staging the rolled roster (the pack still stages the proven 1 general
-+ 2 units a side until the full-army spike) and CK3 write-back.
+Reads the newest CK3 save, lists battles in progress, rolls both armies from
+vanilla 3K units (dev/battle_math), builds and installs the crusader_wars_2
+battle pack, launches Three Kingdoms, reads the battle result and removes the
+pack. A previous pack is replaced only when its SHA-256 matches a recorded run.
 
-Every public method returns an envelope: {'ok': True, ...} or {'error': msg}.
-The UI turns 'error' into a JS exception, so behaviour does not depend on how
-pywebview serialises Python exceptions across the bridge.
+Every public method returns {'ok': True, ...} or {'error': msg}; the UI turns
+'error' into a JS exception.
 """
 from __future__ import annotations
 import json
@@ -28,8 +24,8 @@ for _p in (str(_HERE.parents[0] / 'spikes' / 'g1_3k_io'),
            str(_HERE.parents[0] / 'battle_math'), str(_HERE)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
-import probe  # G1 spike: build, install, uninstall, read_result
-import preflight  # G2 spike: read-only save intake and combat inventory
+import probe  # battle pack: build, install, uninstall, read_result
+import preflight  # CK3 save reader: combat inventory
 from roll import MODES, roll
 from scale import stage
 
@@ -46,8 +42,8 @@ CK3_SAVES = _ck3_saves()
 STEAM_3K = 'steam://rungameid/779340'
 STEAM_CK3 = 'steam://rungameid/1158310'
 ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
-STAGING_NOTE = ('Prepare and install still stages the proven probe roster (1 general + 2 units '
-                'a side, Records Xingyang) until the full-army spike proves rolled rosters load.')
+STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
+                'the rolled army above is what the next build stages.')
 SESSION_NAME = 'cw2-launcher-session.json'
 
 # Mirrors the roster probe.generate() stages into the Records Xingyang battle.
@@ -67,10 +63,6 @@ STAGED_SIDES = [
      ]},
 ]
 
-NOT_INTEGRATED = ('CK3 write-back is not integrated into the launcher yet. The '
-                  'G2 spike (dev/spikes/g2_ck3_writeback) is pre-integration; '
-                  'this run keeps its result as observed_result.json in the '
-                  'run folder for the future patcher.')
 
 
 def _default_tasklist(cmd):
@@ -128,7 +120,7 @@ class Bridge:
 
     def _require_3k_closed(self):
         if self._process_running('Three_Kingdoms.exe'):
-            raise ValueError('Close Three Kingdoms before changing the probe pack.')
+            raise ValueError('Close Three Kingdoms before changing the battle pack.')
 
     def _require_run(self):
         if not self.session.get('output'):
@@ -146,7 +138,7 @@ class Bridge:
         except Exception:
             pass  # progress events are cosmetic; the method return is authoritative
 
-    # ---- js_api surface (names match the mockup contract) --------------
+    # ---- js_api surface -------------------------------------------------
 
     def get_health(self):
         try:
@@ -278,7 +270,7 @@ class Bridge:
                 sides.append({'role': spec['role'], 'name': spec['name'], 'fighting': spec['fighting'],
                               'men': side.men, 'trim': side.trim, 'cards': side.cards,
                               'retinue': side.units, 'generals': generals})
-            note = STAGING_NOTE + (' Romance staging is untested: the probe replaces only Records Xingyang.'
+            note = STAGING_NOTE + (' Romance battles are not staged yet; the pack replaces Records Xingyang.'
                                    if mode == 'romance' else '')
             return {'ok': True, 'seed': seed, 'mode': mode, 'deterministic': False, 'scale': scale,
                     'note': note, 'sides': sides}
@@ -300,16 +292,16 @@ class Bridge:
             target = self.game / 'data' / probe.PACK_NAME
             previous = self._run_for_installed_pack(target) if target.exists() else None
             if target.exists() and previous is None:
-                raise ValueError('An unrecognised probe pack is installed: it matches no recorded run, '
+                raise ValueError('An unrecognised battle pack is installed: it matches no recorded run, '
                                  'so CW2 will not delete it. Remove it by hand.')
             output = self.base / 'runs' / datetime.now().strftime('%Y%m%d-%H%M%S-%f')
-            steps = [('Build and verify the probe pack with RPFM',
+            steps = [('Build and verify the battle pack with RPFM',
                       lambda: probe.build(self.game, self.cli, output)),
                      ('Install the pack into the Three Kingdoms data folder',
                       lambda: probe.install(self.game, output))]
             if previous:
                 # Safe: the installed pack's SHA-256 matches this recorded run.
-                steps.insert(0, ('Remove the previous probe pack',
+                steps.insert(0, ('Replace the previous battle pack',
                                  lambda: probe.uninstall(self.game, previous)))
             for index, (label, step) in enumerate(steps):
                 self._emit('install', {'index': index, 'label': label, 'status': 'run'})
@@ -382,7 +374,7 @@ class Bridge:
                         'was_installed': False, 'run': None}
             run = self._run_for_installed_pack(target)
             if run is None:
-                raise ValueError('The installed probe pack matches no recorded run; refusing to remove it.')
+                raise ValueError('The installed battle pack matches no recorded run; refusing to remove it.')
             probe.uninstall(game, run)
             return {'ok': True, 'removed': probe.PACK_NAME,
                     'was_installed': True, 'run': str(run)}
@@ -422,14 +414,12 @@ class Bridge:
 
     def preview_writeback(self):
         return {
-            'error': ('CK3 write-back is disabled until G2 verifies save fingerprints, exact '
-                      'casualty conservation, duplicate rejection, and reload persistence.')
+            'error': 'Writing results into CK3 saves is off in this build. The result is kept as observed_result.json in the run folder.'
         }
 
     def apply_writeback(self):
         return {
-            'error': ('CK3 write-back is disabled until a generated save has passed the G2 '
-                      'reload and time-advance acceptance test.')
+            'error': 'Writing results into CK3 saves is off in this build. The result is kept as observed_result.json in the run folder.'
         }
 
 

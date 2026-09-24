@@ -1,9 +1,7 @@
-"""CW2 launcher shell: a pywebview window around the G1 bridge.
+"""Crusader Wars 2 launcher: a pywebview window whose js_api is dev/app/bridge.py.
 
-Per docs/design/FRONTEND_DESIGN.md sections 1-2: the mockup's screens stay,
-the MockBridge goes, js_api is the real Bridge (dev/app/bridge.py). Assets ship
-inside the exe (sys._MEIPASS); runs and session state are written beside the
-exe, like CW2-G1-Probe.exe.
+Assets ship inside the exe (sys._MEIPASS); runs and session state are written
+beside the exe.
 """
 import argparse
 from pathlib import Path
@@ -23,7 +21,7 @@ def _data_root():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='CW2 launcher (G1 scope: staged probe battle).')
+    parser = argparse.ArgumentParser(description='Crusader Wars 2 launcher.')
     parser.add_argument('--smoke-test', action='store_true',
                         help='verify assets and the bridge without opening a window')
     args = parser.parse_args()

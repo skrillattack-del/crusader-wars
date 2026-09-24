@@ -1,26 +1,18 @@
-# Crusader Wars 2 experiments
+# Crusader Wars 2
 
-This repository tracks the source, tests, and evidence for a proposed bridge
-between Crusader Kings III and vanilla Total War: THREE KINGDOMS. It does not
-contain the installed games, the old Crusader Wars application, CK3 saves, or
-extracted game assets. Those stay on the local machine and are ignored by git.
+Fight Crusader Kings III battles in Total War: THREE KINGDOMS.
 
-The current G1 proof covers a generated Three Kingdoms Records battle and
-attributed survivor counts. Its result callback did not export the winner.
-G2 has an isolated CK3 preflight plan, but no externally resolved battle or
-engine-verified save write-back. Do not use an experimental AFTER save as a
-replacement for a campaign save.
+**Play:** double-click `dev/dist/CW2-Launcher.exe` (or the desktop shortcut).
+Pause in CK3 while a battle is on and save, then in the launcher: load the save,
+pick the battle, roll armies (Records or Romance), Prepare and install, fight in
+3K, read the result.
 
-## Local interface
+**Build:** `powershell -ExecutionPolicy Bypass -File dev/build_launcher.ps1`.
+Needs Python 3.12 with pywebview and PyInstaller, and RPFM's CLI in
+`dev/tools/rpfm/` (git-ignored).
 
-Open [Bridge Lab](dev/frontend/index.html) in a browser. It reads a G1 JSONL
-log or a prepared G2 JSON plan selected through the browser; it cannot change
-game files. No build step or server is needed. See the [frontend notes](dev/frontend/README.md)
-for the file formats and focused tests.
+**Layout:** `dev/app` launcher, `dev/battle_math` army scaling and rolls,
+`dev/spikes/*` the pack builder, CK3 save reader and extractor, `dev/mod` the
+CK3 mod (local only, see `docs/third_party/CW1_LICENCE.md`).
 
-For the mod-pack probe, see [the G1 runbook](dev/spikes/g1_3k_io/RUNBOOK.md).
-The probe expects a local, git-ignored RPFM CLI at
-`dev/tools/rpfm/rpfm_cli.exe` and reads native files from the installed 3K
-game. Neither is bundled in git. The [codebase map](dev/CODEBASE_MAP.md),
-[burndown](dev/BURNDOWN.md), and [G2 notes](dev/spikes/g2_ck3_writeback/README.md)
-track the gates.
+Game installs, saves and anything extracted from the games stay out of git.

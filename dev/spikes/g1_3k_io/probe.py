@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 GAME = Path(r'C:\Program Files (x86)\Steam\steamapps\common\Total War THREE KINGDOMS')
-PACK_NAME = 'cw2_g1_probe.pack'
+PACK_NAME = 'crusader_wars_2.pack'
 BATTLE = 'script/battle/historical_battle/historical_battle_xinyang'
 
 def digest(path):

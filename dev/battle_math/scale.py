@@ -2,7 +2,6 @@
 
 Nothing shrinks until a side outgrows a full 3K army (three generals with six
 units each), and both sides always share the scale, so the odds survive.
-Rule and worked examples: docs/design/cw2_bridge_blueprint.html#army.
 """
 from __future__ import annotations
 from dataclasses import dataclass

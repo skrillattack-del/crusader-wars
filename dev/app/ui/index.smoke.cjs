@@ -56,7 +56,7 @@ const api = {
   async get_encounter(save, id) { return encounter(id || '1728053261'); },
   async roll_roster(enc, s, mode) { seed += 1; lastMode = mode; const hero = mode === 'romance';
     return {ok: true, seed, mode, deterministic: false, scale: 1,
-    note: 'Prepare and install still stages the proven probe roster.' + (hero ? ' Romance staging is untested.' : ''),
+    note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
     sides: [{role: 'Attacker', fighting: 340.09, men: 340, trim: 1, cards: 5, retinue: 4, generals: [
               {key: 'g', role: 'Commander', kind: hero ? 'hero' : 'bodyguard', men: hero ? 1 : 21,
                units: [u('Jian Swordguards', 'line', 80, false),
@@ -65,7 +65,7 @@ const api = {
               {key: 'g', role: 'Commander', men: 21, units: [u('Pearl Dragons', 'elite', 80, false),
                 u('Archer Militia', 'militia', 80, true), u('Ji Militia', 'militia', 80, true),
                 u('Spear Warriors', 'militia', 80, false), u('Sabre Cavalry', 'line', 80, false)]}]}]}; },
-  async prepare_and_install() { return {ok: true, pack: 'cw2_g1_probe.pack', sha256: '9f2c', run: 'C:/runs/x',
+  async prepare_and_install() { return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
     removed_previous: 'C:/dist/runs/20260923-175132-201712'}; },
   async launch_3k() { return {ok: true, pid: null}; },
   async read_result() {
@@ -73,9 +73,9 @@ const api = {
     if (readAttempts === 1) return {error: 'Need exactly one start and one result; rebuild for each battle attempt.'};
     return {ok: true, winner: 0, player_side: 0, player_outcome: 'victory', result_source: 'routing_state',
       note: 'derived from unit state at Complete', battle: 'b', run_id: 'r', sides: resultSides}; },
-  async remove_probe() { return {ok: true, removed: 'cw2_g1_probe.pack', was_installed: true, run: 'C:/runs/x'}; },
+  async remove_probe() { return {ok: true, removed: 'crusader_wars_2.pack', was_installed: true, run: 'C:/runs/x'}; },
   async preview_writeback() {
-    return {error: 'CK3 write-back is disabled until G2 reload persistence is verified.'};
+    return {error: 'Writing results into CK3 saves is off in this build.'};
   },
   async apply_writeback() { return {error: 'CK3 write-back is disabled.'}; }
 };
@@ -112,18 +112,18 @@ async function click(action, data = {}) {
   const firstSeed = seed;
   expect('roll shows cards, men and vanilla units', main().includes('Roll armies') && main().includes('Pearl Dragons')
     && main().includes('5 cards') && main().includes('(1 trimmed)') && main().includes(`seed <code>${firstSeed}</code>`));
-  expect('roll is honest about what gets staged', main().includes('proven probe roster')
-    && main().includes('Prepare removes it first'));
+  expect('roll is honest about what gets staged', main().includes('1 general + 2 units a side')
+    && main().includes('Prepare replaces it'));
   await click('reroll');
   expect('roll again draws a new seed', seed === firstSeed + 1 && main().includes(`seed <code>${seed}</code>`));
   expect('Records mode is the default', lastMode === 'records' && main().includes('general with bodyguard, 21 men'));
   await click('setMode', {mode: 'romance'});
   expect('Romance mode re-rolls with hero generals', lastMode === 'romance' && main().includes('hero, 1 man')
-    && main().includes('Romance staging is untested') && log().includes('rolled romance'));
+    && main().includes('Romance battles are not staged yet') && log().includes('rolled romance'));
   await click('setMode', {mode: 'records'});
   await click('install');
   expect('install removes the recorded previous pack automatically', main().includes('Continue to battle')
-    && log().includes('removed the previous probe pack') && log().includes('installed cw2_g1_probe.pack'));
+    && log().includes('replaced the previous battle pack') && log().includes('installed crusader_wars_2.pack'));
   await click('toBattle');
   expect('battle screen prompts the launch', main().includes('Fight in Three Kingdoms') && main().includes('Launch Three Kingdoms'));
   await click('launch');
@@ -134,10 +134,10 @@ async function click(action, data = {}) {
   expect('decisive result renders outcome, source and survivors',
     main().includes('victory') && main().includes('(won)') && main().includes('routing') && log().includes('source=routing_state'));
   await click('removeProbe');
-  expect('probe removal is confirmed', main().includes('Probe pack removed') && log().includes('removed cw2_g1_probe.pack'));
+  expect('pack removal is confirmed', main().includes('Battle pack removed') && log().includes('removed crusader_wars_2.pack'));
   await click('toReturn');
-  expect('writeback gate explains why CK3 mutation is disabled', main().includes('write-back is disabled') && main().includes('reload and time-advance'));
-  expect('writeback gate does not claim the result is sealed', !document.getElementById('stepline').innerHTML.includes('Sealed.'));
+  expect('write-back screen says it is off and where the result is', main().includes('off in this build') && main().includes('saved in the run folder'));
+  expect('write-back screen does not claim the result is sealed', !document.getElementById('stepline').innerHTML.includes('Sealed.'));
   await click('restart');
   expect('restart returns to CK3', main().includes('Start in Crusader Kings III') && !main().includes('Roll armies'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);

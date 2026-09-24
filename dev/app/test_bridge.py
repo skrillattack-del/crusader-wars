@@ -147,12 +147,12 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(first, again)
         self.assertEqual(first['scale'], 1.0)
         self.assertEqual([(s['cards'], s['men'], s['trim']) for s in first['sides']], [(5, 340, 1), (6, 421, 0)])
-        self.assertIn('proven probe roster', first['note'])
+        self.assertIn('1 general + 2 units a side', first['note'])
         self.assertIsInstance(bridge.roll_roster(encounter)['seed'], int)
         romance = bridge.roll_roster(encounter, 1702901, 'romance')
         self.assertEqual([s['generals'][0]['kind'] for s in romance['sides']], ['hero', 'hero'])
         self.assertEqual([s['men'] for s in romance['sides']], [340, 421])
-        self.assertIn('Romance staging is untested', romance['note'])
+        self.assertIn('Romance battles are not staged yet', romance['note'])
         self.assertIn('Unknown mode', bridge.roll_roster(encounter, 1, 'arcade')['error'])
         self.assertIn('Pick a CK3 battle', bridge.roll_roster(None)['error'])
 
@@ -170,7 +170,7 @@ class BridgeTests(unittest.TestCase):
         target = self.game / 'data' / probe.PACK_NAME
         target.write_bytes(b'stale pack')
         result = self.bridge.prepare_and_install()
-        self.assertIn('unrecognised probe pack', result['error'])
+        self.assertIn('unrecognised battle pack', result['error'])
         self.assertTrue(target.exists())
 
     def test_prepare_removes_a_recorded_pack_before_building(self):
@@ -316,13 +316,13 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(result['was_installed'])
         self.assertIsNone(result['run'])
 
-    # ---- write-back safety gate ----
+    # ---- write-back ----
 
-    def test_writeback_is_disabled_until_g2_is_verified(self):
+    def test_writeback_is_off_and_writes_no_save(self):
         preview = self.bridge.preview_writeback()
         apply = self.bridge.apply_writeback()
-        self.assertIn('disabled', preview['error'])
-        self.assertIn('disabled', apply['error'])
+        self.assertIn('off in this build', preview['error'])
+        self.assertIn('off in this build', apply['error'])
         self.assertFalse(list(self.root.rglob('CW2_*_AFTER.ck3')))
 
 
