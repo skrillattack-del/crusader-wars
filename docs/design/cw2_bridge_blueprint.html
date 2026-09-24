@@ -1,0 +1,700 @@
+<title>CW2 Bridge Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Young+Serif&family=Cormorant+SC:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Kanit:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&text=%E6%94%BB%E5%AE%88&display=swap">
+<style>
+/* Page tokens follow docs/design/FRONTEND_DESIGN.md §8 (patina, verdigris, bronze, cinnabar, bone).
+   Single dark look on purpose; the game mockups carry their own fixed palettes. */
+:root{
+  color-scheme:dark;
+  --p950:#112021;--p900:#16292a;--p800:#1c3432;--p700:#274542;--rule:#2f4d4a;
+  --verd:#72b8a3;--bronze:#b8924f;--cinn:#c8372d;--cinn-soft:#e0786f;
+  --bone:#e8dfcb;--bone2:#bdb6a4;--bone3:#8f8b7e;
+  --display:"Young Serif",Georgia,"Times New Roman",serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--p900)}
+body{background:var(--p900);color:var(--bone);font:16px/1.55 var(--body);margin:0}
+a{color:var(--verd);text-underline-offset:2px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--bronze);outline-offset:2px}
+code{font-family:var(--mono);font-size:.88em;background:var(--p950);color:var(--bone);padding:1px 5px;border-radius:3px}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:34px 80px}
+
+/* Header */
+.top{display:grid;gap:14px;padding-bottom:26px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--bronze)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,4.4vw,46px);line-height:1.12;margin:0;text-wrap:balance;max-width:24ch}
+.lede{margin:0;max-width:68ch;color:var(--bone2);font-size:17px}
+.gates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+@media (max-width:820px){.gates{grid-template-columns:1fr}}
+.gate{padding:12px 14px;background:var(--p800);border:1px solid var(--rule);border-radius:6px;display:grid;gap:3px}
+.gate b{font-size:13px;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.gate b::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--dot);flex:none}
+.gate span{font-size:14.5px;color:var(--bone2)}
+.gate.wait{--dot:var(--bronze)} .gate.open{--dot:var(--cinn)}
+
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--p950);border-block:1px solid var(--rule);margin-inline:-20px;padding:9px 20px}
+nav.toc ul{list-style:none;margin:0 auto;padding:0;max-width:1080px;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px}
+nav.toc a{color:var(--bone2);text-decoration:none}
+nav.toc a:hover{color:var(--bone)}
+
+section{padding-top:52px;scroll-margin-top:56px}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,3vw,32px);line-height:1.2;margin:0 0 10px;text-wrap:balance}
+h3{font-size:16px;margin:0}
+.intro{max-width:68ch;color:var(--bone2);margin:0 0 22px}
+.dim{color:var(--bone2)}
+
+/* The loop */
+.loop{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;counter-reset:st}
+@media (max-width:1000px){.loop{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.loop{grid-template-columns:1fr}}
+.loop li{background:var(--p800);border:1px solid var(--rule);border-radius:6px;padding:12px;display:grid;gap:7px;align-content:start;counter-increment:st}
+.loop .lhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.loop .lhead::before{content:counter(st);font-family:var(--display);color:var(--bronze);font-size:20px;line-height:1}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;font-weight:700}
+.tag.ck3{background:#23324a;color:#abc2e2}.tag.cw2{background:#1f3f3a;color:var(--verd)}.tag.tk{background:#e9e2d0;color:#161412}
+.loop p{margin:0;font-size:13.5px;color:var(--bone2)}
+.file{font-family:var(--mono);font-size:12px;color:var(--bone);overflow-wrap:anywhere}
+.pill{justify-self:start;font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid;line-height:1.5}
+.pill.ok{color:var(--verd);border-color:#3f7466}.pill.wait{color:var(--bronze);border-color:#6f5a33}.pill.open{color:var(--cinn-soft);border-color:#7a2f2a}
+
+/* Army rule */
+.rules{display:grid;grid-template-columns:128px 1fr;margin:0 0 24px;border-top:1px solid var(--rule)}
+.rules dt,.rules dd{padding:13px 0;border-bottom:1px solid var(--rule);margin:0}
+.rules dt{font-family:var(--display);color:var(--bronze);font-size:18px;padding-right:12px}
+.rules dd{color:var(--bone2);max-width:78ch}
+.rules dd strong{color:var(--bone);font-weight:700}
+@media (max-width:640px){.rules{grid-template-columns:1fr}.rules dt{border-bottom:0;padding-bottom:0}}
+
+.calc{background:var(--p800);border:1px solid var(--rule);border-radius:8px;padding:18px;display:grid;gap:16px;margin-bottom:22px}
+.calc-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.calc-head h3{font-family:var(--display);font-weight:400;font-size:20px}
+.ex{display:flex;gap:8px;flex-wrap:wrap}
+.ex button{font:inherit;font-size:13.5px;color:var(--bone);background:var(--p950);border:1px solid var(--rule);border-radius:4px;padding:6px 11px;cursor:pointer}
+.ex button[aria-pressed="true"]{border-color:var(--bronze);color:var(--bronze)}
+.inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.inputs label{display:grid;gap:4px;font-size:12.5px;color:var(--bone2)}
+.inputs input{font:inherit;font-variant-numeric:tabular-nums;color:var(--bone);background:var(--p950);border:1px solid var(--rule);border-radius:4px;padding:7px 9px;width:100%;min-width:0}
+.sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.sides{grid-template-columns:1fr}}
+.sidecard{background:var(--p900);border:1px solid var(--rule);border-radius:6px;padding:14px;display:grid;gap:10px;align-content:start}
+.sidecard h4{margin:0;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone2)}
+.big{font-family:var(--display);font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-family:var(--body);font-size:14px;color:var(--bone2);margin-left:6px}
+.deck{display:flex;flex-wrap:wrap;gap:3px;min-height:15px}
+.deck i{width:10px;height:15px;border-radius:2px;background:var(--bone2);display:block}
+.deck i.g{background:var(--bronze)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 14px;font-size:14px;font-variant-numeric:tabular-nums}
+.kv span:nth-child(odd){color:var(--bone2)}
+.kv .loss{color:var(--cinn-soft)}
+.summary{display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px;color:var(--bone2);padding-top:12px;border-top:1px solid var(--rule)}
+.summary b{color:var(--bone);font-variant-numeric:tabular-nums}
+.warn{color:var(--cinn-soft)}
+
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone2);background:var(--p950);font-weight:700}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td .file{font-size:12.5px}
+
+.codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+@media (max-width:760px){.codes{grid-template-columns:1fr}}
+.codes figure{margin:0;display:grid;gap:6px;min-width:0}
+.codes figcaption{font-size:13px;color:var(--bone2)}
+pre{margin:0;background:var(--p950);border:1px solid var(--rule);border-radius:6px;padding:14px;overflow-x:auto;font:12.5px/1.55 var(--mono);color:var(--bone)}
+pre .k{color:var(--verd)} pre .s{color:#d9c79b} pre .c{color:var(--bone3)}
+
+/* Mock staging */
+.shot{margin:0 0 26px;display:grid;gap:10px;min-width:0}
+.shot figcaption{font-size:14px;color:var(--bone2);max-width:74ch}
+.shot figcaption b{color:var(--bone)}
+.step{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--bronze);margin-right:6px}
+.stage{background:#0b1313;border:1px solid var(--rule);border-radius:8px;padding:22px 18px;min-width:0}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+@media (max-width:820px){.pair{grid-template-columns:1fr}}
+.notes{margin:0;padding-left:20px;display:grid;gap:6px;max-width:74ch;color:var(--bone2)}
+.notes b{color:var(--bone)}
+
+/* CK3 mock language: slate panels, gold rules, parchment text */
+.ck3{--ink:#e9dcbc;--ink2:#b7a67f;--gold:#b89a5e;--gold2:#5f4d2c;color:var(--ink);font-family:"Cormorant Garamond",Georgia,serif}
+.ck3-frame{background:linear-gradient(180deg,#1e2833 0%,#141b23 100%);border:1px solid var(--gold2);box-shadow:inset 0 0 0 3px #10161c,inset 0 0 0 4px #3a3021,0 18px 36px rgba(0,0,0,.5);border-radius:3px}
+.ck3-win{max-width:660px;margin:0 auto;padding:18px 20px 20px;display:grid;gap:14px}
+.ck3-head{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.cw2-swords{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#3a2a1a,#15100b 70%);border:2px solid var(--gold);box-shadow:0 0 0 3px #0d1116,0 0 16px rgba(232,190,110,.4)}
+.cw2-swords svg{width:30px;height:30px}
+.ck3-plaque{text-align:center;padding:6px 10px;border-block:1px solid var(--gold2);background:linear-gradient(90deg,transparent,rgba(184,154,94,.13),transparent)}
+.ck3-title{font-family:"Cormorant SC",Georgia,serif;font-weight:700;font-size:26px;line-height:1.1;color:#f0e3c3;letter-spacing:.02em}
+.ck3-title.sm{font-size:21px}
+.ck3-sub{font-family:"Cormorant SC",Georgia,serif;font-weight:600;font-size:15px;color:var(--ink2)}
+.ck3-tip{background:#0e1318;border:1px solid var(--gold);padding:9px 12px;font-size:16px;line-height:1.35;display:grid;gap:2px;position:relative;margin-left:4px}
+.ck3-tip::before{content:"";position:absolute;left:18px;top:-7px;width:12px;height:12px;background:#0e1318;border-left:1px solid var(--gold);border-top:1px solid var(--gold);transform:rotate(45deg)}
+.ck3-tip b{font-family:"Cormorant SC",serif;font-weight:700;font-size:17px;color:#f3e6c6}
+.ck3-tip span{color:var(--ink2)}
+.ck3-sides{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start}
+@media (max-width:520px){.ck3-sides{grid-template-columns:1fr}.ck3-vs{display:none}}
+.ck3-side{background:rgba(0,0,0,.22);border:1px solid #2c3845;padding:12px;display:grid;gap:8px}
+.ck3-role{font-family:"Cormorant SC",serif;font-weight:600;font-size:14px;color:var(--ink2);letter-spacing:.04em}
+.ck3-host{display:flex;gap:10px;align-items:center}
+.shield{width:34px;height:40px;clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%);flex:none}
+.shield.me{background:linear-gradient(180deg,#3a5f9a,#223a63)}.shield.foe{background:linear-gradient(180deg,#9a3a33,#5e1f1b)}
+.ck3-name{font-family:"Cormorant SC",serif;font-weight:700;font-size:19px;line-height:1.1}
+.ck3-dim{font-size:14.5px;color:var(--ink2)}
+.ck3-men{display:flex;align-items:baseline;gap:6px}
+.ck3-men b{font-family:"Cormorant SC",serif;font-size:34px;line-height:1;color:#f3e6c6;font-variant-numeric:tabular-nums}
+.ck3-men span{color:var(--ink2);font-size:15.5px}
+.ck3-maa{display:flex;flex-wrap:wrap;gap:5px}
+.ck3-maa span{font-size:14.5px;padding:1px 8px;border:1px solid #3a4756;background:#18202a;border-radius:2px}
+.ck3-vs{align-self:center;font-family:"Cormorant SC",serif;font-size:20px;color:var(--gold)}
+.ck3-bar{height:8px;background:#6d2521;border:1px solid #0b0f13;display:flex}
+.ck3-bar i{display:block;background:#2f5591;height:100%;width:55.3%}
+.ck3-pause{padding:16px 18px 18px;display:grid;gap:12px;max-width:380px;margin:0 auto}
+.ck3-note{border:1px solid var(--gold2);background:#0f1419;padding:10px 12px;font-size:16.5px;line-height:1.35}
+.ck3-note b{display:block;font-family:"Cormorant SC",serif;font-size:17px;color:#f3e6c6}
+.ck3-menu{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ck3-menu li{font-family:"Cormorant SC",serif;font-weight:600;font-size:17px;text-align:center;padding:6px;border:1px solid #3b4654;background:linear-gradient(180deg,#26313d,#1a222b)}
+.ck3-menu li.hl{border-color:var(--gold);color:#f6e7c1;box-shadow:0 0 10px rgba(232,190,110,.28)}
+.ck3-menu li.off{color:#6e7478}
+.ck3-event{padding:14px 16px 16px;display:grid;gap:12px;max-width:460px;margin:0 auto}
+.ck3-evbody{display:grid;grid-template-columns:118px 1fr;gap:12px}
+@media (max-width:420px){.ck3-evbody{grid-template-columns:1fr}}
+.ck3-art{min-height:132px;border:1px solid var(--gold2);background:
+  radial-gradient(60% 30% at 30% 90%,#8a5a2c 0 60%,transparent 61%),
+  radial-gradient(70% 34% at 82% 96%,#6f4520 0 60%,transparent 61%),
+  radial-gradient(14% 10% at 72% 30%,#f7e2b0 0 50%,transparent 70%),
+  linear-gradient(180deg,#e7b673 0%,#c9864a 58%,#9b6135 100%)}
+.ck3-evbody p{margin:0;font-size:17.5px;line-height:1.4}
+.ck3-option{font-family:"Cormorant SC",serif;font-weight:700;font-size:17px;text-align:center;padding:8px;border:1px solid var(--gold);background:linear-gradient(180deg,#2c3947,#1b242e);color:#f3e6c6}
+
+/* Three Kingdoms mock language: rice paper, ink wash, brush banners, seal red */
+.tk{font-family:"Kanit","Segoe UI",sans-serif;color:#121212}
+.tk-screen{border:1px solid #b9b09b;border-radius:3px;overflow:hidden;padding:16px;display:grid;gap:12px;background:
+  radial-gradient(90% 55% at 50% 118%,rgba(30,30,30,.30),transparent 62%),
+  radial-gradient(40% 30% at 10% 12%,rgba(60,60,60,.17),transparent 70%),
+  radial-gradient(40% 30% at 92% 16%,rgba(60,60,60,.15),transparent 70%),
+  linear-gradient(180deg,#f2ede1,#e2dac7)}
+.brush{position:relative;justify-self:center;width:min(520px,100%);display:grid;place-items:center;padding:16px 30px}
+.brush svg{position:absolute;inset:0;width:100%;height:100%}
+.brush-text{position:relative;text-align:center;color:#fff;text-transform:uppercase;line-height:1.12}
+.brush-text b{display:block;font-weight:700;font-size:clamp(18px,2.6vw,26px);letter-spacing:.03em}
+.brush-text span{display:block;font-weight:600;font-size:clamp(14px,2vw,19px)}
+.brush.sm{width:min(340px,100%);padding:11px 24px}
+.brush.sm .brush-text b{font-size:clamp(15px,2vw,19px)}
+.tk-start{justify-self:center;background:#161616;color:#fff;font-weight:600;font-size:13px;letter-spacing:.07em;text-transform:uppercase;padding:9px 36px;border:1px solid #000;box-shadow:inset 0 0 0 2px #7d6a3c}
+.tk-grid{display:grid;grid-template-columns:1fr 2.1fr 1fr;gap:10px;align-items:end}
+@media (max-width:700px){.tk-grid{grid-template-columns:1fr 1fr}.tk-map{grid-column:1/-1;order:-1}}
+.tk-side{display:grid;gap:8px;justify-items:start;min-width:0}
+.tk-side.right{justify-items:end;text-align:right}
+.tk-flag{width:76px;height:94px;display:grid;place-items:center;border:2px solid #0e0e0e;box-shadow:inset 0 0 0 3px rgba(200,161,90,.8)}
+.tk-flag span{font-family:"Noto Serif SC","Songti SC",serif;font-weight:700;font-size:42px;line-height:1;color:#e2bf6e}
+.tk-flag.def{background:#2f5a45}.tk-flag.atk{background:#1f2d52}
+.tk-flag.sm{width:46px;height:58px}.tk-flag.sm span{font-size:26px}
+.tk-flag.torn{opacity:.55;clip-path:polygon(0 0,100% 0,100% 70%,84% 62%,74% 88%,58% 72%,42% 100%,28% 76%,12% 90%,0 74%)}
+.tk-plate{color:#fff;padding:10px 30px 10px 12px;text-transform:uppercase;background:radial-gradient(120% 150% at 30% 50%,#0d0d0d 52%,rgba(13,13,13,0) 72%);max-width:100%}
+.tk-side.right .tk-plate{padding:10px 12px 10px 30px;background:radial-gradient(120% 150% at 70% 50%,#0d0d0d 52%,rgba(13,13,13,0) 72%)}
+.tk-plate b{display:block;font-weight:700;font-size:clamp(16px,2vw,22px);line-height:1.05}
+.tk-plate span{font-size:12px;font-weight:500;letter-spacing:.06em;color:#d8d2c4}
+.tk-map svg{width:100%;height:auto;display:block}
+.tk-info{background:#f8f5ee;border:2px solid #1a1a1a;padding:10px 14px;display:grid;gap:6px;font-family:"Atkinson Hyperlegible",sans-serif;font-size:14.5px;line-height:1.45;color:#161616}
+.tk-info-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-family:"Kanit",sans-serif;font-size:13px}
+.tk-info-row em{font-style:normal;color:#2e7d32}
+.tk-info p{margin:0}
+.tk-field{border:1px solid #2b2b2b;border-radius:3px;overflow:hidden;min-height:310px;padding:14px;display:grid;align-content:space-between;gap:18px;background:
+  linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.35)),
+  radial-gradient(80% 26% at 50% 40%,rgba(110,210,140,.38),transparent 62%),
+  linear-gradient(180deg,#76866a 0%,#6a5a3e 55%,#584830 100%)}
+.tk-hud{justify-self:start;background:radial-gradient(150% 130% at 22% 62%,rgba(8,8,8,.96) 56%,rgba(8,8,8,0) 76%);padding:12px 44px 14px 12px;display:grid;gap:8px;max-width:100%}
+.tk-hud-head{color:#fff;text-transform:uppercase;display:grid;gap:2px}
+.tk-hud-head b{font-weight:700;font-size:15px}
+.tk-hud-head span{font-size:12px;color:#d8d2c4;letter-spacing:.04em}
+.tk-cards{display:flex;gap:4px;flex-wrap:wrap;position:relative}
+.card{position:relative;width:44px;height:62px;background:linear-gradient(180deg,#3b3a36,#1b1a18);border:1px solid #6d6653;display:grid;place-items:center}
+.card.gen{background:linear-gradient(180deg,#5a4726,#241c10);border-color:#c8a15a}
+.card.focus{outline:2px solid #e2bf6e;outline-offset:1px}
+.card svg{width:22px;height:22px}
+.card em{position:absolute;right:3px;bottom:1px;font-style:normal;font-size:11px;font-weight:600;color:#fff}
+.card small{position:absolute;left:3px;top:0;font-size:10px;color:#9fd29f;font-weight:600}
+.card-tip{position:absolute;left:52px;bottom:calc(100% + 10px);width:min(250px,64vw);background:#0b0b0b;border:1px solid #6d6653;color:#fff;padding:8px 10px;display:grid;gap:2px;font-size:12.5px;line-height:1.35;z-index:2}
+.card-tip b{font-size:13.5px;text-transform:uppercase;letter-spacing:.03em}
+.card-tip span{color:#d8d2c4}
+.tk-result{border:1px solid #2b2b2b;border-radius:3px;overflow:hidden;min-height:250px;display:grid;place-items:center;padding:16px;background:
+  radial-gradient(60% 50% at 50% 50%,rgba(0,0,0,.25),transparent 70%),
+  linear-gradient(180deg,#7c8a6a,#5b6247 60%,#4c4a35)}
+.tk-cloud{background:radial-gradient(closest-side,rgba(6,6,6,.97) 72%,rgba(6,6,6,0));padding:26px 40px 30px;display:grid;gap:12px;justify-items:center;width:min(520px,100%)}
+.tk-flags{display:flex;gap:clamp(40px,14vw,120px);align-items:end}
+.tk-verdict{font-weight:700;font-size:clamp(20px,3vw,27px);color:#fff;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+.tk-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.tk-btns span{display:grid;place-items:center;align-content:center;padding:9px 6px;border:1px solid #8a8a8a;background:#1c1c1c;color:#fff;text-transform:uppercase;font-size:12.5px;font-weight:600;letter-spacing:.05em;text-align:center;min-height:42px}
+.tk-btns span.off{color:#7a7a7a;border-color:#444;background:#141414;text-decoration:line-through}
+.tk-btns span.off small{display:block;font-size:10.5px;letter-spacing:.02em;text-transform:none;color:#c9a15a;font-weight:500;text-decoration:none}
+
+/* CW2 companion toast, in the launcher's own palette */
+.cw2-toast{background:var(--p800);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:grid;gap:10px;margin-top:14px}
+.cw2-toast-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.cw2-toast-head b{font-family:var(--display);font-weight:400;font-size:18px}
+.cw2-toast .tbl table{min-width:420px;font-size:13.5px}
+.cw2-toast-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-size:13.5px;color:var(--bone2)}
+.fakebtn{background:var(--cinn);color:#fff;border-radius:4px;padding:7px 14px;font-size:13.5px;font-weight:700;white-space:nowrap}
+
+.paths{display:grid;gap:14px;margin-bottom:22px}
+.path h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone2);font-weight:700;margin-bottom:8px}
+.steps{display:flex;flex-wrap:wrap;gap:8px 26px;list-style:none;margin:0;padding:0}
+.steps li{position:relative;font-size:13.5px;padding:5px 10px;border:1px solid var(--rule);border-radius:4px;background:var(--p800)}
+.steps li:not(:last-child)::after{content:"\2192";position:absolute;right:-19px;top:50%;transform:translateY(-50%);color:var(--bone3)}
+.steps.today li:last-child{border-color:#7a2f2a;color:var(--cinn-soft)}
+.steps.next li{border-color:#3f7466}
+.steps.next li:last-child{color:var(--verd)}
+
+.fixes{margin:0;padding:0;list-style:none;display:grid;gap:10px;max-width:84ch}
+.fixes li{background:var(--p800);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;color:var(--bone2)}
+.fixes li b{color:var(--bone)}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--bone3)}
+footer ul{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
+footer code{font-size:12px}
+@media (prefers-reduced-motion:no-preference){.ex button,.inputs input{transition:border-color .15s}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">Crusader Wars 2 · bridge plan · 23 September 2026</div>
+  <h1>One CK3 battle, fought in Three Kingdoms, written back once</h1>
+  <p class="lede">This page settles what the launcher spec left open: how army sizes cross between the games, which files carry the battle each way, and what the player sees in each game instead of the Historical Battles detour. Every number comes from the Kasr al-Kabir save fixture (run-002), CW1's captured battle log, or the three G1 Xingyang runs.</p>
+  <div class="gates">
+    <div class="gate wait"><b>G1 · 3K staging</b><span>Armies and survivor counts proven in 3 runs. Winner fix built; one live run left.</span></div>
+    <div class="gate open"><b>G2 · CK3 write-back</b><span>New AFTER save written. Reload proof and Defect 6 (making CK3 accept the winner) still open.</span></div>
+    <div class="gate open"><b>G3 · Launch without the tab</b><span>New gate. Five spikes, one test pack, one 3K session.</span></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections"><ul>
+  <li><a href="#loop">The loop</a></li><li><a href="#army">Army size</a></li><li><a href="#exports">Save exports</a></li>
+  <li><a href="#ck3">CK3 screens</a></li><li><a href="#tk">3K screens</a></li><li><a href="#launch">Launch paths</a></li>
+  <li><a href="#build">Build order</a></li><li><a href="#fixes">Launcher spec fixes</a></li>
+</ul></nav>
+
+<section id="loop">
+  <h2>The loop</h2>
+  <p class="intro">Six stations, each owned by one program. A file crosses between every pair, so each hand-off can be checked on its own.</p>
+  <ol class="loop">
+    <li><div class="lhead"><span class="tag ck3">CK3</span></div><h3>Swords button</h3><p>Prints the battle into the debug log, pauses, saves.</p><span class="file">debug.log · CW2_2717908992_BEFORE.ck3</span><span class="pill ok">CW1 pattern</span></li>
+    <li><div class="lhead"><span class="tag cw2">CW2</span></div><h3>Intake</h3><p>Fingerprints the save; reads fighting men, armies, regiments.</p><span class="file">inventory.json</span><span class="pill ok">G2 proven</span></li>
+    <li><div class="lhead"><span class="tag cw2">CW2</span></div><h3>Manifest</h3><p>Scale, cards, which side the player holds, seed.</p><span class="file">battle_manifest.json</span><span class="pill open">planned</span></li>
+    <li><div class="lhead"><span class="tag tk">3K</span></div><h3>Battle</h3><p>Staged pack, one battle; the logger writes start to result.</p><span class="file">cw2 pack → run log .jsonl</span><span class="pill wait">counts ✓ · winner pending</span></li>
+    <li><div class="lhead"><span class="tag cw2">CW2</span></div><h3>Result</h3><p>Casualty rates back to CK3 men, split across regiments.</p><span class="file">battle_result.json</span><span class="pill wait">split ✓ · rate rule new</span></li>
+    <li><div class="lhead"><span class="tag ck3">CK3</span></div><h3>Load AFTER</h3><p>New save with losses and the outcome; the journal blocks replays.</p><span class="file">CW2_2717908992_AFTER.ck3 · journal.json</span><span class="pill wait">written ✓ · reload open</span></li>
+  </ol>
+</section>
+
+<section id="army">
+  <h2>Army size: small fights stay small, big hosts shrink together</h2>
+  <p class="intro">CK3 counts soldiers per regiment. Three Kingdoms fields at most 21 unit cards per army: three generals, each leading six units. At the unit size in your G1 runs a militia card holds 80 men and a general's card 21, so one army tops out at <strong>1,503 men</strong>.</p>
+  <dl class="rules">
+    <dt>Measure</dt><dd>Take fighting men <code>F</code> per side from the CK3 battle record at export. Kasr al-Kabir: <strong>340.10</strong> attacking, <strong>421.48</strong> defending (of 571 and 528 at the start).</dd>
+    <dt>Shrink</dt><dd><code>s = min(1, 1503 ÷ F_att, 1503 ÷ F_def)</code>. Both sides use the same <code>s</code>, so the odds survive. Below 1,503 men a side, nothing shrinks.</dd>
+    <dt>Fill</dt><dd>Target <code>T = round(F × s)</code>. Add a general for every six units needed: commander first, then the highest-prowess knights, three at most. Units <code>n = ceil((T − 21g) ÷ 80)</code>. Trim the surplus (under 80 men) at deployment with <code>unit:kill_number_of_men</code>. The game's own battle library calls it (<code>lib_battle_script_unit.lua:1334</code>); we haven't tested it.</dd>
+    <dt>Return</dt><dd>CK3 dead per side = <code>round(F × lost ÷ started)</code>. The <strong>casualty rate</strong> crosses, not the head count. <code>started</code> is the count logged at battle start, not the planned one, because unit size follows the player's graphics setting. Split the total across regiments by current strength with largest-remainder rounding so the side's total is exact (G2 chunk attribution).</dd>
+    <dt>Resolve</dt><dd><strong>Proposal for Defect 6.</strong> The loser's surviving 3K men were routing. Record them as CK3 soft casualties so the loser has no fighting men left and CK3 ends the battle for the 3K winner. Test this on the G2 fixture before building on it.</dd>
+  </dl>
+
+  <div class="calc" id="calc">
+    <div class="calc-head">
+      <h3>Try the rule</h3>
+      <div class="ex" role="group" aria-label="Load an example">
+        <button type="button" id="ex-kasr" aria-pressed="true">Kasr al-Kabir (real)</button>
+        <button type="button" id="ex-large" aria-pressed="false">Large war (example)</button>
+      </div>
+    </div>
+    <div class="inputs">
+      <label for="fa">Attacker fighting men (CK3)<input id="fa" type="number" min="1" step="any" value="340.1"></label>
+      <label for="fd">Defender fighting men (CK3)<input id="fd" type="number" min="1" step="any" value="421.48"></label>
+      <label for="usz">Men per unit card (3K)<input id="usz" type="number" min="10" step="1" value="80"></label>
+      <label for="gsz">Men per general card (3K)<input id="gsz" type="number" min="1" step="1" value="21"></label>
+      <label for="sa">Attacker survivors in 3K<input id="sa" type="number" min="0" step="1" value="118"></label>
+      <label for="sd">Defender survivors in 3K<input id="sd" type="number" min="0" step="1" value="356"></label>
+    </div>
+    <div class="sides">
+      <div class="sidecard"><h4>Attacker</h4><div class="big" id="o-am">340<small>3K men</small></div><div class="deck" id="o-adeck" aria-hidden="true"></div><div class="kv" id="o-akv"></div></div>
+      <div class="sidecard"><h4>Defender</h4><div class="big" id="o-dm">421<small>3K men</small></div><div class="deck" id="o-ddeck" aria-hidden="true"></div><div class="kv" id="o-dkv"></div></div>
+    </div>
+    <div class="summary" id="o-sum" aria-live="polite"></div>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Case</th><th>CK3 fighting men</th><th>Scale</th><th>3K cards</th><th>3K men</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Kasr al-Kabir (run-002)</td><td class="num">340.10 v 421.48</td><td class="num">1 : 1</td><td class="num">5 v 6</td><td class="num">340 v 421</td><td>One general a side; 1 man trimmed from the attacker.</td></tr>
+        <tr><td>Large war (example)</td><td class="num">12,400 v 7,900</td><td class="num">1 : 8.3</td><td class="num">21 v 14</td><td class="num">1,503 v 958</td><td>Defender needs 12 units, so it gets a second general; 44 trimmed. Without trimming the odds drift 3.9%.</td></tr>
+        <tr><td>G2 synthetic plan</td><td class="num">340.10 v 421.48</td><td class="num">n/a</td><td class="num">3 v 3</td><td class="num">181 v 181</td><td>Today G1 run 1's raw losses go straight to CK3: 38 / 75. The rate rule makes that <strong>71 / 175</strong>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="exports">
+  <h2>Save exports: five files, each written by one side</h2>
+  <p class="intro">Nothing parses the other game's native files except its own adapter. CK3 facts reach 3K only through the manifest, and 3K facts reach CK3 only through the result.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>File</th><th>Written by</th><th>Read by</th><th>Carries</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><span class="file">debug.log</span> lines</td><td>CK3 mod, Swords chain</td><td>CW2 watcher</td><td>Player side; army ids, owners, cultures; commanders and knights with prowess and martial; battle name, year, month; terrain, region, winter, province</td><td>CW1 format proven; CW2 keyword new</td></tr>
+        <tr><td><span class="file">CW2_2717908992_BEFORE.ck3</span></td><td>CK3 pause-menu save</td><td>CW2 intake</td><td>Full gamestate; battle record with per-regiment starting, current and soft casualties</td><td>Intake and SHA-256 proven (<code>dd278de2…</code>)</td></tr>
+        <tr><td><span class="file">battle_manifest.json</span></td><td>CW2</td><td>Pack builder, launcher</td><td>Encounter id, sides, scale, cards, which 3K alliance is which CK3 side, seed</td><td>Planned</td></tr>
+        <tr><td><span class="file">cw2 pack</span> → <span class="file">run log .jsonl</span></td><td>CW2, then the 3K battle script</td><td>CW2 reader</td><td>start, deployed, victory_countdown, complete, result; per unit: initial, survivors, routing</td><td>Counts proven ×3; winner pending</td></tr>
+        <tr><td><span class="file">CW2_2717908992_AFTER.ck3</span> + <span class="file">journal.json</span></td><td>CW2 patcher</td><td>CK3 Load Game</td><td>Reduced regiments, outcome, applied result ids</td><td>Written; reload and Defect 6 open</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="codes">
+    <figure><figcaption>battle_manifest.json · v1, filled from the fixture</figcaption>
+<pre>{
+  <span class="k">"schema"</span>: <span class="s">"cw2.battle_manifest/1"</span>,
+  <span class="k">"encounter_id"</span>: <span class="s">"ck3:2717908992@dd278de2"</span>,
+  <span class="k">"source"</span>: { <span class="k">"battle"</span>: <span class="s">"Battle of Kasr al-Kabir"</span>,
+    <span class="k">"date"</span>: <span class="s">"908.8.27"</span>, <span class="k">"terrain"</span>: <span class="s">"drylands"</span>,
+    <span class="k">"season"</span>: <span class="s">"summer"</span>, <span class="k">"sha256"</span>: <span class="s">"dd278de2…c93128"</span> },
+  <span class="k">"player_side"</span>: <span class="s">"defender"</span>,
+  <span class="k">"tk_alliance"</span>: { <span class="k">"1"</span>: <span class="s">"defender"</span>, <span class="k">"2"</span>: <span class="s">"attacker"</span> },
+  <span class="k">"scale"</span>: { <span class="k">"s"</span>: 1.0, <span class="k">"unit"</span>: 80, <span class="k">"general"</span>: 21 },
+  <span class="k">"sides"</span>: {
+    <span class="k">"attacker"</span>: { <span class="k">"armies"</span>: [<span class="s">"570426519"</span>], <span class="k">"fighting"</span>: 340.10,
+      <span class="k">"generals"</span>: 1, <span class="k">"units"</span>: 4, <span class="k">"men_3k"</span>: 340, <span class="k">"trim"</span>: 1 },
+    <span class="k">"defender"</span>: { <span class="k">"armies"</span>: [<span class="s">"503317436"</span>], <span class="k">"fighting"</span>: 421.48,
+      <span class="k">"generals"</span>: 1, <span class="k">"units"</span>: 5, <span class="k">"men_3k"</span>: 421, <span class="k">"trim"</span>: 0 }
+  },
+  <span class="k">"seed"</span>: 1702901
+}</pre></figure>
+    <figure><figcaption>battle_result.json · v1, the illustrative outcome used in the mockups</figcaption>
+<pre>{
+  <span class="k">"schema"</span>: <span class="s">"cw2.battle_result/1"</span>,
+  <span class="k">"encounter_id"</span>: <span class="s">"ck3:2717908992@dd278de2"</span>,
+  <span class="k">"run_id"</span>: <span class="s">"…"</span>, <span class="k">"result_id"</span>: <span class="s">"sha256(run_id + log)"</span>,
+  <span class="k">"winner"</span>: <span class="s">"defender"</span>,
+  <span class="k">"winner_source"</span>: <span class="s">"routing_state"</span>,  <span class="c">// or engine_callback</span>
+  <span class="k">"tk"</span>: {
+    <span class="k">"defender"</span>: { <span class="k">"started"</span>: 421, <span class="k">"survived"</span>: 356 },
+    <span class="k">"attacker"</span>: { <span class="k">"started"</span>: 340, <span class="k">"survived"</span>: 118, <span class="k">"routing"</span>: 118 }
+  },
+  <span class="k">"ck3"</span>: {
+    <span class="k">"defender"</span>: { <span class="k">"dead"</span>: 65 },
+    <span class="k">"attacker"</span>: { <span class="k">"dead"</span>: 222, <span class="k">"routed_to_soft"</span>: 118 }
+  }
+}</pre></figure>
+  </div>
+</section>
+
+<section id="ck3">
+  <h2>Crusader Kings III: one button, then a paused game</h2>
+  <p class="intro">CW1 already proved the CK3 half. Its <strong>Swords button</strong> in the battle window runs eight scripted steps that print the battle into the debug log, then opens the pause menu and saves. CW2 keeps that pattern and changes the text. The player's side sits on the left, as in CK3; at Kasr al-Kabir the player defended.</p>
+
+  <figure class="shot">
+    <div class="stage">
+      <div class="ck3 ck3-frame ck3-win" role="img" aria-label="Mockup of the CK3 battle window for Kasr al-Kabir with the CW2 Swords button and its tooltip">
+        <div class="ck3-head">
+          <span class="cw2-swords" aria-hidden="true"><svg viewBox="0 0 40 40"><g stroke="#ecdcb4" stroke-width="2.4" stroke-linecap="round" fill="none"><path d="M9 9 27 27M31 9 13 27M24 30l6-6M10 24l6 6M28 28l4 4M12 28l-4 4"/></g></svg></span>
+          <div class="ck3-plaque"><div class="ck3-title">Battle of Kasr al-Kabir</div><div class="ck3-sub">Main phase · Drylands · Summer 908</div></div>
+        </div>
+        <div class="ck3-tip"><b>Fight this battle in Three Kingdoms</b><span>Up to 1,503 men a side at full strength. Larger hosts shrink together.</span></div>
+        <div class="ck3-sides">
+          <div class="ck3-side">
+            <div class="ck3-role">Defender · You</div>
+            <div class="ck3-host"><span class="shield me"></span><div><div class="ck3-name">Kru host</div><div class="ck3-dim">army 503317436</div></div></div>
+            <div class="ck3-men"><b>421</b><span>of 528 men</span></div>
+            <div class="ck3-maa"><span>Levies</span><span>Knights</span></div>
+          </div>
+          <div class="ck3-vs">vs</div>
+          <div class="ck3-side">
+            <div class="ck3-role">Attacker</div>
+            <div class="ck3-host"><span class="shield foe"></span><div><div class="ck3-name">Maghrebi host of Gharb</div><div class="ck3-dim">army 570426519</div></div></div>
+            <div class="ck3-men"><b>340</b><span>of 571 men</span></div>
+            <div class="ck3-maa"><span>Bowmen ×3</span><span>Levies ×2</span><span>Knights</span></div>
+          </div>
+        </div>
+        <div class="ck3-bar" aria-hidden="true"><i></i></div>
+      </div>
+    </div>
+    <figcaption><span class="step">Step 1 of 6</span><b>Battle window.</b> Same place and gate as CW1's button in <code>gui/window_combat.gui</code>: until the player's side takes its first casualties the tooltip reads “Wait just a few more days…”. Composition comes from CW1's log of this battle; the counts come from the save.</figcaption>
+  </figure>
+
+  <div class="pair">
+    <figure class="shot">
+      <div class="stage">
+        <div class="ck3 ck3-frame ck3-pause" role="img" aria-label="Mockup of the CK3 pause menu with a CW2 note to stay paused and load the AFTER save">
+          <div class="ck3-plaque"><div class="ck3-title sm">Game Paused</div></div>
+          <div class="ck3-note"><b>Fighting in Three Kingdoms</b>Stay paused. When Crusader Wars 2 reports the result, open Load Game and choose the save ending in <i>_AFTER</i>.</div>
+          <ul class="ck3-menu"><li class="off">Resume</li><li>Save Game</li><li class="hl">Load Game</li><li>Settings</li><li>Exit to Main Menu</li></ul>
+        </div>
+      </div>
+      <figcaption><span class="step">Step 2 of 6</span><b>Pause menu.</b> CW1's chain already ends in the pause menu and a save. The note is static text, so the CK3 mod needs no link to the launcher. The AFTER save is a new file, so CK3 can stay open.</figcaption>
+    </figure>
+    <figure class="shot">
+      <div class="stage">
+        <div class="ck3 ck3-frame ck3-event" role="img" aria-label="Mockup of a CK3 event reporting the Three Kingdoms outcome of Kasr al-Kabir">
+          <div class="ck3-plaque"><div class="ck3-title sm">Tidings from Kasr al-Kabir</div></div>
+          <div class="ck3-evbody"><div class="ck3-art" aria-hidden="true"></div><p>The dust of the drylands has settled. Our host held the field: of 421 men, 65 fell. The Maghrebi of Gharb left 222 dead, and the other 118 fled.</p></div>
+          <div class="ck3-option">The field is ours</div>
+        </div>
+      </div>
+      <figcaption><span class="step">Step 6 of 6</span><b>After loading the AFTER save.</b> This comes last: it can only fire once Defect 6 makes CK3 end the battle, from a combat-end hook that reads a CW2 flag written into the save. Unverified.</figcaption>
+    </figure>
+  </div>
+  <ul class="notes">
+    <li><b>Reused from CW1:</b> the button, the first-casualty gate, the scripted steps that write to the debug log (participants, armies, characters, battle, terrain, modifiers) and the pause-and-save step.</li>
+    <li><b>New for CW2:</b> its own marker keyword and save names, and the tooltip text. The scale preview lives in the launcher, not in CK3.</li>
+    <li><b>CW1 and CW2 can't share a playset.</b> Both replace <code>gui/window_combat.gui</code>, so disable CW1 when testing CW2.</li>
+  </ul>
+</section>
+
+<section id="tk">
+  <h2>Three Kingdoms: a pending battle, not a history lesson</h2>
+  <p class="intro">Today the probe borrows the Xingyang slot, so the player clicks through Historical Battles and reads about Dong Zhuo's army at Xingyang before fighting a battle from CK3. The proposal keeps the proven slot but opens it for the player and shows the CK3 battle's own names and date.</p>
+  <div class="paths">
+    <div class="path"><h3>Today · 6 clicks, wrong story</h3>
+      <ol class="steps today"><li>PLAY</li><li>Mod notice: Play</li><li>Historical Battles</li><li>Battle of Xingyang</li><li>Records mode</li><li>Start battle</li><li>“Xingyang, Spring 190”</li></ol></div>
+    <div class="path"><h3>Proposed · 3 clicks, the CK3 battle</h3>
+      <ol class="steps next"><li>PLAY</li><li>Mod notice: Play</li><li>Start battle</li><li>“Kasr al-Kabir, Summer 908”</li></ol></div>
+  </div>
+
+  <figure class="shot">
+    <div class="stage">
+      <div class="tk tk-screen" role="img" aria-label="Mockup of the Three Kingdoms pre-battle screen reskinned for Kasr al-Kabir, player defending on the left">
+        <div class="brush">
+          <svg viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true"><path d="M14 40C70 22 150 30 222 20 300 9 388 24 462 15c62-7 110 3 130 17 8 12-2 24 4 36 4 16-12 30-36 34-82 12-164 0-254 8-86 8-174-4-254-6-30-2-46-14-40-30-8-10-10-24 2-34Z" fill="#0d0d0d"/><path d="M30 28 150 22M440 104l130-8M20 96l70 4" stroke="#0d0d0d" stroke-width="4" stroke-linecap="round"/></svg>
+          <div class="brush-text"><b>Battle of Kasr al-Kabir</b><span>Summer 908</span></div>
+        </div>
+        <span class="tk-start">Start battle</span>
+        <div class="tk-grid">
+          <div class="tk-side">
+            <div class="tk-flag def"><span>守</span></div>
+            <div class="tk-plate"><b>Kru host</b><span>Defender · You · 421</span></div>
+          </div>
+          <div class="tk-map">
+            <svg viewBox="0 0 420 230" aria-hidden="true">
+              <g fill="none" stroke="#6b6558" stroke-opacity=".35" stroke-width="1.2"><path d="M10 60c70-20 120 10 180-8 70-22 140 6 220-12"/><path d="M10 180c80-20 140 16 220-4 70-18 120 14 180-6"/><path d="M60 10c10 50-20 100 10 150 20 36 0 54 10 66"/><path d="M330 8c-12 52 20 92 2 142-12 40 14 60 8 76"/></g>
+              <path d="M0 132c60-12 110 14 170 6s80-26 130-20 90-10 120-6" fill="none" stroke="#7a8b93" stroke-width="3"/>
+              <path d="M376 70c-46 8-96 38-140 68" fill="none" stroke="#141414" stroke-width="11" stroke-linecap="round"/>
+              <path d="M376 70c-46 8-96 38-140 68" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+              <polygon points="225,145 245,142 235,128" fill="#fff" stroke="#141414" stroke-width="2"/>
+              <path d="M150 152h52" stroke="#141414" stroke-width="3" stroke-dasharray="4 4"/>
+              <path d="M206 140l16 16M222 140l-16 16" stroke="#a8261d" stroke-width="4" stroke-linecap="round"/>
+              <text x="214" y="176" text-anchor="middle" font-family="Kanit,sans-serif" font-size="12" font-weight="600" fill="#141414">KASR AL-KABIR</text>
+              <text x="378" y="60" text-anchor="end" font-family="Kanit,sans-serif" font-size="12" font-weight="600" fill="#141414">MAGHREBI HOST</text>
+              <text x="146" y="144" text-anchor="end" font-family="Kanit,sans-serif" font-size="12" font-weight="600" fill="#141414">KRU HOST (YOU)</text>
+              <text x="14" y="220" font-family="Kanit,sans-serif" font-size="10.5" letter-spacing="1.5" fill="#4a463d">DRYLANDS · SUMMER</text>
+            </svg>
+          </div>
+          <div class="tk-side right">
+            <div class="tk-flag atk"><span>攻</span></div>
+            <div class="tk-plate"><b>Maghrebi host</b><span>Attacker · 340</span></div>
+          </div>
+        </div>
+        <div class="tk-info">
+          <div class="tk-info-row"><span>Records mode · <em>locked</em></span><span>Scale 1 : 1 · your 6 cards v their 5</span></div>
+          <p>Crusader Kings III, August 908. The Maghrebi host of Gharb (340 fighting men: bowmen, levies, knights) falls on your Kru host (421). One battle decides it; there is no rematch.</p>
+        </div>
+      </div>
+    </div>
+    <figcaption><span class="step">Step 3 of 6</span><b>Pending battle.</b> The same native screen the Historical Battles tab uses, with the tab row hidden, the text replaced through a localisation override (G3a), and the screen opened by a frontend script (G3b). None of these three is tested yet. Flags read 守 “defend” and 攻 “attack”.</figcaption>
+  </figure>
+
+  <div class="pair">
+    <figure class="shot">
+      <div class="stage">
+        <div class="tk tk-field" role="img" aria-label="Mockup of the 3K deployment HUD showing six unit cards and a tooltip tracing a card back to CK3 levies">
+          <div class="brush sm"><svg viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true"><path d="M14 40C70 22 150 30 222 20 300 9 388 24 462 15c62-7 110 3 130 17 8 12-2 24 4 36 4 16-12 30-36 34-82 12-164 0-254 8-86 8-174-4-254-6-30-2-46-14-40-30-8-10-10-24 2-34Z" fill="#0d0d0d"/></svg><div class="brush-text"><b>Deployment phase</b></div></div>
+          <div class="tk-hud">
+            <div class="tk-hud-head"><b>Battle of Kasr al-Kabir</b><span>6 cards · 421 men · Summer 908</span></div>
+            <div class="tk-cards">
+              <div class="card-tip"><b>Ji Militia · 80</b><span>From CK3: Kru levies, melee card 1 of 3</span><span>Scale 1 : 1 · trimmed 0</span></div>
+              <div class="card gen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l2.4 5.6L18 10l-5.6 2.4L10 18l-2.4-5.6L2 10l5.6-2.4Z" fill="#e2bf6e"/></svg><em>21</em></div>
+              <div class="card focus"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 18V5" stroke="#e8e2d2" stroke-width="1.6"/><path d="M10 1.5 12 5.5H8Z" fill="#e8e2d2"/><path d="M10 7c3 0 4.5 1.5 4.5 3.5" stroke="#e8e2d2" stroke-width="1.4" fill="none"/></svg><em>80</em></div>
+              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
+              <div class="card"><small>1</small><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 2c8 4 8 12 0 16" stroke="#e8e2d2" stroke-width="1.6" fill="none"/><path d="M6 2v16" stroke="#e8e2d2" stroke-width=".8"/><path d="M3 10h13" stroke="#e8e2d2" stroke-width="1.2"/><path d="m16 10-2.5-1.5v3Z" fill="#e8e2d2"/></svg><em>80</em></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="step">Step 4 of 6</span><b>Deployment.</b> Native HUD, native unit cards (Ji Militia and Archer Militia are the two keys G1 has proven). What's new is provenance: each card knows which CK3 regiment it stands for, recorded in the manifest.</figcaption>
+    </figure>
+    <figure class="shot">
+      <div class="stage">
+        <div class="tk tk-result" role="img" aria-label="Mockup of the 3K result screen with Rematch locked for CW2 battles">
+          <div class="tk-cloud">
+            <div class="tk-flags"><span class="tk-flag def sm"><span>守</span></span><span class="tk-flag atk sm torn"><span>攻</span></span></div>
+            <div class="tk-verdict">Decisive victory</div>
+            <div class="tk-btns"><span class="off">Rematch<small>locked for CW2 battles</small></span><span>End battle</span><span>Save replay</span><span>Load replay</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><span class="step">Step 5 of 6</span><b>Result.</b> Native screen with Rematch locked (G3c): a rematch adds a second start line to the log, and the reader rejects the run. That already happened once, in G1 run 2.</figcaption>
+    </figure>
+  </div>
+
+  <div class="cw2-toast" role="img" aria-label="Mockup of the CW2 launcher notification after the battle">
+    <div class="cw2-toast-head"><span class="pill ok">Result recorded</span><b>You held the field</b><span class="dim">winner from routing state · illustrative numbers</span></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Side</th><th>Started</th><th>Survived</th><th>Lost</th><th>Rate</th><th>CK3 dead</th></tr></thead>
+      <tbody>
+        <tr><td>Kru host (you, defender)</td><td class="num">421</td><td class="num">356</td><td class="num">65</td><td class="num">15.4%</td><td class="num">65</td></tr>
+        <tr><td>Maghrebi host (attacker)</td><td class="num">340</td><td class="num">118</td><td class="num">222</td><td class="num">65.3%</td><td class="num">222 + 118 routed</td></tr>
+      </tbody>
+    </table></div>
+    <div class="cw2-toast-foot"><span>Next: CW2_2717908992_AFTER.ck3, then Load Game in CK3.</span><span class="fakebtn">Write to CK3 save</span></div>
+  </div>
+</section>
+
+<section id="launch">
+  <h2>Launch paths</h2>
+  <p class="intro">Recommendation: <strong>B</strong>. It keeps the only launch path we have proven and removes the detour. <strong>C</strong> is the fallback if the frontend can't open the battle for us.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th></th><th>A · Historical slot, by hand (today)</th><th>B · Reskinned slot, opened for you</th><th>C · Any battle, logged by the mod loader</th></tr></thead>
+      <tbody>
+        <tr><td>Clicks after PLAY</td><td>Historical Battles → Xingyang → Records → Start</td><td>Start</td><td>Custom Battle setup, units picked by hand</td></tr>
+        <tr><td>What the screen says</td><td>Xingyang, 190, Cao Cao and Liu Bei</td><td>Kasr al-Kabir, 908, your CK3 hosts</td><td>Whatever the player sets up</td></tr>
+        <tr><td>Roster from CK3</td><td>Staged ✓</td><td>Staged ✓</td><td>Manual; saved army setups unverified</td></tr>
+        <tr><td>Map</td><td>Xingyang's</td><td>Xingyang's; maps matched to CK3 terrain later (G3f)</td><td>Any</td></tr>
+        <tr><td>Evidence</td><td>G1 runs 1–3</td><td>Localisation override, frontend opener and hidden tabs untested. The frontend mod loader runs (<code>lua_frontend_mod_log.txt</code>, empty today).</td><td><code>script/_lib/mod</code> files load (<code>lua_mod_log.txt</code>). Logging a custom battle is untested.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build order</h2>
+  <p class="intro">Four tracks that can run in parallel. The two game sessions are short and scripted, and track A needs neither game.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Track</th><th>Needs</th><th>Next action</th><th>Done when</th></tr></thead>
+      <tbody>
+        <tr><td><b>A · Bridge math</b></td><td>Nothing</td><td>Write <code>scale.py</code> and <code>result_to_ck3.py</code> as pure functions. Make <code>read_result</code> report the CK3 winner through the side map; it currently assumes the player attacked.</td><td>Tests reproduce both examples on this page and the 71 / 175 check</td></tr>
+        <tr><td><b>B · One 3K session</b></td><td>3K, rebuilt probe exe</td><td>Close G1: one Xingyang run, then Read result. Then one test pack covering G3a–e: localisation reskin, frontend opener, locked rematch, a 21-card army with generated positions across retinues 0–2, and trimming to exact men.</td><td>A 21 v 14 battle logs trimmed start counts and a result on a screen showing CK3 names</td></tr>
+        <tr><td><b>C · One CK3 session</b></td><td>CK3, run-002 fixture</td><td>G2 reload proof on the AFTER save. Then Defect 6: record the loser's routing men as soft casualties.</td><td>CK3 ends the battle for the patched winner, and replaying the result is rejected</td></tr>
+        <tr><td><b>D · Screens</b></td><td>A; results from B and C</td><td>Launcher per <code>FRONTEND_DESIGN.md</code> with the fixes below. Build the CK3 Swords button after C passes.</td><td>One click-through from the CK3 button to a loaded AFTER save</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="fixes">
+  <h2>Fixes for the launcher spec</h2>
+  <p class="intro"><code>docs/design/FRONTEND_DESIGN.md</code> stays the launcher plan. These five changes bring it in line with the evidence above.</p>
+  <ul class="fixes">
+    <li><b>Small fights get inflated.</b> <code>slots_for</code> turns Kasr al-Kabir (340 v 421) into 15 v 18 slots: 1,200 v 1,440 men in 3K. This page's rule stays at 1 : 1 until a side passes 1,503 men, giving 5 v 6 cards.</li>
+    <li><b>Generals count toward the cap.</b> <code>MAX_SLOTS = 18</code> leaves them out. 3K caps an army at 21 cards with six units per general, so the second and third generals join only when a side needs more than 6 or 12 units.</li>
+    <li><b>The winner can be filled in now.</b> <code>BattleResult.winner</code> comes from the logged result (<code>routing_state</code>, or <code>engine_callback</code> if the engine ever sends it), mapped through the manifest's side map. The player defended at Kasr al-Kabir.</li>
+    <li><b>Same loss rule, different denominator.</b> <code>ck3_losses</code> already scales by casualty rate. Take <code>tk_men</code> from the logged start count, since unit size follows the graphics setting.</li>
+    <li><b>CK3 can stay open.</b> Writing to a new _AFTER file doesn't touch the open save, so the player can stay paused and use Load Game. Keep the “CK3 must be closed” block only for writes that overwrite an existing save, and confirm this during the G2 reload proof.</li>
+  </ul>
+</section>
+
+<footer>
+  Sources, all local:
+  <ul>
+    <li>CW1 CK3 mod: <code>dev/reference/cw1/ck3 mod/…/gui/window_combat.gui</code> (Swords button, eight-step chain, wait and fight tooltips) and <code>common/scripted_guis/01_battle_info.txt</code> (debug-log fields).</li>
+    <li>CW1 battle log: <code>dev/reference/cw1/data/BattleLog.txt</code> (Kasr al-Kabir: drylands, summer, player defending; attacker bowmen ×3, levies, knights).</li>
+    <li>G2 fixture: <code>results/run-002/inventory.json</code> (fighting 340.09632 / 421.48395; initial 571 / 528) and <code>synthetic_result.json</code> (38 / 75).</li>
+    <li>G1 logs: <code>dev/spikes/g1_3k_io/evidence</code> (runs 1–3 survivors: 143/106, 146/49, 163/68 of 181 a side).</li>
+    <li>3K install: <code>lib_battle_manager.lua:535</code> (<code>battle_is_won</code>), <code>lib_battle_script_unit.lua:1334</code> (<code>kill_number_of_men</code>), <code>lua_frontend_mod_log.txt</code>, <code>lua_mod_log.txt</code>.</li>
+    <li>Illustrative numbers (Kasr al-Kabir 3K outcome, large war) are examples, labelled where they appear.</li>
+  </ul>
+</footer>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+  var EXAMPLES = {
+    kasr: { fa: 340.1, fd: 421.48, usz: 80, gsz: 21, sa: 118, sd: 356 },
+    large: { fa: 12400, fd: 7900, usz: 80, gsz: 21, sa: 1052, sd: 326 }
+  };
+
+  // Staging rule: shared scale, generals added per six units, units rounded up then trimmed.
+  function side(F, s, G, U) {
+    var T = Math.max(1, Math.round(F * s));
+    var need = Math.max(1, Math.ceil((T - G) / U));
+    var g = Math.min(3, Math.max(1, Math.ceil(need / 6)));
+    var n = Math.min(6 * g, Math.max(1, Math.ceil((T - g * G) / U)));
+    var full = g * G + n * U;
+    var trim = Math.max(0, full - T);
+    var nr = Math.min(6 * g, Math.max(1, Math.round((F * s - g * G) / U)));
+    return { T: T, g: g, n: n, men: full - trim, trim: trim, rounded: g * G + nr * U, small: T < G + 20 };
+  }
+
+  function deck(el, g, n) {
+    var html = '';
+    for (var i = 0; i < g; i++) html += '<i class="g"></i>';
+    for (var j = 0; j < n; j++) html += '<i></i>';
+    el.innerHTML = html;
+  }
+
+  function kv(el, r, F, S) {
+    var survived = Math.min(Math.max(0, S), r.men);
+    var lost = r.men - survived;
+    var dead = Math.round(F * lost / r.men);
+    el.innerHTML =
+      '<span>Cards</span><span>' + r.g + (r.g > 1 ? ' generals + ' : ' general + ') + r.n + ' units</span>' +
+      '<span>Trimmed at deployment</span><span>' + fmt(r.trim) + ' men</span>' +
+      '<span>Without trimming</span><span>' + fmt(r.rounded) + ' men</span>' +
+      '<span>3K survivors</span><span>' + fmt(survived) + ' (' + (100 * lost / r.men).toFixed(1) + '% lost)</span>' +
+      '<span>CK3 dead</span><span class="loss">' + fmt(dead) + ' of ' + fmt(F) + '</span>';
+  }
+
+  function num(id, fallback, min) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v >= min ? v : fallback;
+  }
+
+  function render() {
+    var Fa = num('fa', 1, 1), Fd = num('fd', 1, 1);
+    var U = num('usz', 80, 10), G = num('gsz', 21, 1);
+    var Sa = num('sa', 0, 0), Sd = num('sd', 0, 0);
+    var cap = 3 * G + 18 * U;
+    var s = Math.min(1, cap / Fa, cap / Fd);
+    var a = side(Fa, s, G, U), d = side(Fd, s, G, U);
+    $('o-am').innerHTML = fmt(a.men) + '<small>3K men</small>';
+    $('o-dm').innerHTML = fmt(d.men) + '<small>3K men</small>';
+    deck($('o-adeck'), a.g, a.n);
+    deck($('o-ddeck'), d.g, d.n);
+    kv($('o-akv'), a, Fa, Sa);
+    kv($('o-dkv'), d, Fd, Sd);
+    var drift = ((a.rounded / d.rounded) / (Fa / Fd) - 1) * 100;
+    var scale = s >= 1 ? '1 : 1' : '1 : ' + (1 / s).toFixed(1);
+    var parts = [
+      'Shared scale <b>' + scale + '</b>',
+      'Army cap <b>' + fmt(cap) + '</b> men a side',
+      'Odds drift without trimming <b>' + (drift >= 0 ? '+' : '') + drift.toFixed(1) + '%</b>, 0% with it'
+    ];
+    if (a.small || d.small) parts.push('<span class="warn">A side is below one general plus 20 men; let CK3 resolve this one.</span>');
+    $('o-sum').innerHTML = parts.join('<span aria-hidden="true"> · </span>');
+  }
+
+  function load(name) {
+    var ex = EXAMPLES[name];
+    Object.keys(ex).forEach(function (k) { $(k).value = ex[k]; });
+    $('ex-kasr').setAttribute('aria-pressed', String(name === 'kasr'));
+    $('ex-large').setAttribute('aria-pressed', String(name === 'large'));
+    render();
+  }
+
+  $('ex-kasr').addEventListener('click', function () { load('kasr'); });
+  $('ex-large').addEventListener('click', function () { load('large'); });
+  ['fa', 'fd', 'usz', 'gsz', 'sa', 'sd'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      $('ex-kasr').setAttribute('aria-pressed', 'false');
+      $('ex-large').setAttribute('aria-pressed', 'false');
+      render();
+    });
+  });
+  render();
+})();
+</script>
