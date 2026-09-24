@@ -6,6 +6,7 @@ Only Ji Militia and Archer Militia have been staged by the probe so far; the
 rest are unproven in our packs until the full-army spike (G3d).
 """
 from __future__ import annotations
+import math
 import random
 
 POOL = {
@@ -30,27 +31,62 @@ MODES = {'records': {'general_size': 21, 'general': 'bodyguard'},
          'romance': {'general_size': 1, 'general': 'hero'}}
 PROVEN = {'3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'}
 RETINUE = 6
+CAPTAIN_PROWESS = 5
+BETA = 0.6
 
 def unit_name(key):
     return key.split('_', 4)[-1].replace('_', ' ').title()
 
-def roll_side(side, rng, mode='records'):
+def tier_probs(prowess: int) -> list[float]:
+    p = min(max(prowess / 20, 0.0), 2.0)
+    w = [pi * math.exp(BETA * p * k) for k, pi in enumerate(TIER_WEIGHTS.values())]
+    s = sum(w)
+    return [x / s for x in w]
+
+def generals_of(commander: dict, knights: list[dict], g: int) -> list[dict]:
+    ranked = sorted(knights, key=lambda k: k.get("prowess", 10), reverse=True)
+    picks = ([commander] if commander else []) + ranked
+    # Deduplicate in case commander is in knights
+    seen = set()
+    unique_picks = []
+    for p in picks:
+        if p["name"] not in seen:
+            seen.add(p["name"])
+            unique_picks.append(p)
+    picks = unique_picks[:g]
+    return picks + [{"name": f"Captain {i+1}", "prowess": CAPTAIN_PROWESS} for i in range(g - len(picks))]
+
+def roll_side(side_spec, side, rng, mode='records'):
     """Fill a scale.StagedSide's unit cards; generals lead six units each, in order."""
     kind = MODES[mode]['general']
-    tiers = list(TIER_WEIGHTS)
-    units = []
-    for men in side.card_men[side.generals:]:
-        tier = rng.choices(tiers, [TIER_WEIGHTS[t] for t in tiers])[0]
-        key = rng.choice(POOL[tier])
-        units.append({'key': key, 'name': unit_name(key), 'tier': tier, 'men': men,
-                      'proven': key in PROVEN})
-    return [{'key': GENERALS[g % len(GENERALS)], 'role': 'Commander' if g == 0 else 'Knight',
-             'kind': kind, 'men': side.card_men[g], 'units': units[g * RETINUE:(g + 1) * RETINUE]}
-            for g in range(side.generals)]
+    tiers = list(TIER_WEIGHTS.keys())
+    
+    commander = side_spec.get('commander')
+    knights = side_spec.get('knights', [])
+    gens = generals_of(commander, knights, side.generals)
+    
+    out = []
+    unit_idx = side.generals
+    for g, gen in enumerate(gens):
+        probs = tier_probs(gen["prowess"])
+        n = min(RETINUE, side.cards - unit_idx)
+        units = []
+        for _ in range(n):
+            tier_idx = rng.choices(range(len(tiers)), probs)[0]
+            tier = tiers[tier_idx]
+            key = rng.choice(POOL[tier])
+            units.append({'key': key, 'name': unit_name(key), 'tier': tier, 'men': side.card_men[unit_idx],
+                          'proven': key in PROVEN})
+            unit_idx += 1
+        
+        out.append({'key': GENERALS[g % len(GENERALS)], 'role': 'Commander' if g == 0 else 'Knight',
+                    'name': gen['name'], 'prowess': gen['prowess'],
+                    'kind': kind, 'men': side.card_men[g], 'units': units})
+    return out
 
-def roll(attacker, defender, seed, mode='records'):
-    """Stage the sides with scale.stage(..., general_size=MODES[mode]['general_size']) first."""
+def roll(attacker_spec, defender_spec, attacker_staged, defender_staged, seed, mode='records'):
+    """Stage the sides with scale.stage(...) first."""
     if mode not in MODES:
         raise ValueError(f'Unknown mode {mode!r}; use records or romance.')
     rng = random.Random(seed)
-    return roll_side(attacker, rng, mode), roll_side(defender, rng, mode)
+    return roll_side(attacker_spec, attacker_staged, rng, mode), roll_side(defender_spec, defender_staged, rng, mode)

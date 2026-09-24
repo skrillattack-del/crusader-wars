@@ -1,4 +1,12 @@
-"""CK3 save mutation apply script."""
+import re
+import ast
+
+def rewrite():
+    with open('apply.py', 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # We will write the new file content directly
+    new_content = """\"\"\"CK3 save mutation apply script.\"\"\"
 import argparse
 import hashlib
 import json
@@ -46,7 +54,7 @@ def journal_check(directory, result_id, battle_id):
     return journal, journal_path
 
 def record_bounds(text, key):
-    pattern = re.compile(r'"(?:\\.|[^"\\])*"|#[^\r\n]*|(?P<key>[A-Za-z_0-9]+)\s*=\s*\{|[{}]')
+    pattern = re.compile(r'"(?:\\\\.|[^"\\\\])*"|#[^\\r\\n]*|(?P<key>[A-Za-z_0-9]+)\\s*=\\s*\\{|[{}]')
     level = 1 if text.lstrip().startswith('{') else 0
     depth = 0
     found = []
@@ -62,7 +70,7 @@ def record_bounds(text, key):
     return found
 
 def get_block_by_id(text, block_type, id_str):
-    pattern = re.compile(r'\b' + str(id_str) + r'\s*=\s*\{')
+    pattern = re.compile(r'\\b' + str(id_str) + r'\\s*=\\s*\\{')
     for match in pattern.finditer(text):
         start = match.end() - 1
         end = preflight.block_end(text, start)
@@ -135,7 +143,7 @@ def plan_mutations(gamestate_text, synthetic_result, linked_records):
         if old_total < total_loss:
             raise ValueError(f"{side} total_fighting_men ({old_total}) is less than synthetic_casualties ({total_loss})")
             
-        reg_pattern = re.compile(r'\{\s*regiment=(\d+)\s+starting=[0-9.]+\s+current=([0-9.]+)\s+soft_casualties=([0-9.]+)\s*\}')
+        reg_pattern = re.compile(r'\\{\\s*regiment=(\\d+)\\s+starting=[0-9.]+\\s+current=([0-9.]+)\\s+soft_casualties=([0-9.]+)\\s*\\}')
         reg_matches = list(reg_pattern.finditer(side_text))
         
         total_current = sum(Decimal(m.group(2)) for m in reg_matches)
@@ -229,7 +237,7 @@ def plan_mutations(gamestate_text, synthetic_result, linked_records):
                 chunks_text = reg_text[chunks_start:chunks_end]
                 chunks_offset = reg_offset + chunks_start
                 
-                chunk_matches = list(re.finditer(r'\{[^{}]*current=([0-9.]+)[^{}]*\}', chunks_text))
+                chunk_matches = list(re.finditer(r'\\{[^{}]*current=([0-9.]+)[^{}]*\\}', chunks_text))
                 
                 if not chunk_matches:
                     raise ValueError(f'No soldiers found in backing regiment {backing_id}.')
@@ -298,3 +306,9 @@ if __name__ == '__main__':
     parser.add_argument('--run', required=True)
     args = parser.parse_args()
     print(json.dumps(apply(args.run), indent=2))
+"""
+    with open('apply_new.py', 'w', encoding='utf-8') as f:
+        f.write(new_content)
+
+if __name__ == '__main__':
+    rewrite()

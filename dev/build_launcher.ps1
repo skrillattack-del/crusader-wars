@@ -21,6 +21,8 @@ $buildArgs = @(
   '--workpath', (Join-Path $PSScriptRoot 'build'),
   '--specpath', $PSScriptRoot,
   '--paths', $probeRoot,
+  '--paths', (Join-Path $PSScriptRoot 'spikes/g2_ck3_writeback/patcher'),
+  '--paths', (Join-Path $PSScriptRoot 'battle_math'),
   '--add-data', "$(Join-Path $appRoot 'ui\index.html');ui",
   '--add-data', "$(Join-Path $probeRoot 'probe.lua');.",
   (Join-Path $appRoot 'main.py')

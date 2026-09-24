@@ -1,9 +1,10 @@
 /* ============================================================
    CW2 launcher, G1 scope. The screens are the V1 mockup's; the
    bridge is the real Python side (pywebview js_api -> bridge.py).
-   Integrated: pack build/install, 3K launch, strict result read,
-   probe removal. Not integrated (honest errors on screen): CK3
-   encounter extraction, roster roll, CK3 write-back.
+   CK3 first: read the latest save, pick a battle, roll both armies.
+   Integrated: pack build/install (auto-removing a recorded previous
+   pack), 3K launch, strict result read, probe removal. Not yet: the
+   pack stages the proven probe roster, not the roll; CK3 write-back.
    ============================================================ */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = n => Number(n||0).toLocaleString("en-CA");
@@ -22,13 +23,13 @@ const err = e => (e && (e.message || e)) ? (e.message || String(e)) : String(e);
 
 /* ---- state ---- */
 const STEPS=[
-  {id:"setup",   title:"Check setup"},
-  {id:"enc",     title:"Review staged battle"},
-  {id:"roster",  title:"Prepare the pack"},
+  {id:"setup",   title:"Start in CK3"},
+  {id:"enc",     title:"Pick the CK3 battle"},
+  {id:"roster",  title:"Roll armies"},
   {id:"battle",  title:"Fight in 3K"},
   {id:"return",  title:"Write back"}
 ];
-const S={view:0, reached:0, sealed:false, busy:false,
+const S={view:0, reached:0, sealed:false, busy:false, mode:"records",
   health:null, enc:null, roster:null, install:[], installed:false,
   launched:false, removed:false, result:null, diff:null, error:null};
 
@@ -64,10 +65,10 @@ function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render()
 const V={
   setup(){
     const h=S.health;
-    if(!h) return `<h2>Check setup</h2><p class="lede">Checking game paths and tools...</p>`;
-    const probeOk=h.gates && h.gates.probe;
-    return `<h2>Check setup</h2>
-    <p class="lede">The G1 probe needs your Three Kingdoms install and the RPFM command-line tool. CK3 paths are checked now because write-back will need them later.</p>
+    if(!h) return `<h2>Start in Crusader Kings III</h2><p class="lede">Checking game paths and tools...</p>`;
+    const ck3Ok=h.gates && h.gates.ck3;
+    return `<h2>Start in Crusader Kings III</h2>
+    <p class="lede">Every battle starts in CK3. Open your campaign, pause while your armies are fighting, and save. The launcher reads that save, rolls both armies from Three Kingdoms units, and stages the fight.</p>
     <div class="panel paths">${h.paths.map(p=>`
       <div class="pathrow"><span class="dot ${p.ok?"":"bad"}" aria-label="${p.ok?"Found":"Missing"}"></span>
         <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}
@@ -77,50 +78,68 @@ const V={
         ? `<p class="notice">Three Kingdoms is running. Close it before preparing or removing the probe pack.</p>`
         : `<p class="notice ok">Three Kingdoms is closed. Pack operations are available.</p>`}
       ${h.ck3_running
-        ? `<p class="notice">Crusader Kings III is running. Informational only: write-back is not integrated yet.</p>`
+        ? `<p class="notice ok">Crusader Kings III is running. Save while a battle is on, then load it here.</p>`
         : ``}
     </div>
+    ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
     <div class="actions">
-      <button class="btn-primary" data-action="toEncounter" ${probeOk?"":"disabled"}>Continue to the staged battle</button>
+      <button class="btn-primary" data-action="toEncounter" ${ck3Ok?"":"disabled"}>Load my latest CK3 save</button>
+      ${h.ck3_running?"":`<button class="btn-quiet" data-action="launchCk3">Open Crusader Kings III</button>`}
       <button class="btn-quiet" data-action="recheck">Check again</button>
     </div>`;
   },
   enc(){
-    const e=S.enc; if(!e) return `<h2>Review staged battle</h2><p class="lede">Reading the staged probe battle...</p>`;
+    const e=S.enc;
+    if(!e) return `<h2>Pick the CK3 battle</h2>${S.error?`<p class="notice">${esc(S.error)}</p>
+      <div class="actions"><button class="btn-quiet" data-action="toEncounter">Try again</button></div>`
+      :`<p class="lede">Reading your latest save...</p>`}`;
     const side=s=>`<section class="panel side" aria-label="${s.role}">
-      <p class="role">${s.role}</p><h3>${esc(s.name)}</h3>
+      <p class="role">${s.role}${s.yours?" · your army":""}</p><h3>${fmt(Math.round(s.fighting))} fighting men</h3>
       <dl class="kv" style="margin-top:12px">
-        <dt>Commander</dt><dd>${esc(s.name)} (Earth general)</dd>
-        ${s.units.map(u=>`<dt>${u.kind==="general"?"General":"Unit"}</dt>
-          <dd>${esc(u.name)} <code style="font-size:.75rem">${esc(u.key)}</code></dd>`).join("")}
-        <dt>3K army</dt><dd><b>1</b> general + <b>${s.cards-1}</b> units = ${s.cards} cards</dd>
+        <dt>At the start</dt><dd>${fmt(Math.round(s.initial))} men</dd>
+        <dt>CK3 armies</dt><dd><code style="font-size:.75rem">${esc(s.army_ids.join(", "))}</code></dd>
       </dl></section>`;
-    return `<h2>Battle of ${esc(e.location)}</h2>
-    <p class="lede">${esc(e.mode)}. ${esc(e.note)}</p>
+    const list=e.battles.map(b=>`<li><button class="${b.combat_id===e.combat_id?"btn-primary":"btn-quiet"}" data-action="pickBattle" data-id="${esc(b.combat_id)}"
+      aria-pressed="${b.combat_id===e.combat_id}">${fmt(b.men[0])} v ${fmt(b.men[1])}${b.yours?" · yours":""}</button></li>`).join("");
+    return `<h2>Pick the CK3 battle</h2>
+    <p class="lede"><code>${esc(e.save_name)}</code>, ${esc(e.date||"undated")}: ${e.battles.length} battle${e.battles.length===1?"":"s"} in progress. Battles with one of your own armies are marked; a vassal's or ally's army is not detected, so pick yours.</p>
+    <ul class="picks" style="list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:6px">${list}</ul>
     <div class="faceoff">${side(e.sides[0])}<div class="vs" aria-hidden="true">vs</div>${side(e.sides[1])}</div>
-    <div class="actions"><button class="btn-primary" data-action="toRoster">Review the staged roster</button></div>`;
+    ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
+    <div class="actions">
+      <button class="btn-primary" data-action="toRoster">Roll armies</button>
+      <button class="btn-quiet" data-action="toEncounter">Reload latest save</button>
+    </div>`;
   },
   roster(){
-    const r=S.roster, e=S.enc; if(!r) return `<h2>Prepare the pack</h2><p class="lede">Loading the staged roster...</p>`;
-    const col=(enc,side)=>`<section class="panel"><h3 style="font-family:var(--display);font-weight:400;margin:0">${esc(side.name)}</h3>
-      <p style="color:var(--bone-dim);margin:2px 0 8px">${side.generals.length} general + ${side.retinue} units = ${side.cards} cards</p>
+    const r=S.roster;
+    if(!r) return `<h2>Roll armies</h2>${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Rolling...</p>`}`;
+    const col=side=>`<section class="panel"><h3 style="font-family:var(--display);font-weight:400;margin:0">${esc(side.role)}</h3>
+      <p style="color:var(--bone-dim);margin:2px 0 8px">${side.generals.length} general${side.generals.length>1?"s":""} + ${side.retinue} units = ${side.cards} cards · ${fmt(side.men)} men${side.trim?` (${side.trim} trimmed)`:""}</p>
       ${side.generals.map(g=>`<div class="general">
-        <p class="gname"><b>${esc(g.name)}</b> <span>${esc(g.role)}, leads ${g.retinue}</span></p>
-        <table><tbody>${g.units.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.kind}</td><td class="num">1</td></tr>`).join("")}</tbody></table>
+        <p class="gname"><b>${g.role==="Commander"?"Commander":"Knight"}</b> <span>${g.kind==="hero"?"hero":"general with bodyguard"}, ${g.men} ${g.men===1?"man":"men"}, leads ${g.units.length}</span></p>
+        <table><tbody>${g.units.map(u=>`<tr><td>${esc(u.name)}${u.proven?"":` <span title="Not yet staged by the probe" style="color:var(--bone-dim)">*</span>`}</td>
+          <td>${esc(u.tier)}</td><td class="num">${u.men}</td></tr>`).join("")}</tbody></table>
       </div>`).join("")}</section>`;
-    const prog=S.install.length?`<ul class="progress">${S.install.map(x=>`<li data-s="${x.status}"><span class="dot"></span>${esc(x.label)}</li>`).join("")}</ul>`:"";
-    const stale=S.health && S.health.probe_installed && !S.installed;
-    return `<h2>Prepare the pack</h2>
-    <p class="lede">${esc(r.note)} The pack replaces only the Records version of Xingyang; original CA packs are never modified.</p>
-    <div class="cols">${col(e,r.sides[0])}${col(e,r.sides[1])}</div>
+    const prog=S.install.length?`<ul class="progress">${S.install.map(x=>x?`<li data-s="${x.status}"><span class="dot"></span>${esc(x.label)}</li>`:"").join("")}</ul>`:"";
+    const probeOk=S.health && S.health.gates && S.health.gates.probe;
+    const scale=r.scale>=1?"1 : 1":`1 : ${(1/r.scale).toFixed(1)}`;
+    return `<h2>Roll armies</h2>
+    <p class="lede">Scale ${scale}, seed <code>${r.seed}</code>. Units are drawn from vanilla Three Kingdoms units; * marks units the probe has not staged yet.</p>
+    <div class="actions" role="group" aria-label="Game mode" style="margin-top:0">
+      ${[["records","Records: generals lead bodyguards"],["romance","Romance: generals are heroes"]].map(([m,label])=>
+        `<button class="${S.mode===m?"btn-primary":"btn-quiet"}" data-action="setMode" data-mode="${m}" aria-pressed="${S.mode===m}" ${S.installed||S.busy?"disabled":""}>${label}</button>`).join("")}
+    </div>
+    <div class="cols">${col(r.sides[0])}${col(r.sides[1])}</div>
+    <p class="notice" style="margin-top:16px">${esc(r.note)}${S.health&&S.health.probe_installed&&!S.installed?" An earlier probe pack is installed; Prepare removes it first if it matches a recorded run.":""}</p>
     ${prog}
-    ${stale?`<p class="notice" style="margin-top:16px">A probe pack from an earlier run is installed. Remove it before preparing a fresh one.</p>`:""}
+    ${probeOk?"":`<p class="notice" style="margin-top:16px">Three Kingdoms or the RPFM tool is missing; go back to the first step.</p>`}
     ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
     <div class="actions">
       ${S.installed
         ? `<button class="btn-primary" data-action="toBattle">Continue to battle</button>`
-        : `<button class="btn-primary" data-action="install" ${S.busy?"disabled":""}>Prepare and install</button>`}
-      ${stale?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove installed probe pack</button>`:""}
+        : `<button class="btn-primary" data-action="install" ${S.busy||!probeOk?"disabled":""}>Prepare and install</button>
+           <button class="btn-quiet" data-action="reroll" ${S.busy?"disabled":""}>Roll again</button>`}
     </div>`;
   },
   battle(){
@@ -146,10 +165,39 @@ const V={
     ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}`;
   },
   return(){
+    const d=S.diff;
+    if(!d) return `<h2>Write back to your save</h2>${S.error?`<p class="notice">${esc(S.error)}</p>`:`<p class="lede">Planning mutations...</p>`}`;
+    const cas=d.casualties;
+    const diff_table=d.changes.length?`<div class="panel" style="margin-top:16px"><table class="diff">
+      <thead><tr><th>Path</th><th class="num">Before</th><th class="num">After</th></tr></thead>
+      <tbody>${d.changes.map(c=>`<tr><td><code style="font-size:.8rem;color:var(--bone-dim)">${esc(c.path)}</code></td>
+        <td class="num before">${fmt(c.before)}</td><td class="num after">${fmt(c.after)}</td></tr>`).join("")}</tbody>
+    </table></div>`:"";
+    
     return `<h2>Write back to your save</h2>
-    <p class="lede">CK3 write-back is not integrated into the launcher yet. The verified battle result is preserved as <code>observed_result.json</code> in the run folder; the G2 spike applies save changes from a separate pre-integration tool. The tally seal waits for the write-back step.</p>
+    <p class="lede">The battle is resolved. These are the casualties calculated from the Three Kingdoms survivors, applied proportionally to the CK3 regiments.</p>
+    <div class="cols">
+      <section class="panel side">
+        <p class="role">Attacker</p>
+        <dl class="kv">
+          <dt>CK3 Dead</dt><dd class="formula">${fmt(cas.attacker?.dead||0)}</dd>
+        </dl>
+      </section>
+      <section class="panel side">
+        <p class="role">Defender</p>
+        <dl class="kv">
+          <dt>CK3 Dead</dt><dd class="formula">${fmt(cas.defender?.dead||0)}</dd>
+        </dl>
+      </section>
+    </div>
+    ${diff_table}
     ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
-    <div class="actions"><button class="btn-quiet" data-action="restart">Start over</button></div>`;
+    <div class="actions">
+      ${S.sealed
+        ? `<button class="btn-primary" data-action="restart">Start a new battle</button>`
+        : `<button class="btn-primary" data-action="applyWriteback" ${S.busy?"disabled":""}>Apply to save</button>
+           <button class="btn-quiet" data-action="restart" ${S.busy?"disabled":""}>Discard and start over</button>`}
+    </div>`;
   }
 };
 
@@ -161,14 +209,24 @@ const A={
     try{S.health=await call("get_health");
       log(`health probe_ready=${S.health.gates.probe} tk_running=${S.health.tk_running} ck3_running=${S.health.ck3_running}`);}
     catch(e){S.error=err(e);} render();},
-  async toEncounter(){go(1);
-    try{S.enc=await call("get_encounter"); log(`staged battle ${S.enc.id}`);}
+  async launchCk3(){
+    try{await call("launch_ck3"); log("CK3 launch requested via Steam");}
     catch(e){S.error=err(e);} render();},
-  async toRoster(){go(2);
-    try{S.roster=await call("roll_roster",S.enc,null); log("staged roster loaded (fixed by the probe)");}
+  async toEncounter(){go(1); S.enc=null; S.roster=null; render();
+    try{S.enc=await call("get_encounter"); log(`CK3 save ${S.enc.save_name}: battle ${S.enc.combat_id} of ${S.enc.battles.length}`);}
+    catch(e){S.error=err(e); log(`save error: ${S.error}`);} render();},
+  async pickBattle(b){S.error=null;
+    try{S.enc=await call("get_encounter",S.enc.save,b.dataset.id); S.roster=null; log(`picked battle ${S.enc.combat_id}`);}
     catch(e){S.error=err(e);} render();},
+  async toRoster(){go(2); await A.reroll();},
+  async reroll(){S.error=null;
+    try{S.roster=await call("roll_roster",S.enc,null,S.mode);
+      log(`rolled ${S.roster.mode} seed=${S.roster.seed} cards=${S.roster.sides.map(s=>s.cards).join("v")}`);}
+    catch(e){S.error=err(e);} render();},
+  async setMode(b){S.mode=b.dataset.mode; await A.reroll();},
   async install(){S.busy=true;S.install=[];S.error=null;render();
     try{const r=await call("prepare_and_install",S.roster); S.installed=true;
+      if(r.removed_previous) log(`removed the previous probe pack (run: ${r.removed_previous})`);
       log(`installed ${r.pack} sha256=${r.sha256}`); log(`run evidence: ${r.run}`);}
     catch(e){S.error=err(e); log(`install error: ${S.error}`);}
     S.busy=false; render();},
@@ -187,9 +245,17 @@ const A={
       await A.recheck();}
     catch(e){S.error=err(e); log(`remove error: ${S.error}`);}
     S.busy=false; render();},
-  async toReturn(){go(4);
-    try{await call("preview_writeback");}
-    catch(e){S.error=err(e);} render();},
+  async toReturn(){go(4); S.error=null; S.diff=null; S.busy=true; render();
+    try{S.diff=await call("preview_writeback");
+        log(`previewed writeback: ${S.diff.changes.length} changes`);}
+    catch(e){S.error=err(e); log(`preview error: ${S.error}`);}
+    S.busy=false; render();},
+  async applyWriteback(){S.busy=true; S.error=null; render();
+    try{const r=await call("apply_writeback");
+        log(`writeback applied: ${r.after_save}`);
+        S.sealed=true;}
+    catch(e){S.error=err(e); log(`apply error: ${S.error}`);}
+    S.busy=false; render();},
   async restart(){Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,
       install:[],installed:false,launched:false,removed:false,result:null,diff:null,error:null});
     await A.recheck();}

@@ -70,8 +70,11 @@ def read_gamestate(path):
 def inventory(text):
     army_manager, combat_manager = unique(text, 'armies'), unique(text, 'combats')
     sections = {key: unique(combat_manager if key in ('combats', 'combat_results') else army_manager, key) for key in SECTIONS}
+    return {'combats': combat_rows(sections['combats']),
+            'section_characters': {k: len(v) for k, v in sections.items()}}, sections
+
+def combat_rows(combat):
     # Match only immediate child records, skipping their nested blocks intact.
-    combat = sections['combats']
     records = []
     pos = 1
     record_re = re.compile(r'\s*(\d+)\s*=\s*(\{|none)')
@@ -90,13 +93,20 @@ def inventory(text):
             army_ids = unique(body, 'armies')[1:-1].split()
             if not army_ids or any(not x.isdecimal() for x in army_ids):
                 raise ValueError('Unsupported combat army list.')
+            
+            commander_match = re.search(r'(?m)^\s*commander=(\d+)', body)
+            commander = commander_match.group(1) if commander_match else None
+            char_ids = re.findall(r'(?m)character=\{\s*character=(\d+)', body)
+            
             row[side] = {'army_ids': army_ids,
                          'initial_men': scalar(body, 'initial_men'),
-                         'total_fighting_men': scalar(body, 'total_fighting_men')}
+                         'total_fighting_men': scalar(body, 'total_fighting_men'),
+                         'commander': commander,
+                         'characters': char_ids}
         row['phase'] = scalar(record, 'phase')
         records.append(row)
         pos = end
-    return {'combats': records, 'section_characters': {k: len(v) for k, v in sections.items()}}, sections
+    return records
 
 def intake(source, destination):
     source, destination = Path(source).resolve(), Path(destination).resolve()

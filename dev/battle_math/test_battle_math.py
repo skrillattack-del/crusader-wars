@@ -73,9 +73,9 @@ class ReturnTests(unittest.TestCase):
 class RollTests(unittest.TestCase):
     def test_same_seed_same_armies_and_cards_match_the_stage(self):
         _, attacker, defender = stage(12400, 7900)
-        first, second = roll(attacker, defender, 1702901), roll(attacker, defender, 1702901)
+        first, second = roll({}, {}, attacker, defender, 1702901), roll({}, {}, attacker, defender, 1702901)
         self.assertEqual(first, second)
-        self.assertNotEqual(first, roll(attacker, defender, 7))
+        self.assertNotEqual(first, roll({}, {}, attacker, defender, 7))
         for side, generals in zip((attacker, defender), first):
             self.assertEqual(len(generals), side.generals)
             units = [u for g in generals for u in g['units']]
@@ -89,10 +89,10 @@ class RollTests(unittest.TestCase):
         scale, attacker, defender = stage(*KASR, general_size=size)
         self.assertEqual(scale, 1.0)
         self.assertEqual((attacker.men, attacker.card_men[0], attacker.units), (340, 1, 5))
-        generals = roll(attacker, defender, 1, mode='romance')[0]
+        generals = roll({}, {}, attacker, defender, 1, mode='romance')[0]
         self.assertEqual((generals[0]['kind'], generals[0]['men']), ('hero', 1))
         self.assertEqual(army_cap(general_size=size), 1443)
-        with self.assertRaises(ValueError): roll(attacker, defender, 1, mode='arcade')
+        with self.assertRaises(ValueError): roll({}, {}, attacker, defender, 1, mode='arcade')
 
     def test_unit_names_read_like_the_game(self):
         self.assertEqual(unit_name('3k_main_unit_wood_ji_militia'), 'Ji Militia')
