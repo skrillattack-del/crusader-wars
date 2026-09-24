@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crusader Wars 2 launcher</title>
+<style>
+:root{
+  --patina-950:#112021; --patina-900:#16292a; --patina-800:#1c3432; --patina-700:#25433e;
+  --line:#35564f;
+  --verdigris:#72b8a3; --bronze:#b8924f; --bronze-hi:#dcbb7a; --bronze-lo:#7a5e2f;
+  --cinnabar:#c8372d; --cinnabar-hi:#df5448;
+  --bone:#e8dfcb; --bone-dim:#aca693;
+  --display:"Young Serif", Georgia, "Times New Roman", serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --han:"Noto Serif SC", "Songti SC", "SimSun", serif;
+  --r-s:4px; --r-m:10px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--patina-900);color:var(--bone);font:16px/1.5 var(--body);
+  display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+:focus-visible{outline:2px solid var(--bronze-hi);outline-offset:2px}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.45}
+
+/* ---------- header: the tally ---------- */
+.top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;
+  padding:14px 24px;background:var(--patina-950);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-size:1.25rem;letter-spacing:.01em;margin:0;white-space:nowrap}
+.brand small{display:block;font-family:var(--body);font-size:.8rem;color:var(--bone-dim)}
+.tally{width:100%;max-width:520px;height:auto;justify-self:center;overflow:visible}
+.tally .half path{fill:url(#bronze);stroke:var(--bronze-lo);stroke-width:1.5}
+.tally .half{transition:transform .6s cubic-bezier(.3,.7,.2,1)}
+.tally-lbl{font:700 12px var(--body);fill:var(--patina-900)}
+.tally-han{font:700 18px var(--han);fill:var(--patina-900)}
+.seal{opacity:0;transform-origin:200px 32px;transform:scale(1.6) rotate(-8deg);
+  transition:opacity .25s ease-out .45s, transform .35s cubic-bezier(.2,1.4,.4,1) .45s}
+.seal rect{fill:var(--cinnabar);stroke:#8e2019;stroke-width:1.5}
+.seal text{font:700 26px var(--han);fill:var(--bone)}
+.seal.on{opacity:1;transform:scale(1) rotate(-4deg)}
+.stepline{font-size:.9rem;color:var(--bone-dim);text-align:right;white-space:nowrap}
+.stepline b{color:var(--bone);font-weight:700}
+
+/* ---------- body ---------- */
+.frame{display:grid;grid-template-columns:220px 1fr;min-height:0}
+.rail{border-right:1px solid var(--line);padding:20px 12px;background:var(--patina-900)}
+.rail ol{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.rail button{width:100%;display:grid;grid-template-columns:28px 1fr;align-items:center;gap:10px;
+  text-align:left;background:none;border:0;color:var(--bone-dim);padding:10px;border-radius:var(--r-s)}
+.rail button .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  border:1.5px solid var(--line);font-size:.85rem}
+.rail button[data-state="done"] .n{border-color:var(--verdigris);color:var(--verdigris)}
+.rail button[data-state="current"]{background:var(--patina-800);color:var(--bone)}
+.rail button[data-state="current"] .n{border-color:var(--bronze);background:var(--bronze);color:var(--patina-950)}
+.rail button[data-state="locked"]{opacity:.5}
+
+main{padding:28px 36px 40px;overflow:auto}
+main h2{font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.15;margin:0 0 6px}
+.lede{color:var(--bone-dim);margin:0 0 24px;max-width:62ch}
+.panel{background:var(--patina-800);border:1px solid var(--line);border-radius:var(--r-m);padding:18px 20px}
+.stack{display:grid;gap:16px}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center}
+
+.btn-primary{background:var(--cinnabar);color:var(--bone);border:1px solid #8e2019;
+  padding:11px 20px;border-radius:var(--r-s);font-weight:700}
+.btn-primary:hover:not(:disabled){background:var(--cinnabar-hi)}
+.btn-quiet{background:transparent;color:var(--bronze-hi);border:1px solid var(--bronze-lo);
+  padding:10px 16px;border-radius:var(--r-s)}
+.btn-quiet:hover:not(:disabled){border-color:var(--bronze-hi)}
+
+/* setup */
+.paths{display:grid;gap:10px}
+.pathrow{display:grid;grid-template-columns:22px 180px 1fr auto;gap:12px;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--line)}
+.pathrow:last-child{border-bottom:0}
+.pathrow code{font-family:Consolas, "Cascadia Mono", monospace;font-size:.82rem;color:var(--bone-dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--verdigris)}
+.dot.bad{background:var(--cinnabar)}
+.notice{border-left:3px solid var(--cinnabar);padding:10px 14px;background:rgba(200,55,45,.1);border-radius:0 var(--r-s) var(--r-s) 0}
+.notice.ok{border-left-color:var(--verdigris);background:rgba(114,184,163,.08)}
+
+/* encounter */
+.faceoff{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:stretch}
+.side h3{font-family:var(--display);font-weight:400;font-size:1.3rem;margin:0}
+.side .role{color:var(--bone-dim);font-size:.9rem;margin:0 0 12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}
+.kv dt{color:var(--bone-dim)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+.vs{display:grid;place-items:center;font-family:var(--display);color:var(--bronze);font-size:1.4rem}
+.ratio{margin-top:20px}
+.ratio .bar{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.ratio .a{background:var(--bronze)} .ratio .b{background:var(--verdigris)}
+.ratio p{margin:8px 0 0;color:var(--bone-dim);font-size:.92rem}
+
+/* roster */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tiers{display:grid;gap:6px;margin:12px 0 16px}
+.tier{display:grid;grid-template-columns:70px 1fr 46px;gap:10px;align-items:center;font-size:.88rem}
+.tier .track{height:10px;background:var(--patina-950);border-radius:5px;overflow:hidden}
+.tier .fill{height:100%;background:var(--bronze)}
+.tier span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--bone-dim)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:.92rem}
+th{color:var(--bone-dim);font-weight:400}
+td.num,th.num{text-align:right}
+.seedrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seedrow input{background:var(--patina-950);color:var(--bone);border:1px solid var(--line);border-radius:var(--r-s);
+  padding:8px 10px;font:inherit;width:140px;font-variant-numeric:tabular-nums}
+.progress{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px}
+.progress li{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:center;color:var(--bone-dim)}
+.progress li[data-s="done"]{color:var(--bone)}
+.progress li[data-s="done"] .dot{background:var(--verdigris)}
+.progress li[data-s="run"] .dot{background:var(--bronze);animation:pulse 1s infinite alternate}
+.progress li[data-s="wait"] .dot{background:var(--line)}
+@keyframes pulse{to{opacity:.35}}
+
+.general{padding:12px 0;border-top:1px solid var(--line)}
+.general table{table-layout:fixed}
+.general td:nth-child(2){width:88px} .general td:nth-child(3){width:44px}
+.gname{margin:0 0 6px} .gname span{color:var(--bone-dim);font-size:.88rem;margin-left:6px}
+.stackbar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:6px;background:var(--patina-950)}
+.t0{background:#4f6f67} .t1{background:var(--verdigris)} .t2{background:var(--bronze)} .t3{background:var(--bronze-hi)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--bone-dim);font-size:.85rem;margin:0 0 12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+/* write-back */
+.diff td.before{color:var(--bone-dim);text-decoration:line-through}
+.diff td.after{color:var(--verdigris)}
+.formula{font-family:var(--display);font-size:1.05rem;color:var(--bronze-hi);margin:6px 0 0}
+
+/* evidence drawer */
+.drawer{border-top:1px solid var(--line);background:var(--patina-950)}
+.drawer summary{padding:10px 24px;cursor:pointer;color:var(--bone-dim);display:flex;justify-content:space-between;gap:12px}
+.drawer summary label{display:inline-flex;gap:6px;align-items:center;font-size:.85rem}
+.log{margin:0;padding:0 24px 14px;max-height:170px;overflow:auto;
+  font:12.5px/1.6 Consolas, "Cascadia Mono", monospace;color:var(--bone-dim);white-space:pre-wrap}
+
+@media (max-width: 860px){
+  .top{grid-template-columns:1fr;gap:10px}
+  .stepline{text-align:left}
+  .frame{grid-template-columns:1fr}
+  .rail{border-right:0;border-bottom:1px solid var(--line);padding:10px}
+  .rail ol{grid-auto-flow:column;overflow-x:auto}
+  .rail button{grid-template-columns:28px auto;white-space:nowrap}
+  main{padding:20px}
+  .faceoff,.cols{grid-template-columns:1fr}
+  .vs{padding:4px 0}
+  .pathrow{grid-template-columns:22px 1fr;}
+  .pathrow code,.pathrow button{grid-column:2}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="brand">Crusader Wars 2<small>CK3 battles, fought in Three Kingdoms</small></h1>
+  <svg class="tally" viewBox="0 0 400 64" role="img" aria-labelledby="tallyTitle tallyDesc">
+    <title id="tallyTitle">Round-trip tally</title>
+    <desc id="tallyDesc">The two halves close as each step finishes and are sealed when the result save is installed in CK3.</desc>
+    <defs>
+      <linearGradient id="bronze" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#dcbb7a"/><stop offset=".55" stop-color="#b8924f"/><stop offset="1" stop-color="#8a6a36"/>
+      </linearGradient>
+    </defs>
+    <g id="halfL" class="half">
+      <path d="M20,8 H190 L200,18 L190,28 L200,38 L190,48 L200,56 H20 Q8,56 8,44 V20 Q8,8 20,8 Z"/>
+      <text x="22" y="39" class="tally-han">左</text>
+      <text x="50" y="37" class="tally-lbl">Crusader Kings III</text>
+    </g>
+    <g id="halfR" class="half">
+      <path d="M190,8 H380 Q392,8 392,20 V44 Q392,56 380,56 H200 L190,48 L200,38 L190,28 L200,18 Z"/>
+      <text x="378" y="39" class="tally-han" text-anchor="end">右</text>
+      <text x="350" y="37" class="tally-lbl" text-anchor="end">Three Kingdoms</text>
+    </g>
+    <g id="seal" class="seal" aria-hidden="true">
+      <rect x="178" y="10" width="44" height="44" rx="4"/>
+      <text x="200" y="42" text-anchor="middle">合</text>
+    </g>
+  </svg>
+  <p class="stepline" id="stepline" aria-live="polite"></p>
+</header>
+
+<div class="frame">
+  <nav class="rail" aria-label="Round-trip steps"><ol id="rail"></ol></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<details class="drawer">
+  <summary><span>Evidence log</span>
+    </summary>
+  <pre class="log" id="log"></pre>
+</details>
+
+<script>
+/* ============================================================
+   CW2 launcher, G1 scope. The screens are the V1 mockup's; the
+   bridge is the real Python side (pywebview js_api -> bridge.py).
+   Integrated: pack build/install, 3K launch, strict result read,
+   probe removal. Not integrated (honest errors on screen): CK3
+   encounter extraction, roster roll, CK3 write-back.
+   ============================================================ */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => Number(n||0).toLocaleString("en-CA");
+
+/* ---- event bus the Python side pushes into via evaluate_js ---- */
+window.cw2 = { handlers:{}, on(t,f){(this.handlers[t]=this.handlers[t]||[]).push(f)},
+  emit(t,p){(this.handlers[t]||[]).forEach(f=>f(p)); log(`${t} ${JSON.stringify(p)}`)} };
+
+/* ---- bridge call: {'ok':...} or {'error': msg} -> JS exception ---- */
+async function call(method, ...args){
+  const r = await window.pywebview.api[method](...args);
+  if (r && r.error !== undefined) throw new Error(r.error);
+  return r || {};
+}
+const err = e => (e && (e.message || e)) ? (e.message || String(e)) : String(e);
+
+/* ---- state ---- */
+const STEPS=[
+  {id:"setup",   title:"Check setup"},
+  {id:"enc",     title:"Review staged battle"},
+  {id:"roster",  title:"Prepare the pack"},
+  {id:"battle",  title:"Fight in 3K"},
+  {id:"return",  title:"Write back"}
+];
+const S={view:0, reached:0, sealed:false, busy:false,
+  health:null, enc:null, roster:null, install:[], installed:false,
+  launched:false, removed:false, result:null, diff:null, error:null};
+
+function log(msg){const el=document.getElementById("log");
+  el.textContent+=`[${new Date().toLocaleTimeString("en-CA",{hour12:false})}] ${msg}\n`;el.scrollTop=el.scrollHeight;}
+
+/* tally gap: 5 finished steps closes it; seal only after write-back (not integrated yet) */
+function setTally(){
+  const done=S.sealed?5:S.reached; const g=(5-done)*7;
+  document.getElementById("halfL").style.transform=`translateX(${-g}px)`;
+  document.getElementById("halfR").style.transform=`translateX(${g}px)`;
+  document.getElementById("seal").classList.toggle("on",S.sealed);
+  document.getElementById("stepline").innerHTML=S.sealed
+    ? "<b>Sealed.</b> Result is in the save."
+    : `Step <b>${S.view+1}</b> of 5: ${STEPS[S.view].title}`;
+}
+
+function renderRail(){
+  document.getElementById("rail").innerHTML=STEPS.map((s,i)=>{
+    const state=i===S.view?"current":i>S.reached?"locked":"done";
+    return `<li><button data-go="${i}" data-state="${state}" ${i>S.reached?"disabled":""}
+      aria-current="${i===S.view?"step":"false"}"><span class="n">${i+1}</span>${s.title}</button></li>`;
+  }).join("");
+}
+
+function render(){
+  renderRail(); setTally();
+  document.getElementById("main").innerHTML=V[STEPS[S.view].id]();
+}
+function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render(); document.getElementById("main").focus();}
+
+/* ---- screens ---- */
+const V={
+  setup(){
+    const h=S.health;
+    if(!h) return `<h2>Check setup</h2><p class="lede">Checking game paths and tools...</p>`;
+    const probeOk=h.gates && h.gates.probe;
+    return `<h2>Check setup</h2>
+    <p class="lede">The G1 probe needs your Three Kingdoms install and the RPFM command-line tool. CK3 paths are checked now because write-back will need them later.</p>
+    <div class="panel paths">${h.paths.map(p=>`
+      <div class="pathrow"><span class="dot ${p.ok?"":"bad"}" aria-label="${p.ok?"Found":"Missing"}"></span>
+        <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}
+    </div>
+    <div class="stack" style="margin-top:16px">
+      ${h.tk_running
+        ? `<p class="notice">Three Kingdoms is running. Close it before preparing or removing the probe pack.</p>`
+        : `<p class="notice ok">Three Kingdoms is closed. Pack operations are available.</p>`}
+      ${h.ck3_running
+        ? `<p class="notice">Crusader Kings III is running. Informational only: write-back is not integrated yet.</p>`
+        : ``}
+    </div>
+    <div class="actions">
+      <button class="btn-primary" data-action="toEncounter" ${probeOk?"":"disabled"}>Continue to the staged battle</button>
+      <button class="btn-quiet" data-action="recheck">Check again</button>
+    </div>`;
+  },
+  enc(){
+    const e=S.enc; if(!e) return `<h2>Review staged battle</h2><p class="lede">Reading the staged probe battle...</p>`;
+    const side=s=>`<section class="panel side" aria-label="${s.role}">
+      <p class="role">${s.role}</p><h3>${esc(s.name)}</h3>
+      <dl class="kv" style="margin-top:12px">
+        <dt>Commander</dt><dd>${esc(s.name)} (Earth general)</dd>
+        ${s.units.map(u=>`<dt>${u.kind==="general"?"General":"Unit"}</dt>
+          <dd>${esc(u.name)} <code style="font-size:.75rem">${esc(u.key)}</code></dd>`).join("")}
+        <dt>3K army</dt><dd><b>1</b> general + <b>${s.cards-1}</b> units = ${s.cards} cards</dd>
+      </dl></section>`;
+    return `<h2>Battle of ${esc(e.location)}</h2>
+    <p class="lede">${esc(e.mode)}. ${esc(e.note)}</p>
+    <div class="faceoff">${side(e.sides[0])}<div class="vs" aria-hidden="true">vs</div>${side(e.sides[1])}</div>
+    <div class="actions"><button class="btn-primary" data-action="toRoster">Review the staged roster</button></div>`;
+  },
+  roster(){
+    const r=S.roster, e=S.enc; if(!r) return `<h2>Prepare the pack</h2><p class="lede">Loading the staged roster...</p>`;
+    const col=(enc,side)=>`<section class="panel"><h3 style="font-family:var(--display);font-weight:400;margin:0">${esc(side.name)}</h3>
+      <p style="color:var(--bone-dim);margin:2px 0 8px">${side.generals.length} general + ${side.retinue} units = ${side.cards} cards</p>
+      ${side.generals.map(g=>`<div class="general">
+        <p class="gname"><b>${esc(g.name)}</b> <span>${esc(g.role)}, leads ${g.retinue}</span></p>
+        <table><tbody>${g.units.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.kind}</td><td class="num">1</td></tr>`).join("")}</tbody></table>
+      </div>`).join("")}</section>`;
+    const prog=S.install.length?`<ul class="progress">${S.install.map(x=>`<li data-s="${x.status}"><span class="dot"></span>${esc(x.label)}</li>`).join("")}</ul>`:"";
+    const stale=S.health && S.health.probe_installed && !S.installed;
+    return `<h2>Prepare the pack</h2>
+    <p class="lede">${esc(r.note)} The pack replaces only the Records version of Xingyang; original CA packs are never modified.</p>
+    <div class="cols">${col(e,r.sides[0])}${col(e,r.sides[1])}</div>
+    ${prog}
+    ${stale?`<p class="notice" style="margin-top:16px">A probe pack from an earlier run is installed. Remove it before preparing a fresh one.</p>`:""}
+    ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
+    <div class="actions">
+      ${S.installed
+        ? `<button class="btn-primary" data-action="toBattle">Continue to battle</button>`
+        : `<button class="btn-primary" data-action="install" ${S.busy?"disabled":""}>Prepare and install</button>`}
+      ${stale?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove installed probe pack</button>`:""}
+    </div>`;
+  },
+  battle(){
+    const r=S.result;
+    const SRC={engine_callback:"engine callback",routing_state:"routing state at the results screen"};
+    const res=r?`<p class="notice ${r.player_outcome==="victory"?"ok":""}" style="margin-top:20px">${esc(r.sides[r.player_side].name)}: ${r.player_outcome==="victory"?"victory":"not a victory (loss, draw or withdrawal)"}. Read from the ${esc(SRC[r.result_source]||r.result_source)}. ${esc(r.note)}</p>
+    <div class="panel" style="margin-top:12px"><table>
+      <thead><tr><th>Side</th><th>Unit</th><th class="num">Men</th><th class="num">Lost</th><th class="num">Survivors</th><th>State</th></tr></thead>
+      <tbody>${r.sides.map((s,i)=>s.units.map((u,j)=>`<tr>
+        ${j===0?`<td rowspan="${s.units.length}">${esc(s.name)}${r.winner===i?" (won)":""}</td>`:""}
+        <td>${esc(u.unit_type)}</td><td class="num">${fmt(u.initial)}</td><td class="num">${fmt(u.lost)}</td>
+        <td class="num">${fmt(u.survivors)}</td><td>${u.routing?"routing":"steady"}</td></tr>`).join("")).join("")}</tbody></table></div>`:"";
+    return `<h2>Fight in Three Kingdoms</h2>
+    <p class="lede">${S.launched
+      ? "Three Kingdoms is launching. Enable cw2_g1_probe in its mod manager, select Historical Battles - Xingyang in Records mode, and fight to a decisive finish (fully rout the enemy). Come back once the results screen has appeared."
+      : "The probe pack is installed. Launch Three Kingdoms, enable cw2_g1_probe in the mod manager, then fight the Records Xingyang battle to a decisive finish."}</p>
+    <div class="actions">
+      ${S.launched?"":`<button class="btn-primary" data-action="launch">Launch Three Kingdoms</button>`}
+      ${S.launched&&!r?`<button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Read battle result</button>`:""}
+      ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove probe pack</button>`:""}
+    </div>${res}
+    ${S.removed?`<p class="notice ok" style="margin-top:16px">Probe pack removed. Original CA packs were never modified.</p>`:""}
+    ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}`;
+  },
+  return(){
+    return `<h2>Write back to your save</h2>
+    <p class="lede">CK3 write-back is not integrated into the launcher yet. The verified battle result is preserved as <code>observed_result.json</code> in the run folder; the G2 spike applies save changes from a separate pre-integration tool. The tally seal waits for the write-back step.</p>
+    ${S.error?`<p class="notice" style="margin-top:16px">${esc(S.error)}</p>`:""}
+    <div class="actions"><button class="btn-quiet" data-action="restart">Start over</button></div>`;
+  }
+};
+
+/* ---- actions ---- */
+window.cw2.on("install",p=>{S.install[p.index]={label:p.label,status:p.status}; if(STEPS[S.view].id==="roster") render();});
+
+const A={
+  async recheck(){S.error=null;
+    try{S.health=await call("get_health");
+      log(`health probe_ready=${S.health.gates.probe} tk_running=${S.health.tk_running} ck3_running=${S.health.ck3_running}`);}
+    catch(e){S.error=err(e);} render();},
+  async toEncounter(){go(1);
+    try{S.enc=await call("get_encounter"); log(`staged battle ${S.enc.id}`);}
+    catch(e){S.error=err(e);} render();},
+  async toRoster(){go(2);
+    try{S.roster=await call("roll_roster",S.enc,null); log("staged roster loaded (fixed by the probe)");}
+    catch(e){S.error=err(e);} render();},
+  async install(){S.busy=true;S.install=[];S.error=null;render();
+    try{const r=await call("prepare_and_install",S.roster); S.installed=true;
+      log(`installed ${r.pack} sha256=${r.sha256}`); log(`run evidence: ${r.run}`);}
+    catch(e){S.error=err(e); log(`install error: ${S.error}`);}
+    S.busy=false; render();},
+  async toBattle(){go(3);},
+  async launch(){
+    try{await call("launch_3k"); S.launched=true; log("3K launch requested via Steam");}
+    catch(e){S.error=err(e);} render();},
+  async readResult(){S.busy=true;S.error=null;render();
+    try{S.result=await call("read_result");
+      log(`result outcome=${S.result.player_outcome} source=${S.result.result_source}`);}
+    catch(e){S.error=err(e); log(`result error: ${S.error}`);}
+    S.busy=false; render();},
+  async removeProbe(){S.busy=true;S.error=null;render();
+    try{const r=await call("remove_probe"); S.removed=true;
+      log(`removed ${r.removed}${r.run?" (run: "+r.run+")":""}`);
+      await A.recheck();}
+    catch(e){S.error=err(e); log(`remove error: ${S.error}`);}
+    S.busy=false; render();},
+  async toReturn(){go(4);
+    try{await call("preview_writeback");}
+    catch(e){S.error=err(e);} render();},
+  async restart(){Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,
+      install:[],installed:false,launched:false,removed:false,result:null,diff:null,error:null});
+    await A.recheck();}
+};
+
+document.addEventListener("click",async ev=>{
+  const g=ev.target.closest("[data-go]"); if(g&&!g.disabled){go(+g.dataset.go);return;}
+  const b=ev.target.closest("[data-action]"); if(b&&!b.disabled&&A[b.dataset.action]) await A[b.dataset.action](b);
+});
+
+window.addEventListener("pywebviewready",()=>{log("Python bridge ready"); render(); A.recheck();});
+log("launcher booted; waiting for the Python bridge...");
+render();
+
+
+
+
+</script>
+</body>
+</html>

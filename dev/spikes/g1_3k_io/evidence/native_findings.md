@@ -115,8 +115,11 @@ line references were from build 20435474. Findings:
   sent the command in that session.
 - `script/_lib/lib_battle_manager.lua:535`: the manager constructor registers
   `VictoryCountdown` phase → `self.battle_is_won = true`. That phase fired in
-  the live run, so the flag is an engine-set outcome signal, unlike the routing
-  heuristics in `lib_generated_battle` that remain forbidden as authority.
+  the live run, but correction from the third live run: the flag is
+  side-agnostic (either side's countdown sets it) and battle timers stop at
+  `Complete`, so neither the flag nor a deferred callback can serve as a
+  fallback; the routing
+  heuristics in `lib_generated_battle` also remain forbidden as authority.
 - `script/battle/historical_battle/historical_battle_xinyang/battle_script.lua`
   is a 13-line loader for `battle_script_behaviour` (via the `_romance`
   package path); the native behaviour script registers no results callbacks,
@@ -124,13 +127,19 @@ line references were from build 20435474. Findings:
 - The updated build's `historical_battle_xinyang/battle.xml` is byte-identical
   to build 20435474 (same SHA-256 in both run manifests).
 
-Probe changes (3K-side only): `probe.lua` now emits exactly one `result` event,
-preferring the engine `Battle Results` callback; if none arrived 5s after the
-`Complete` phase it falls back to `bm.battle_is_won` and labels the event
-`result_source: victory_countdown_fallback`. A late engine result is preserved
-as a separate `engine_result` event, never a second result. Every event carries
-the battle identifier, and `probe.py` rejects events whose battle differs from
-the staged run, unknown result sources, and late engine results that
-contradict the recorded outcome. The old installed pack from run
-`9ce5f8c1f80046d392113783e6b9160b` predates this fix and must not be replayed;
-remove it and prepare a fresh run.
+Probe changes (3K-side only), after the third live run: `probe.lua` emits
+exactly one `result` event, preferring the engine `Battle Results` callback.
+If none arrived by the `Complete` phase it decides synchronously, with no
+timer: the side whose every unit is routing or dead lost
+(`result_source: routing_state`); if neither or both sides meet that,
+`player_won` stays null and the reader rejects the run as undetermined. A late
+engine result is preserved as a separate `engine_result` event, never a second
+result. Every event carries the battle identifier, and `probe.py` rejects
+events whose battle differs from the staged run, unknown result sources, and
+late engine results that contradict the recorded outcome. The third live run
+(run `f9faafbc5e544efbb7e6606752ade7cd`, 2026-09-23 17:51) proved the earlier
+5s `victory_countdown_fallback` could never fire: its log
+(`evidence/records_run3_fallback_pack.jsonl`) holds `start`, `deployed`,
+`victory_countdown` and `complete` but no `result`, because battle timers stop
+at `Complete`. Packs from runs before this fix must not be replayed; remove
+them and prepare a fresh run.

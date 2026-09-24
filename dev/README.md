@@ -14,6 +14,11 @@ Double-click [CW2-G1-Probe.exe](dist/CW2-G1-Probe.exe). It prepares a separate
 opens 3K on request, validates captured results, and removes its own pack.
 Python is bundled; pack operations expect a local, git-ignored RPFM CLI under
 `tools/rpfm/` (or an explicitly selected CLI path).
+
+Double-click [CW2-Launcher.exe](dist/CW2-Launcher.exe) for the same G1 flow
+with the launcher UI (pywebview window, mockup screens, real bridge). Its
+G1-scope limits are listed in [app/README.md](app/README.md); build it with
+`dev/build_launcher.ps1`.
 The [G2 spike](spikes/g2_ck3_writeback/README.md) now provides CK3 save intake
 and synthetic-result preflight. Actual write-back remains unimplemented.
 
@@ -24,8 +29,11 @@ establishes a concrete historical-battle XML/script route to test.
 
 Development: [codebase map](CODEBASE_MAP.md), [burndown](BURNDOWN.md).
 Build with `powershell -ExecutionPolicy Bypass -File dev/build_probe.ps1`
+and `dev/build_launcher.ps1`
 from the repository root (Python 3.12 and PyInstaller 6.22.3 used locally).
-Test with `python -m unittest discover -s dev/spikes/g1_3k_io -p "test_*.py" -v`.
+Test with `python -m unittest discover -s dev/spikes/g1_3k_io -p "test_*.py" -v`
+and `python -m unittest discover -s dev/app -p "test_*.py" -v`;
+the launcher UI smoke test is `node dev/app/ui/index.smoke.cjs`.
 The optional Lua 5.1 harness requires `lupa` (2.8 used locally).
 
 Generated packs, extracted native files and executables are local build outputs.

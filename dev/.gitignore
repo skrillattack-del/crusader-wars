@@ -4,5 +4,7 @@ dist/
 *.spec
 spikes/g1_3k_io/generated/
 spikes/g1_3k_io/evidence/*-index.txt
+app/runs/
+app/cw2-launcher-session.json
 tools/
 reference/
