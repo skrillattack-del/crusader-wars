@@ -2,6 +2,7 @@
 import unittest
 from scale import GENERAL_SIZE, UNIT_SIZE, army_cap, round_half_up, shared_scale, stage, stage_side
 from result_to_ck3 import ck3_casualties, side_dead
+from roll import MODES, POOL, RETINUE, roll, unit_name
 
 KASR = (340.09632, 421.48395)  # run-002 inventory.json: fighting men, attacker and defender
 
@@ -68,5 +69,33 @@ class ReturnTests(unittest.TestCase):
             with self.assertRaises(ValueError): side_dead(100, started, survived)
         with self.assertRaises(ValueError): ck3_casualties({'attacker': 1}, {'defender': (1, 1)})
         with self.assertRaises(ValueError): ck3_casualties({'attacker': 1}, {'attacker': (1, 1)}, winner='defender')
+
+class RollTests(unittest.TestCase):
+    def test_same_seed_same_armies_and_cards_match_the_stage(self):
+        _, attacker, defender = stage(12400, 7900)
+        first, second = roll(attacker, defender, 1702901), roll(attacker, defender, 1702901)
+        self.assertEqual(first, second)
+        self.assertNotEqual(first, roll(attacker, defender, 7))
+        for side, generals in zip((attacker, defender), first):
+            self.assertEqual(len(generals), side.generals)
+            units = [u for g in generals for u in g['units']]
+            self.assertEqual([g['men'] for g in generals] + [u['men'] for u in units], list(side.card_men))
+            self.assertTrue(all(len(g['units']) <= RETINUE for g in generals))
+            self.assertTrue(all(u['key'] in POOL[u['tier']] for u in units))
+            self.assertEqual(generals[0]['role'], 'Commander')
+
+    def test_romance_generals_are_single_heroes(self):
+        size = MODES['romance']['general_size']
+        scale, attacker, defender = stage(*KASR, general_size=size)
+        self.assertEqual(scale, 1.0)
+        self.assertEqual((attacker.men, attacker.card_men[0], attacker.units), (340, 1, 5))
+        generals = roll(attacker, defender, 1, mode='romance')[0]
+        self.assertEqual((generals[0]['kind'], generals[0]['men']), ('hero', 1))
+        self.assertEqual(army_cap(general_size=size), 1443)
+        with self.assertRaises(ValueError): roll(attacker, defender, 1, mode='arcade')
+
+    def test_unit_names_read_like_the_game(self):
+        self.assertEqual(unit_name('3k_main_unit_wood_ji_militia'), 'Ji Militia')
+        self.assertEqual(unit_name('3k_main_unit_fire_tiger_and_leopard_cavalry'), 'Tiger And Leopard Cavalry')
 
 if __name__ == '__main__': unittest.main()
