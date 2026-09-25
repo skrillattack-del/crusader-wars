@@ -42,7 +42,6 @@ def _ck3_saves():
     return next((f for f in folders if f.is_dir()), folders[-1])
 
 CK3_SAVES = _ck3_saves()
-STEAM_3K = 'steam://rungameid/779340'
 STEAM_CK3 = 'steam://rungameid/1158310'
 CW1_WORKSHOP_ID = '2977969008'  # Crusader Wars 'Ad Maiorem Gloriam' (Attila era)
 STEAM_CW1_PAGE = f'steam://url/CommunityFilePage/{CW1_WORKSHOP_ID}'
@@ -53,6 +52,8 @@ ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
 STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
                 'the rolled army above is what the next build stages.')
 SESSION_NAME = 'cw2-launcher-session.json'
+# CW2's own 3K mod list; CA's launcher owns used_mods.txt (CW1 used used_mods_cw.txt for Attila).
+TK_MOD_LIST = 'used_mods_cw2.txt'
 # The CW2 button logs the battle name, then CK3 writes the save it triggered.
 CW2_BATTLE_LINE = re.compile(r'(?m)^\[(\d\d):(\d\d):(\d\d)\][^\n]*?\(CW2_Battle:effect\): BATTLE_NAME:([^\r\n]*)')
 SIGNAL_WINDOW = 300  # seconds allowed between that log line and the save
@@ -86,7 +87,7 @@ class Bridge:
     """js_api for the launcher window. See dev/app/ui/index.html for callers."""
 
     def __init__(self, base=None, game=None, cli=None, tasklist=None, saves=None,
-                 ck3_mods=None, cw1_dir=None, mod_source=None):
+                 ck3_mods=None, cw1_dir=None, mod_source=None, popen=None):
         self.base = Path(base) if base else self._default_base()
         self.game = Path(game) if game else probe.GAME
         self.saves = Path(saves) if saves else CK3_SAVES
@@ -102,6 +103,7 @@ class Bridge:
         self._signal_pending = None
         self.cli = Path(cli) if cli else self._find_cli()
         self._tasklist = tasklist or _default_tasklist
+        self._popen = popen or subprocess.Popen
         self._window = None
         self.session = {'output': None}
         state = self.base / SESSION_NAME
@@ -491,10 +493,14 @@ class Bridge:
             return {'error': str(exc)}
 
     def launch_3k(self):
+        """Start Three Kingdoms with only the battle pack enabled, skipping CA's mod manager."""
         try:
-            os.startfile(STEAM_3K)
-            return {'ok': True, 'pid': None,
-                    'note': 'launched through Steam; the launcher does not track the process'}
+            if not (self.game / 'data' / probe.PACK_NAME).is_file():
+                raise ValueError('The battle pack is not installed. Send the armies to Three Kingdoms first.')
+            (self.game / TK_MOD_LIST).write_text(f'mod "{probe.PACK_NAME}";\n', encoding='utf-8')
+            process = self._popen([str(self.game / 'Three_Kingdoms.exe'), f'{TK_MOD_LIST};'],
+                                  cwd=str(self.game))
+            return {'ok': True, 'pid': process.pid, 'note': f'started with {TK_MOD_LIST}'}
         except Exception as exc:
             return {'error': str(exc)}
 

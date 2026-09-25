@@ -23,7 +23,7 @@ global.window = global;
 global.addEventListener = (type, fn) => { winHandlers[type] = fn; };
 
 let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
-let signal = null, tkLaunches = 0;
+let signal = null, tkLaunches = 0, lastSave;
 const side = (role, fighting, initial, armies, yours) => ({role, name: `${role} · army ${armies}`,
   army_ids: [armies], fighting, initial, yours});
 const battles = {
@@ -49,7 +49,7 @@ const api = {
   async add_to_playset() { inPlayset = true; return {ok: true, playset: 'Initial playset', cw1_disabled: 1, backup: 'C:/dist/backups/x.sqlite'}; },
   async open_cw1_page() { cw1Pages += 1; return {ok: true}; },
   async launch_ck3() { ck3Launches += 1; return {ok: true}; },
-  async get_encounter(save, id) { return encounter(id || '1728053261'); },
+  async get_encounter(save, id) { lastSave = save; return encounter(id || '1728053261'); },
   async roll_roster(enc, s, mode) { seed += 1; lastMode = mode; const hero = mode === 'romance';
     return {ok: true, seed, mode, deterministic: false, scale: 1,
       note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
@@ -122,9 +122,9 @@ async function click(action, data = {}) {
   expect('Send to Three Kingdoms installs the pack', main().includes('Next: fight') && log().includes('installed crusader_wars_2.pack')
     && log().includes('replaced the previous battle pack'));
   await click('toBattle');
-  expect('fight screen is a step-by-step checklist', main().includes('crusader_wars_2') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
+  expect('fight screen is a step-by-step checklist', main().includes('Battle of Xingyang') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
   await click('launch');
-  expect('after launch the checklist says so', main().includes('Three Kingdoms is starting.'));
+  expect('after launch the checklist says so', main().includes('Three Kingdoms is starting') && main().includes('crusader_wars_2'));
   await click('readResult');
   expect('no battle yet reads as plain language', main().includes('No battle has been fought with this pack yet'));
   await click('readResult');
@@ -134,12 +134,13 @@ async function click(action, data = {}) {
   expect('pack removal is confirmed', main().includes('Battle pack removed') && log().includes('removed crusader_wars_2.pack'));
   await click('restart');
   expect('Fight another battle returns to Get ready', main().includes('Get ready') && !main().includes('Your armies'));
-  signal = {ok: true, save: 'C:/saves/latest.ck3', save_name: 'latest.ck3', battle: 'Battle of Muluya'};
+  const signal_save = 'C:/saves/King_Matuxia_of_Badajoz_911_09_02.ck3';
+  signal = {ok: true, save: signal_save, save_name: 'King_Matuxia_of_Badajoz_911_09_02.ck3', battle: 'Battle of Muluya'};
   const launchesBefore = tkLaunches;
   await watch();
   await settle();
-  expect('the CK3 button save goes straight to Three Kingdoms', tkLaunches === launchesBefore + 1
-    && main().includes('Three Kingdoms is starting.') && log().includes('CK3 battle button: Battle of Muluya'));
+  expect('the CK3 button save goes straight to Three Kingdoms', tkLaunches === launchesBefore + 1 && lastSave === signal_save
+    && main().includes('Three Kingdoms is starting') && log().includes('CK3 battle button: Battle of Muluya'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
   process.exit(failed ? 1 : 0);
 })().catch(error => { console.error('smoke crashed:', error); process.exit(1); });

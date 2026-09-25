@@ -27,6 +27,15 @@ class FakeTasklist:
         return 0, rows + '\r\n'
 
 
+class FakePopen:
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, args, cwd=None):
+        self.calls.append((args, cwd))
+        return type('Process', (), {'pid': 4242})()
+
+
 class BridgeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -450,6 +459,19 @@ class BridgeTests(unittest.TestCase):
 
 
     # ---- session and assets ----
+
+    def test_launch_3k_starts_the_game_with_only_the_battle_pack(self):
+        popen = FakePopen()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), popen=popen)
+        self.assertIn('not installed', bridge.launch_3k()['error'])
+        self.assertEqual(popen.calls, [])
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        (self.game / 'used_mods.txt').write_text('mod "someone_elses.pack";', encoding='utf-8')
+        launched = bridge.launch_3k()
+        self.assertEqual(launched['pid'], 4242)
+        self.assertEqual(popen.calls, [([str(self.game / 'Three_Kingdoms.exe'), 'used_mods_cw2.txt;'], str(self.game))])
+        self.assertEqual((self.game / 'used_mods_cw2.txt').read_text(encoding='utf-8'), f'mod "{probe.PACK_NAME}";\n')
+        self.assertEqual((self.game / 'used_mods.txt').read_text(encoding='utf-8'), 'mod "someone_elses.pack";')
 
     def test_session_persists_between_launches(self):
         self.bridge.session.update(output=str(self.root / 'run'), game=str(self.game))
