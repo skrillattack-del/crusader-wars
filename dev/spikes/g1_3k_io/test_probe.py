@@ -26,6 +26,15 @@ class ResultValidationTests(unittest.TestCase):
         self.write([self.start, self.final])
         self.assertEqual(probe.read_result(self.root)['winner'], 'attacker')
 
+    def test_units_smaller_than_their_card_keep_their_real_strength(self):
+        # 3K sizes units by type; trimming only removes surplus, so the real count stands.
+        path = self.root / 'run.json'
+        manifest = json.loads(path.read_text())
+        manifest['expected_units'][0]['target_men'] = 120
+        path.write_text(json.dumps(manifest))
+        self.write([self.start, self.final])
+        self.assertEqual(probe.read_result(self.root)['units'][0]['initial'], 100)
+
     def test_non_victory_is_not_assumed_defeat(self):
         self.final['player_won'] = False
         self.write([self.start, self.final])
@@ -115,5 +124,132 @@ class ResultValidationTests(unittest.TestCase):
         probe.uninstall(game, self.root)
         self.assertFalse(target.exists())
         self.assertEqual(native.read_bytes(), b'native pack untouched')
+
+GENERAL = ('<general><name>1</name><commander_type>commanding_general</commander_type>'
+           '<commander_id>0</commander_id><game_mode>historical</game_mode></general>')
+
+def native_unit(kind, x, y, radians, general=False):
+    return (f'<unit script_name="n"><unit_type type="{kind}"/><retinue id="0"/>'
+            f'<position x="{x}" y="{y}"/><orientation radians="{radians}"/><width metres="20"/>'
+            f'<unit_experience level="5"/>{GENERAL if general else ""}</unit>')
+
+def native_battle(armies):
+    alliances = ''.join(f'<alliance><army><faction>f</faction>{"".join(units)}</army>'
+                        f'<army><faction>reinforcements</faction></army>'
+                        f'<victory_condition><kill_or_rout_enemy/></victory_condition></alliance>'
+                        for units in armies)
+    return (f'<battle><battle_description><battle_script prepare_for_fade_in="true">x</battle_script>'
+            f'</battle_description>{alliances}</battle>')
+
+class GenerateTests(unittest.TestCase):
+    ROSTER = {'mode': 'records', 'sides': [
+        {'role': 'Attacker', 'name': 'Gharb', 'fighting': 3785.0, 'generals': [
+            {'key': '3k_main_general_earth_generic', 'name': 'Captain 1', 'men': 21,
+             'units': [{'key': f'unit_a{i}', 'name': f'A{i}', 'men': 80 - i} for i in range(6)]},
+            {'key': '3k_main_general_wood_generic', 'name': 'Captain 2', 'men': 21,
+             'units': [{'key': 'unit_b', 'name': 'B', 'men': 75}]}]},
+        {'role': 'Defender', 'name': 'Kru', 'fighting': 152.0, 'generals': [
+            {'key': '3k_main_general_earth_generic', 'name': 'Captain 1', 'men': 21,
+             'units': [{'key': 'unit_c', 'name': 'C', 'men': 39}]}]}]}
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.native = self.root / 'native'
+        battles = self.native / 'script/battle/historical_battle'
+        (battles / 'historical_battle_xinyang').mkdir(parents=True)
+        (battles / 'historical_battle_red_cliff').mkdir(parents=True)
+        (battles / 'historical_battle_xinyang/battle.xml').write_text(native_battle([
+            [native_unit('3k_main_general_earth_cao_cao', -400, -150, 0.74, True), native_unit('u', -380, -140, 0.74)],
+            [native_unit('3k_main_general_metal_generic', 100, 350, 3.87, True), native_unit('u', 120, 300, 3.87)]]))
+        (battles / 'historical_battle_red_cliff/battle.xml').write_text(native_battle([
+            [native_unit('3k_main_general_earth_liu_bei', 0, 0, 0, True),
+             native_unit('3k_main_general_earth_generic', 0, 0, 0, True)],
+            [native_unit('3k_main_general_wood_generic', 0, 0, 0, True)]]))
+        self.output = self.root / 'out'
+        self.output.mkdir()
+
+    def generate(self, roster):
+        return probe.generate(self.native, self.output, probe.HERE / 'probe.lua', roster)
+
+    def staged_armies(self):
+        import xml.etree.ElementTree as ET
+        root = ET.parse(self.output / 'pack' / probe.BATTLE / 'battle.xml').getroot()
+        return [alliance.findall('army') for alliance in root.findall('alliance')]
+
+    def test_stages_the_rolled_roster(self):
+        manifest = self.generate(self.ROSTER)
+        armies = self.staged_armies()
+        self.assertEqual([len(a) for a in armies], [1, 1])  # reinforcement armies dropped
+        attacker, defender = (a[0].findall('unit') for a in armies)
+        self.assertEqual(len(attacker), 2 + 7)
+        self.assertEqual(len(defender), 1 + 1)
+        self.assertEqual([u.find('unit_type').get('type') for u in attacker[:3]],
+                         ['3k_main_general_earth_generic', '3k_main_general_wood_generic', 'unit_a0'])
+        self.assertEqual([u.find('retinue').get('id') for u in attacker],
+                         ['0', '1'] + ['0'] * 6 + ['1'])
+        self.assertEqual([u.findtext('general/commander_type') for u in attacker[:2]],
+                         ['commanding_general', 'non_commanding_general'])
+        self.assertEqual([u.findtext('general/commander_id') for u in attacker[:2]], ['0', '1'])
+        self.assertTrue(all(u.find('general') is None for u in attacker[2:]))
+        spots = {(u.find('position').get('x'), u.find('position').get('y')) for u in attacker + defender}
+        self.assertEqual(len(spots), len(attacker) + len(defender))
+        self.assertEqual([u.find('orientation').get('radians') for u in (attacker[0], defender[0])], ['0.74', '3.87'])
+        self.assertEqual([s['men'] for s in manifest['sides']], [21 + 21 + sum(80 - i for i in range(6)) + 75, 60])
+        self.assertEqual([s['name'] for s in manifest['sides']], ['Gharb', 'Kru'])
+        self.assertEqual(len(manifest['expected_units']), 11)
+
+    def test_generals_stand_behind_their_units(self):
+        self.generate(self.ROSTER)
+        attacker = self.staged_armies()[0][0].findall('unit')
+        enemy = (110.0, 325.0)  # native defender centre
+        def distance(unit):
+            p = unit.find('position')
+            return ((float(p.get('x')) - enemy[0]) ** 2 + (float(p.get('y')) - enemy[1]) ** 2) ** 0.5
+        self.assertGreater(min(map(distance, attacker[:2])), max(map(distance, attacker[2:])))
+
+    def test_battle_script_trims_every_card_to_its_rolled_size(self):
+        manifest = self.generate(self.ROSTER)
+        lua = (self.output / 'pack' / probe.BATTLE / 'battle_script.lua').read_text(encoding='utf-8')
+        self.assertNotIn('@@', lua)
+        for unit in manifest['expected_units']:
+            self.assertIn(f'["{unit["script_name"]}"] = {unit["target_men"]}', lua)
+
+    def test_a_defending_player_takes_the_player_slot(self):
+        roster = copy.deepcopy(self.ROSTER)
+        roster['sides'][1]['yours'] = True
+        manifest = self.generate(roster)
+        player, enemy = (a[0].findall('unit') for a in self.staged_armies())
+        self.assertEqual((len(player), len(enemy)), (1 + 1, 2 + 7))
+        self.assertEqual(player[0].find('orientation').get('radians'), '0.74')  # the native player slot
+        self.assertEqual({(u['alliance'], u['side']) for u in manifest['expected_units']},
+                         {(1, 'defender'), (2, 'attacker')})
+        self.assertEqual([s['name'] for s in manifest['sides']], ['Kru', 'Gharb'])
+
+    def test_frontend_opener_is_bound_to_this_run(self):
+        manifest = self.generate(self.ROSTER)
+        opener = (self.output / 'pack' / probe.OPENER).read_text(encoding='utf-8')
+        self.assertNotIn('@@', opener)
+        self.assertIn(manifest['run_id'], opener)
+        self.assertIn(manifest['log_path'].replace('\\', '/'), opener)
+        self.assertTrue(probe.OPENER.startswith('script/frontend/mod/'))
+
+    def test_default_roster_is_the_g1_three_cards(self):
+        manifest = self.generate(None)
+        self.assertEqual([u['unit_type'] for u in manifest['expected_units']],
+                         ['3k_main_general_earth_cao_cao', '3k_main_unit_wood_ji_militia',
+                          '3k_main_unit_water_archer_militia', '3k_main_general_earth_liu_bei',
+                          '3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'])
+
+    def test_refuses_romance_and_unknown_generals(self):
+        with self.assertRaisesRegex(ValueError, 'Romance'):
+            self.generate(dict(self.ROSTER, mode='romance'))
+        roster = copy.deepcopy(self.ROSTER)
+        roster['sides'][1]['generals'][0]['key'] = '3k_main_general_fire_nobody'
+        with self.assertRaisesRegex(ValueError, 'not a Records general'):
+            self.generate(roster)
+        with self.assertRaisesRegex(ValueError, 'two sides'):
+            self.generate({'mode': 'records', 'sides': self.ROSTER['sides'][:1]})
 
 if __name__ == '__main__': unittest.main()

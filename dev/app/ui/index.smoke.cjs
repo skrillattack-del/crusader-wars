@@ -52,7 +52,7 @@ const api = {
   async get_encounter(save, id) { lastSave = save; return encounter(id || '1728053261'); },
   async roll_roster(enc, s, mode) { seed += 1; lastMode = mode; const hero = mode === 'romance';
     return {ok: true, seed, mode, deterministic: false, scale: 1,
-      note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
+      note: 'Three Kingdoms fights exactly this roll on the Records Xingyang map.' + (hero ? ' Romance battles are not staged yet.' : ''),
       sides: [{role: 'Attacker', fighting: 340.09, men: 340, trim: 1, cards: 5, retinue: 4, generals: [general(hero,
                 [u('Jian Swordguards', 'line', 80), u('Ji Militia', 'militia', 80), u('Raider Cavalry', 'line', 80), u('Axe Band', 'militia', 79)])]},
               {role: 'Defender', fighting: 421.48, men: 421, trim: 0, cards: 6, retinue: 5, generals: [general(hero,
@@ -122,7 +122,7 @@ async function click(action, data = {}) {
   expect('Send to Three Kingdoms installs the pack', main().includes('Next: fight') && log().includes('installed crusader_wars_2.pack')
     && log().includes('replaced the previous battle pack'));
   await click('toBattle');
-  expect('fight screen is a step-by-step checklist', main().includes('Battle of Xingyang') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
+  expect('fight screen is a step-by-step checklist', main().includes('opens the battle by itself') && main().includes('Battle of Xingyang') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
   await click('launch');
   expect('after launch the checklist says so', main().includes('Three Kingdoms is starting') && main().includes('crusader_wars_2'));
   await click('readResult');

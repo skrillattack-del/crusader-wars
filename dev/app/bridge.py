@@ -49,8 +49,8 @@ CK3_MOD_FILE = 'cw2_ck3_bridge.mod'
 CK3_MOD_ID = f'mod/{CK3_MOD_FILE}'  # the Paradox launcher's gameRegistryId
 PARADOX_LAUNCHER = 'Paradox Launcher.exe'
 ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
-STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
-                'the rolled army above is what the next build stages.')
+STAGING_NOTE = ('Three Kingdoms fights exactly this roll on the Records Xingyang map; '
+                'units bigger than their card are trimmed at deployment.')
 SESSION_NAME = 'cw2-launcher-session.json'
 # CW2's own 3K mod list; CA's launcher owns used_mods.txt (CW1 used used_mods_cw.txt for Attila).
 TK_MOD_LIST = 'used_mods_cw2.txt'
@@ -58,24 +58,6 @@ TK_MOD_LIST = 'used_mods_cw2.txt'
 CW2_BATTLE_LINE = re.compile(r'(?m)^\[(\d\d):(\d\d):(\d\d)\][^\n]*?\(CW2_Battle:effect\): BATTLE_NAME:([^\r\n]*)')
 SIGNAL_WINDOW = 300  # seconds allowed between that log line and the save
 SAVE_SETTLE = 2  # seconds a save must stay unchanged before it is read
-
-# Mirrors the roster probe.generate() stages into the Records Xingyang battle.
-# Keep in sync with probe.py when the staged roster changes.
-STAGED_SIDES = [
-    {'role': 'Attacker', 'name': 'Cao Cao', 'faction': 'cao_cao',
-     'units': [
-         {'kind': 'general', 'key': '3k_main_general_earth_cao_cao', 'name': 'Cao Cao (Earth general)'},
-         {'kind': 'unit', 'key': '3k_main_unit_wood_ji_militia', 'name': 'Ji Militia'},
-         {'kind': 'unit', 'key': '3k_main_unit_water_archer_militia', 'name': 'Archer Militia'},
-     ]},
-    {'role': 'Defender', 'name': 'Liu Bei', 'faction': 'liu_bei',
-     'units': [
-         {'kind': 'general', 'key': '3k_main_general_earth_liu_bei', 'name': 'Liu Bei (Earth general)'},
-         {'kind': 'unit', 'key': '3k_main_unit_wood_ji_militia', 'name': 'Ji Militia'},
-         {'kind': 'unit', 'key': '3k_main_unit_water_archer_militia', 'name': 'Archer Militia'},
-     ]},
-]
-
 
 
 def _default_tasklist(cmd):
@@ -340,6 +322,7 @@ class Bridge:
             sides = []
             for spec, side, generals in zip(encounter['sides'], staged, rolled):
                 sides.append({'role': spec['role'], 'name': spec['name'], 'fighting': spec['fighting'],
+                              'yours': bool(spec.get('yours')),
                               'men': side.men, 'trim': side.trim, 'cards': side.cards,
                               'retinue': side.units, 'generals': generals})
             note = STAGING_NOTE + (' Romance battles are not staged yet; the pack replaces Records Xingyang.'
@@ -456,7 +439,10 @@ class Bridge:
             return {'error': str(exc)}
 
     def prepare_and_install(self, roster=None):
+        """Build a pack that stages `roster` (roll_roster's result), then install it."""
         try:
+            if not roster or len(roster.get('sides') or []) != 2:
+                raise ValueError('Roll the armies first.')
             self._require_3k_closed()
             if not (self.game / 'Three_Kingdoms.exe').is_file() or not self.cli.is_file():
                 raise ValueError('Select the installed Three Kingdoms folder and rpfm_cli.exe.')
@@ -467,7 +453,7 @@ class Bridge:
                                  'so CW2 will not delete it. Remove it by hand.')
             output = self.base / 'runs' / datetime.now().strftime('%Y%m%d-%H%M%S-%f')
             steps = [('Build and verify the battle pack with RPFM',
-                      lambda: probe.build(self.game, self.cli, output)),
+                      lambda: probe.build(self.game, self.cli, output, roster=roster)),
                      ('Install the pack into the Three Kingdoms data folder',
                       lambda: probe.install(self.game, output))]
             if previous:
@@ -486,8 +472,9 @@ class Bridge:
             self.session.update(output=str(output), game=str(self.game))
             self._save_session()
             self._emit('install', {'index': len(steps), 'label': 'Record run evidence', 'status': 'done'})
+            staged = [sum(1 for u in manifest['expected_units'] if u['alliance'] == a) for a in (1, 2)]
             return {'ok': True, 'pack': probe.PACK_NAME,
-                    'sha256': manifest['pack_sha256'], 'run': str(output),
+                    'sha256': manifest['pack_sha256'], 'run': str(output), 'staged': staged,
                     'removed_previous': str(previous) if previous else None}
         except Exception as exc:
             return {'error': str(exc)}
@@ -508,12 +495,18 @@ class Bridge:
         try:
             run = self._require_run()
             result = probe.read_result(run)
+            staged = json.loads((run / 'run.json').read_text(encoding='utf-8')).get('sides') or []
+            names = {s.get('role', '').lower(): s['name'] for s in staged}
+            roles = ('attacker', 'defender')
+            # The player's side fights as 3K alliance 1 (probe.generate seats it there).
+            alliance_of = {result['player_side']: 1}
+            alliance_of[roles[1 - roles.index(result['player_side'])]] = 2
             sides = []
-            for index, role in enumerate(('attacker', 'defender')):
-                units = [u for u in result['units'] if u['alliance'] == index + 1]
+            for role in roles:
+                units = [u for u in result['units'] if u['alliance'] == alliance_of[role]]
                 initial = sum(u['initial'] for u in units)
                 survivors = sum(u['survivors'] for u in units)
-                sides.append({'role': role, 'name': STAGED_SIDES[index]['name'],
+                sides.append({'role': role, 'name': names.get(role, role.title()),
                               'men': initial, 'lost': initial - survivors,
                               'units': [{'script_name': u['script_name'],
                                          'unit_type': u['unit_type'],
@@ -522,8 +515,8 @@ class Bridge:
                                          'lost': u['initial'] - u['survivors'],
                                          'routing': u['routing']} for u in units]})
             return {'ok': True,
-                    'winner': 0 if result['winner'] == 'attacker' else None,
-                    'player_side': 0,
+                    'winner': roles.index(result['winner']) if result['winner'] in roles else None,
+                    'player_side': roles.index(result['player_side']),
                     'player_outcome': result['player_outcome'],
                     'result_source': result['result_source'],
                     'note': result['limitation'],

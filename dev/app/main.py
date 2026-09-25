@@ -44,8 +44,9 @@ def main():
             raise RuntimeError(f'roster roll failed: {roster}')
         if getattr(sys, 'frozen', False):
             import probe
-            if not (probe.HERE / 'probe.lua').is_file():
-                raise RuntimeError('Packaged Lua resource is missing.')
+            for resource in ('probe.lua', 'frontend_open.lua'):
+                if not (probe.HERE / resource).is_file():
+                    raise RuntimeError(f'Packaged Lua resource is missing: {resource}')
         import webview  # verifies pywebview and its Windows backend landed in the bundle
         print('launcher smoke OK')
         return

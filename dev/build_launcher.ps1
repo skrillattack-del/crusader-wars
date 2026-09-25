@@ -25,6 +25,7 @@ $buildArgs = @(
   '--paths', (Join-Path $PSScriptRoot 'battle_math'),
   '--add-data', "$(Join-Path $appRoot 'ui\index.html');ui",
   '--add-data', "$(Join-Path $probeRoot 'probe.lua');.",
+  '--add-data', "$(Join-Path $probeRoot 'frontend_open.lua');.",
   (Join-Path $appRoot 'main.py')
 )
 python -m PyInstaller @buildArgs
