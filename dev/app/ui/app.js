@@ -96,7 +96,7 @@ const V={
       <ol class="howto">
         <li>Get every line above ready. <b>Add to playset</b> puts the CW2 mod last in your active playset for you.</li>
         <li>Play CK3. When your armies meet, open the battle and press the <b>crossed swords</b>. The game pauses and saves.</li>
-        <li>Come back here and press <b>Find my battle</b>.</li>
+        <li>Keep this window open: it spots the save, builds both armies and starts Three Kingdoms. To choose by hand, press <b>Find my battle</b>.</li>
       </ol></section>
     ${errorBox()}
     <div class="actions">
@@ -262,14 +262,29 @@ const A={
     S.busy=false; render();},
   async restart(){Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
       install:[],installed:false,launched:false,removed:false,result:null,error:null});
-    await A.recheck();}
+    await A.recheck();},
+  /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
+  async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
+    await A.toEncounter(); if(!S.enc) return;
+    await A.toRoster(); if(!S.roster) return;
+    await A.install(); if(!S.installed) return;
+    go(3); await A.launch();}
 };
+
+let watching=false;
+async function watch(){
+  if(watching||S.busy||S.view!==0) return;
+  watching=true;
+  try{const sig=await call("poll_battle"); if(sig.save&&!S.busy&&S.view===0) await A.autoFight(sig);}
+  catch(e){log(`watch: ${err(e)}`);}
+  watching=false;
+}
 
 document.addEventListener("click",async ev=>{
   const g=ev.target.closest("[data-go]"); if(g&&!g.disabled){go(+g.dataset.go);return;}
   const b=ev.target.closest("[data-action]"); if(b&&!b.disabled&&A[b.dataset.action]) await A[b.dataset.action](b);
 });
 
-window.addEventListener("pywebviewready",()=>{log("Python bridge ready"); render(); A.recheck();});
+window.addEventListener("pywebviewready",()=>{log("Python bridge ready"); render(); A.recheck(); setInterval(watch,3000);});
 log("launcher started; waiting for the Python bridge...");
 render();

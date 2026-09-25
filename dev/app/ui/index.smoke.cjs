@@ -23,6 +23,7 @@ global.window = global;
 global.addEventListener = (type, fn) => { winHandlers[type] = fn; };
 
 let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
+let signal = null, tkLaunches = 0;
 const side = (role, fighting, initial, armies, yours) => ({role, name: `${role} · army ${armies}`,
   army_ids: [armies], fighting, initial, yours});
 const battles = {
@@ -59,7 +60,8 @@ const api = {
                  u('Spear Warriors', 'militia', 80), u('Sabre Cavalry', 'line', 80)])]}]}; },
   async prepare_and_install() { return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
     removed_previous: 'C:/dist/runs/old'}; },
-  async launch_3k() { return {ok: true, pid: null}; },
+  async launch_3k() { tkLaunches += 1; return {ok: true, pid: null}; },
+  async poll_battle() { const s = signal; signal = null; return s || {ok: true, save: null}; },
   async read_result() {
     readAttempts += 1;
     if (readAttempts === 1) return {error: 'No runtime log yet. The probe has not demonstrated that it loaded.'};
@@ -132,6 +134,12 @@ async function click(action, data = {}) {
   expect('pack removal is confirmed', main().includes('Battle pack removed') && log().includes('removed crusader_wars_2.pack'));
   await click('restart');
   expect('Fight another battle returns to Get ready', main().includes('Get ready') && !main().includes('Your armies'));
+  signal = {ok: true, save: 'C:/saves/latest.ck3', save_name: 'latest.ck3', battle: 'Battle of Muluya'};
+  const launchesBefore = tkLaunches;
+  await watch();
+  await settle();
+  expect('the CK3 button save goes straight to Three Kingdoms', tkLaunches === launchesBefore + 1
+    && main().includes('Three Kingdoms is starting.') && log().includes('CK3 battle button: Battle of Muluya'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
   process.exit(failed ? 1 : 0);
 })().catch(error => { console.error('smoke crashed:', error); process.exit(1); });

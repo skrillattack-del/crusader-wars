@@ -1,8 +1,10 @@
 import copy
+from datetime import datetime
 import json
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -228,6 +230,37 @@ class BridgeTests(unittest.TestCase):
     def test_encounter_without_saves_or_battles_explains(self):
         empty = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=self.root)
         self.assertIn('No .ck3 saves', empty.get_encounter()['error'])
+
+    def write_debug_log(self, bridge, stamp):
+        logs = bridge.saves.parent / 'logs'
+        logs.mkdir(exist_ok=True)
+        (logs / 'debug.log').write_text(
+            f'[{stamp:%H:%M:%S}][D][jomini_effect_impl.cpp:450]: file: common/scripted_guis/01_battle_info.txt '
+            'line: 82 (CW2_Battle:effect): BATTLE_NAME:Battle of Muluya\n', encoding='utf-8')
+
+    def test_poll_battle_reports_a_cw2_button_save_once_it_settles(self):
+        import os
+        bridge, path = self.write_save()
+        saved = time.time() - 10
+        os.utime(path, (saved, saved))
+        self.write_debug_log(bridge, datetime.fromtimestamp(saved - 20))
+        self.assertIsNone(bridge.poll_battle()['save'])  # first sight: wait for it to stop changing
+        signal = bridge.poll_battle()
+        self.assertEqual((signal['save'], signal['battle']), (str(path), 'Battle of Muluya'))
+        self.assertIsNone(bridge.poll_battle()['save'])  # reported once
+
+    def test_poll_battle_ignores_saves_the_button_did_not_trigger(self):
+        import os
+        bridge, path = self.write_save()
+        saved = time.time() - 10
+        os.utime(path, (saved, saved))
+        self.write_debug_log(bridge, datetime.fromtimestamp(saved - 3600))  # an old button press
+        bridge.poll_battle()
+        self.assertIsNone(bridge.poll_battle()['save'])
+        old = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=path.parent)
+        os.utime(path, (saved - 3600, saved - 3600))  # written before the launcher opened
+        old.poll_battle()
+        self.assertIsNone(old.poll_battle()['save'])
 
     def test_roll_scales_both_sides_and_repeats_by_seed(self):
         bridge, _ = self.write_save()

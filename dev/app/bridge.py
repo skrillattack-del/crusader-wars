@@ -18,6 +18,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 _HERE = Path(__file__).resolve().parent
@@ -52,6 +53,10 @@ ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
 STAGING_NOTE = ('This build fights 1 general + 2 units a side in 3K (Records Xingyang); '
                 'the rolled army above is what the next build stages.')
 SESSION_NAME = 'cw2-launcher-session.json'
+# The CW2 button logs the battle name, then CK3 writes the save it triggered.
+CW2_BATTLE_LINE = re.compile(r'(?m)^\[(\d\d):(\d\d):(\d\d)\][^\n]*?\(CW2_Battle:effect\): BATTLE_NAME:([^\r\n]*)')
+SIGNAL_WINDOW = 300  # seconds allowed between that log line and the save
+SAVE_SETTLE = 2  # seconds a save must stay unchanged before it is read
 
 # Mirrors the roster probe.generate() stages into the Records Xingyang battle.
 # Keep in sync with probe.py when the staged roster changes.
@@ -92,6 +97,9 @@ class Bridge:
             (p / 'mod' / 'cw2_ck3_mod' for p in (self.base, *self.base.parents, _HERE.parent)
              if (p / 'mod' / 'cw2_ck3_mod' / 'descriptor.mod').is_file()), None)
         self._save_cache = None
+        # A button press shortly before the launcher opened still counts.
+        self._signal_seen = time.time() - SIGNAL_WINDOW
+        self._signal_pending = None
         self.cli = Path(cli) if cli else self._find_cli()
         self._tasklist = tasklist or _default_tasklist
         self._window = None
@@ -242,6 +250,49 @@ class Bridge:
         data = {'date': date.group(1) if date else None, 'battles': battles}
         self._save_cache = (key, data)
         return data
+
+    def _cw2_battle_for(self, save_mtime):
+        """The battle name the CW2 button logged just before a save, or None."""
+        log = self.saves.parent / 'logs' / 'debug.log'
+        try:
+            text = log.read_text(encoding='utf-8', errors='replace')
+        except OSError:
+            return None
+        found = None
+        for found in CW2_BATTLE_LINE.finditer(text):
+            pass
+        if found is None:
+            return None
+        h, m, s = (int(g) for g in found.groups()[:3])
+        saved = datetime.fromtimestamp(save_mtime)
+        # debug.log stamps only the time of day; compare modulo a day.
+        gap = (saved.hour * 3600 + saved.minute * 60 + saved.second - (h * 3600 + m * 60 + s)) % 86400
+        return (found.group(4).strip() or 'CK3 battle') if gap <= SIGNAL_WINDOW else None
+
+    def poll_battle(self):
+        """A save written by the CW2 battle button since the last poll: {'save': path, 'battle': name}.
+
+        A save is reported once, after it has stopped changing; other saves are skipped.
+        """
+        try:
+            try:
+                path = self._latest_save()
+            except ValueError:
+                return {'ok': True, 'save': None}
+            stat = path.stat()
+            if stat.st_mtime <= self._signal_seen:
+                return {'ok': True, 'save': None}
+            key = (str(path), stat.st_mtime_ns, stat.st_size)
+            if self._signal_pending != key or time.time() - stat.st_mtime < SAVE_SETTLE:
+                self._signal_pending = key
+                return {'ok': True, 'save': None}
+            self._signal_seen, self._signal_pending = stat.st_mtime, None
+            battle = self._cw2_battle_for(stat.st_mtime)
+            if battle is None:
+                return {'ok': True, 'save': None}
+            return {'ok': True, 'save': str(path), 'save_name': path.name, 'battle': battle}
+        except Exception as exc:
+            return {'error': str(exc)}
 
     def get_encounter(self, save=None, combat_id=None):
         """Read the newest CK3 save (or `save`) and pick a battle in progress.
