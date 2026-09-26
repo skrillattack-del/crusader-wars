@@ -27,6 +27,15 @@ class FakeTasklist:
         return 0, rows + '\r\n'
 
 
+class FakePopen:
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, args, cwd=None):
+        self.calls.append((args, cwd))
+        return type('Process', (), {'pid': 4242})()
+
+
 class BridgeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -43,6 +52,7 @@ class BridgeTests(unittest.TestCase):
         expected = [{'script_name': f'cw2_{side}_{i}', 'unit_type': f'type_{i}', 'alliance': a}
                     for a, side in ((1, 'attacker'), (2, 'defender')) for i in range(3)]
         manifest = {'schema': 1, 'run_id': 'run1', 'entry': probe.BATTLE,
+                    'sides': [{'role': 'Attacker', 'name': 'Gharb'}, {'role': 'Defender', 'name': 'Kru'}],
                     'expected_units': expected, 'log_path': str(run / 'runtime.jsonl')}
         run.mkdir(parents=True)
         units = [dict(u, army=1, index=i + 1, initial=100, survivors=100, routing=False)
@@ -270,7 +280,7 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(first, again)
         self.assertEqual(first['scale'], 1.0)
         self.assertEqual([(s['cards'], s['men'], s['trim']) for s in first['sides']], [(5, 340, 1), (6, 421, 0)])
-        self.assertIn('1 general + 2 units a side', first['note'])
+        self.assertIn('fights exactly this roll', first['note'])
         self.assertIsInstance(bridge.roll_roster(encounter)['seed'], int)
         romance = bridge.roll_roster(encounter, 1702901, 'romance')
         self.assertEqual([s['generals'][0]['kind'] for s in romance['sides']], ['hero', 'hero'])
@@ -281,10 +291,16 @@ class BridgeTests(unittest.TestCase):
 
     # ---- prepare guards (no RPFM run happens here) ----
 
+    ROSTER = {'mode': 'records', 'sides': probe.DEFAULT_ROSTER['sides']}
+
+    def test_prepare_needs_a_rolled_roster(self):
+        for roster in (None, {}, {'sides': [{}]}):
+            self.assertIn('Roll the armies first', self.bridge.prepare_and_install(roster)['error'])
+
     def test_prepare_refuses_while_3k_runs(self):
         bridge = Bridge(base=self.root, game=self.game,
                         tasklist=FakeTasklist(['Three_Kingdoms.exe']))
-        result = bridge.prepare_and_install()
+        result = bridge.prepare_and_install(self.ROSTER)
         self.assertIn('Close Three Kingdoms', result['error'])
         self.assertNotIn('ok', result)
 
@@ -292,7 +308,7 @@ class BridgeTests(unittest.TestCase):
         (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
         target = self.game / 'data' / probe.PACK_NAME
         target.write_bytes(b'stale pack')
-        result = self.bridge.prepare_and_install()
+        result = self.bridge.prepare_and_install(self.ROSTER)
         self.assertIn('unrecognised battle pack', result['error'])
         self.assertTrue(target.exists())
 
@@ -305,7 +321,7 @@ class BridgeTests(unittest.TestCase):
         manifest['pack_sha256'] = probe.digest(source)
         (run / 'run.json').write_text(json.dumps(manifest))
         target = probe.install(self.game, run)
-        result = self.bridge.prepare_and_install()  # the fake RPFM then fails the build
+        result = self.bridge.prepare_and_install(self.ROSTER)  # the fake RPFM then fails the build
         self.assertFalse(target.exists())
         self.assertIn('error', result)
 
@@ -323,7 +339,7 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(result['player_outcome'], 'victory')
         self.assertEqual(result['result_source'], 'engine_callback')
         self.assertEqual(result['player_side'], 0)
-        self.assertEqual([s['name'] for s in result['sides']], ['Cao Cao', 'Liu Bei'])
+        self.assertEqual([s['name'] for s in result['sides']], ['Gharb', 'Kru'])
         self.assertEqual(len(result['sides']), 2)
         for side in result['sides']:
             self.assertEqual(side['men'], 300)
@@ -333,6 +349,18 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual(unit['lost'], unit['initial'] - unit['survivors'])
         self.assertEqual(result['sides'][0]['role'], 'attacker')
         self.assertEqual(result['sides'][1]['role'], 'defender')
+
+    def test_a_defending_player_reads_as_the_defender(self):
+        run = self.make_run()
+        manifest = json.loads((run / 'run.json').read_text())
+        for unit in manifest['expected_units']:  # the player's alliance 1 is the CK3 defender
+            unit['side'] = 'defender' if unit['alliance'] == 1 else 'attacker'
+        (run / 'run.json').write_text(json.dumps(manifest))
+        self.bridge.session.update(output=str(run), game=str(self.game))
+        result = self.bridge.read_result()
+        self.assertEqual((result['player_side'], result['winner']), (1, 1))
+        self.assertEqual([s['name'] for s in result['sides']], ['Gharb', 'Kru'])
+        self.assertTrue(all(u['script_name'].startswith('cw2_attacker') for u in result['sides'][1]['units']))
 
     def test_read_result_rejects_undetermined(self):
         run = self.make_run(player_won=None, source='routing_state')
@@ -450,6 +478,19 @@ class BridgeTests(unittest.TestCase):
 
 
     # ---- session and assets ----
+
+    def test_launch_3k_starts_the_game_with_only_the_battle_pack(self):
+        popen = FakePopen()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), popen=popen)
+        self.assertIn('not installed', bridge.launch_3k()['error'])
+        self.assertEqual(popen.calls, [])
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        (self.game / 'used_mods.txt').write_text('mod "someone_elses.pack";', encoding='utf-8')
+        launched = bridge.launch_3k()
+        self.assertEqual(launched['pid'], 4242)
+        self.assertEqual(popen.calls, [([str(self.game / 'Three_Kingdoms.exe'), 'used_mods_cw2.txt;'], str(self.game))])
+        self.assertEqual((self.game / 'used_mods_cw2.txt').read_text(encoding='utf-8'), f'mod "{probe.PACK_NAME}";\n')
+        self.assertEqual((self.game / 'used_mods.txt').read_text(encoding='utf-8'), 'mod "someone_elses.pack";')
 
     def test_session_persists_between_launches(self):
         self.bridge.session.update(output=str(self.root / 'run'), game=str(self.game))

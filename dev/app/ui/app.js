@@ -170,9 +170,8 @@ const V={
     return `<h2>Fight in Three Kingdoms</h2>
     <p class="lede">The battle is ready. Follow these steps, then come back for the result.</p>
     <ol class="howto panel">
-      <li>${S.launched?"Three Kingdoms is starting.":`<button class="btn-quiet btn-sm" data-action="launch">Launch Three Kingdoms</button>`}</li>
-      <li>In the mod manager, turn on <b>crusader_wars_2</b>, then press Play.</li>
-      <li>Open <b>Historical Battles</b>, choose <b>Battle of Xingyang</b> in Records mode, and start it.</li>
+      <li>${S.launched?"Three Kingdoms is starting with only the <b>crusader_wars_2</b> battle pack on.":`<button class="btn-quiet btn-sm" data-action="launch">Launch Three Kingdoms</button>`}</li>
+      <li>Three Kingdoms opens the battle by itself. If it stops at a menu: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
       <li>Fight until one army breaks. Stay on the results screen for a few seconds, and don't press Rematch.</li>
     </ol>
     ${errorBox()}
@@ -226,8 +225,8 @@ const A={
   async launchCk3(){
     try{await call("launch_ck3"); log("CK3 launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
-  async toEncounter(){go(1); S.enc=null; S.roster=null; render();
-    try{S.enc=await call("get_encounter"); log(`CK3 save ${S.enc.save_name}: battle ${S.enc.combat_id} of ${S.enc.battles.length}`);}
+  async toEncounter(_,save=null){go(1); S.enc=null; S.roster=null; render();
+    try{S.enc=await call("get_encounter",save); log(`CK3 save ${S.enc.save_name}: battle ${S.enc.combat_id} of ${S.enc.battles.length}`);}
     catch(e){S.error=fail(e);} render();},
   async pickBattle(b){S.error=null;
     try{S.enc=await call("get_encounter",S.enc.save,b.dataset.id); S.roster=null; log(`picked battle ${S.enc.combat_id}`);}
@@ -265,7 +264,7 @@ const A={
     await A.recheck();},
   /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
   async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
-    await A.toEncounter(); if(!S.enc) return;
+    await A.toEncounter(null,sig.save); if(!S.enc) return;
     await A.toRoster(); if(!S.roster) return;
     await A.install(); if(!S.installed) return;
     go(3); await A.launch();}

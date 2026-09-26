@@ -1,9 +1,10 @@
-"""Build a reversible 3K-native historical-battle experiment, not a CK3 port."""
+"""Build the crusader_wars_2 battle pack: a rolled roster staged on the Records Xingyang map."""
 from __future__ import annotations
 import argparse
 import copy
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -16,6 +17,21 @@ HERE = Path(__file__).resolve().parent
 GAME = Path(r'C:\Program Files (x86)\Steam\steamapps\common\Total War THREE KINGDOMS')
 PACK_NAME = 'crusader_wars_2.pack'
 BATTLE = 'script/battle/historical_battle/historical_battle_xinyang'
+# 3K's frontend loader (script/frontend_mod_scripting.lua) runs every Lua file here.
+OPENER = 'script/frontend/mod/cw2_open_battle.lua'
+ROW = 6          # unit cards per formation row
+SPACING = 30.0   # metres between cards, across and between rows
+CARD_WIDTH = '25.00'
+# Staged when no roster is given (the probe CLI): 1 general + 2 units a side, as in G1 runs 1-3.
+DEFAULT_ROSTER = {'mode': 'records', 'sides': [
+    {'role': 'Attacker', 'name': 'Cao Cao', 'generals': [
+        {'key': '3k_main_general_earth_cao_cao', 'name': 'Cao Cao', 'men': 21, 'units': [
+            {'key': '3k_main_unit_wood_ji_militia', 'name': 'Ji Militia', 'men': 80},
+            {'key': '3k_main_unit_water_archer_militia', 'name': 'Archer Militia', 'men': 80}]}]},
+    {'role': 'Defender', 'name': 'Liu Bei', 'generals': [
+        {'key': '3k_main_general_earth_liu_bei', 'name': 'Liu Bei', 'men': 21, 'units': [
+            {'key': '3k_main_unit_wood_ji_militia', 'name': 'Ji Militia', 'men': 80},
+            {'key': '3k_main_unit_water_archer_militia', 'name': 'Archer Militia', 'men': 80}]}]}]}
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -28,8 +44,34 @@ def run_cli(cli, *args):
         raise RuntimeError(result.stderr or result.stdout or f'RPFM exit {result.returncode}')
     return result.stdout
 
-def generate(native, output, lua_template):
-    """Reuse only locally installed native metadata and map; emit six unique units."""
+def _centre(units):
+    points = [(float(u.find('position').get('x')), float(u.find('position').get('y'))) for u in units]
+    return sum(p[0] for p in points) / len(points), sum(p[1] for p in points) / len(points)
+
+def formation(units, generals, centre, facing):
+    """Card positions: unit cards in rows of ROW facing the enemy, then the generals in a row behind."""
+    fx, fy = facing
+    spots = []
+    def row(count, depth):
+        for c in range(count):
+            across = (c - (count - 1) / 2) * SPACING
+            spots.append((centre[0] + fy * across - fx * depth, centre[1] - fx * across - fy * depth))
+    for first in range(0, units, ROW):
+        row(min(ROW, units - first), first // ROW * SPACING)
+    row(generals, math.ceil(units / ROW) * SPACING)
+    return spots
+
+def _lua_string(text):
+    return '"' + str(text).replace('\\', '/').replace('"', '\\"') + '"'
+
+def generate(native, output, lua_template, roster=None, opener_template=None):
+    """Stage `roster` (bridge.roll_roster's result) on the natively installed Records Xingyang map."""
+    roster = roster or DEFAULT_ROSTER
+    if roster.get('mode', 'records') != 'records':
+        raise ValueError('Romance battles are not staged yet; roll the armies in Records mode.')
+    sides = roster.get('sides') or []
+    if len(sides) != 2 or not all(s.get('generals') for s in sides):
+        raise ValueError('The roster needs two sides, each led by at least one general.')
     source = native / BATTLE / 'battle.xml'
     root = ET.parse(source).getroot()
     general_sources = {}
@@ -40,33 +82,53 @@ def generate(native, output, lua_template):
             if kind is not None and unit.findtext('general/game_mode') == 'historical':
                 general_sources.setdefault(kind.get('type'), unit)
     run_id = uuid.uuid4().hex
-    expected = []
-    for a, side in enumerate(('attacker', 'defender')):
-        alliance = root.findall('alliance')[a]
+    alliances = root.findall('alliance')[:2]
+    centres = [_centre(alliance.find('army').findall('unit')) for alliance in alliances]
+    expected, staged = [], []
+    # 3K seats the player in the first alliance, so the CK3 player's side goes there.
+    order = sorted(range(2), key=lambda i: not sides[i].get('yours'))
+    for a, (i, alliance) in enumerate(zip(order, alliances)):
+        side, spec = ('attacker', 'defender')[i], sides[i]
         army = alliance.find('army')
-        originals = army.findall('unit')
-        faction = 'cao_cao' if a == 0 else 'liu_bei'
+        orientation = army.find('unit/orientation')
+        faction = 'cao_cao' if a == 0 else 'liu_bei'  # the faction only picks banner colours
         army.find('faction').text = '3k_main_faction_' + faction
         for child in list(army):
             if child.tag in ('unit', 'reinforcement_army'):
                 army.remove(child)
-        types = ['3k_main_general_earth_' + faction,
-                 '3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia']
-        for i, kind in enumerate(types):
-            unit = ET.Element('unit', script_name=f'cw2_{side}_{i}')
-            ET.SubElement(unit, 'unit_type', type=kind)
-            ET.SubElement(unit, 'retinue', id='0')
-            for tag in ('position', 'orientation', 'width'):
-                unit.append(copy.deepcopy(originals[i].find(tag)))
+        generals = spec['generals']
+        cards = ([(g, general, True) for g, general in enumerate(generals)]
+                 + [(g, unit, False) for g, general in enumerate(generals) for unit in general.get('units', [])])
+        (cx, cy), (ex, ey) = centres[a], centres[1 - a]
+        distance = math.hypot(ex - cx, ey - cy)
+        spots = formation(len(cards) - len(generals), len(generals), centres[a],
+                          ((ex - cx) / distance, (ey - cy) / distance))
+        spots = spots[len(cards) - len(generals):] + spots[:len(cards) - len(generals)]  # generals first
+        for n, ((g, card, is_general), (x, y)) in enumerate(zip(cards, spots)):
+            key, men = card['key'], int(card['men'])
+            if men <= 0:
+                raise ValueError(f'{card.get("name", key)} has no men.')
+            if is_general and key not in general_sources:
+                raise ValueError(f'{key} is not a Records general in the native battles.')
+            unit = ET.Element('unit', script_name=f'cw2_{side}_{n}')
+            ET.SubElement(unit, 'unit_type', type=key)
+            ET.SubElement(unit, 'retinue', id=str(g))
+            ET.SubElement(unit, 'position', x=f'{x:.2f}', y=f'{y:.2f}')
+            unit.append(copy.deepcopy(orientation))
+            ET.SubElement(unit, 'width', metres=CARD_WIDTH)
             ET.SubElement(unit, 'unit_experience', level='0')
-            if i == 0:
-                general = copy.deepcopy(general_sources[kind].find('general'))
-                general.find('commander_type').text = 'commanding_general'
-                general.find('commander_id').text = '0'
+            if is_general:
+                general = copy.deepcopy(general_sources[key].find('general'))
+                general.find('commander_type').text = 'commanding_general' if g == 0 else 'non_commanding_general'
+                general.find('commander_id').text = str(g)
                 unit.append(general)
             army.append(unit)
-            expected.append({'script_name': unit.get('script_name'), 'unit_type': kind,
-                             'alliance': a + 1, 'side': side, 'general': i == 0})
+            expected.append({'script_name': unit.get('script_name'), 'unit_type': key,
+                             'name': card.get('name', key), 'alliance': a + 1, 'side': side,
+                             'general': is_general, 'general_index': g, 'target_men': men})
+        staged.append({'role': spec.get('role', side.title()), 'name': spec.get('name', side.title()),
+                       'fighting': spec.get('fighting'),
+                       'men': sum(u['target_men'] for u in expected if u['alliance'] == a + 1)})
         for other in list(alliance.findall('army'))[1:]:
             alliance.remove(other)
         victory = alliance.find('victory_condition')
@@ -79,18 +141,25 @@ def generate(native, output, lua_template):
     ET.indent(root)
     ET.ElementTree(root).write(stage / 'battle.xml', encoding='utf-8', xml_declaration=True)
     log = output.resolve() / f'{run_id}.jsonl'
+    trim = '{' + ', '.join(f'[{_lua_string(u["script_name"])}] = {u["target_men"]}' for u in expected) + '}'
     lua = lua_template.read_text(encoding='utf-8').replace('@@RUN_ID@@', run_id).replace('@@BATTLE@@', BATTLE)
     # JSON quoting yields Lua-compatible escaping for an ASCII Windows path.
     lua = lua.replace('@@OUTPUT_PATH@@', str(log).replace('\\', '/').replace('"', '\\"'))
+    lua = lua.replace('@@TRIM@@', trim)
     (stage / 'battle_script.lua').write_text(lua, encoding='utf-8')
+    opener = (opener_template or lua_template.parent / 'frontend_open.lua').read_text(encoding='utf-8')
+    opener = (opener.replace('@@RUN_ID@@', run_id)
+              .replace('@@OUTPUT_PATH@@', str(log).replace('\\', '/').replace('"', '\\"'))
+              .replace('@@FRONTEND_LOG@@', str(output.resolve() / 'frontend.log').replace('\\', '/').replace('"', '\\"')))
+    (output / 'pack' / OPENER).parent.mkdir(parents=True, exist_ok=True)
+    (output / 'pack' / OPENER).write_text(opener, encoding='utf-8')
     manifest = {'schema': 1, 'kind': 'g1_runtime_unverified', 'run_id': run_id,
                 'mode': 'Records', 'entry': BATTLE, 'source_sha256': digest(source),
-                'log_path': str(log), 'expected_units': expected,
-                'candidate_change': 'Liu Bei uses native Records general instead of original hero candidate.'}
+                'log_path': str(log), 'sides': staged, 'expected_units': expected}
     (output / 'run.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     return manifest
 
-def build(game, cli, output, native=None):
+def build(game, cli, output, native=None, roster=None):
     game, cli, output = Path(game), Path(cli), Path(output)
     if not (game / 'Three_Kingdoms.exe').is_file() or not cli.is_file():
         raise ValueError('Select the installed Three Kingdoms folder and rpfm_cli.exe.')
@@ -102,18 +171,19 @@ def build(game, cli, output, native=None):
         run_cli(cli, 'extract', '--pack-path', game / 'data/data.pack',
                 '--file-path', f'{BATTLE}/battle.xml;{native}',
                 '--file-path', f'script/battle/historical_battle/historical_battle_red_cliff/battle.xml;{native}')
-    manifest = generate(Path(native), output, HERE / 'probe.lua')
+    manifest = generate(Path(native), output, HERE / 'probe.lua', roster)
     pack = output / PACK_NAME
     run_cli(cli, 'create', '--pack-path', pack)
     # Bundled RPFM creates PFH5 mod packs (type 3). Its set-file-type command
     # panics in this old build; validate the newly created header instead.
     if pack.read_bytes()[:8] != b'PFH5\x03\x00\x00\x00':
         raise ValueError('RPFM did not create the expected PFH5 mod pack.')
-    for name in ('battle.xml', 'battle_script.lua'):
-        run_cli(cli, 'add', '--pack-path', pack, '--file-path', f'{output / "pack" / BATTLE / name};{BATTLE}/{name}')
+    files = [f'{BATTLE}/battle.xml', f'{BATTLE}/battle_script.lua', OPENER]
+    for name in files:
+        run_cli(cli, 'add', '--pack-path', pack, '--file-path', f'{output / "pack" / name};{name}')
     listed = run_cli(cli, 'list', '--pack-path', pack).splitlines()
-    if sorted(listed) != sorted(f'{BATTLE}/{n}' for n in ('battle.xml', 'battle_script.lua')):
-        raise ValueError('Pack contents do not match the two-file experiment.')
+    if sorted(listed) != sorted(files):
+        raise ValueError('Pack contents do not match the staged battle files.')
     manifest['pack_sha256'] = digest(pack)
     (output / 'run.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     return manifest
@@ -155,7 +225,7 @@ def read_result(output):
             raise ValueError('Event battle identifier differs from the staged battle.')
         units = event['units']
         if len(units) != len(expected) or {u['script_name'] for u in units} != set(expected):
-            raise ValueError('Loaded roster differs from the staged six unique units.')
+            raise ValueError('Loaded roster differs from the staged roster.')
         for unit in units:
             match = expected[unit['script_name']]
             if unit['unit_type'] != match['unit_type'] or unit['alliance'] != match['alliance'] or unit['army'] != 1:

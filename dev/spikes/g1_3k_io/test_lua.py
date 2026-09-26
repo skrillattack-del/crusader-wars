@@ -18,6 +18,7 @@ MOCK_ENV = '''
     end
     local alliance_list = {}
     alive = 100
+    men = {}
     routing = {false, false}
     for a=1,2 do
         local units = {}
@@ -25,7 +26,8 @@ MOCK_ENV = '''
             local name = 'cw2_' .. (a==1 and 'attacker' or 'defender') .. '_' .. i
             units[#units+1] = {name=function() return name end,
                 type=function() return 'native_unit' end,
-                number_of_men_alive=function() return alive end,
+                number_of_men_alive=function() return men[name] or alive end,
+                kill_number_of_men=function(self, n, hide) men[name] = (men[name] or alive) - n end,
                 is_routing=function() return routing[a] end}
         end
         local army = {units=function() return collection(units) end}
@@ -41,12 +43,13 @@ MOCK_ENV = '''
     battle_manager = {new=function() return manager end}
 '''
 
-def load(temp):
+def load(temp, trim='{}'):
     path = Path(temp) / 'result.jsonl'
     lua = LuaRuntime()
     lua.execute(MOCK_ENV)
     script = (probe.HERE / 'probe.lua').read_text(encoding='utf-8')
     script = script.replace('@@RUN_ID@@', 'mock-only').replace('@@BATTLE@@', probe.BATTLE).replace('@@OUTPUT_PATH@@', path.as_posix())
+    script = script.replace('@@TRIM@@', trim)
     lua.execute(script)
     return lua, path
 
@@ -65,6 +68,16 @@ class LuaLoggerTests(unittest.TestCase):
             self.assertEqual(len(events[1]['units']), 6)
             self.assertEqual(events[1]['units'][0]['initial'], 100)
             self.assertEqual(events[2]['units'][0]['survivors'], 42)
+
+    def test_cards_are_trimmed_before_the_start_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp:
+            lua, path = load(temp, '{["cw2_attacker_0"] = 21, ["cw2_defender_2"] = 39, ["cw2_defender_1"] = 500}')
+            lua.execute('victory()')
+            start = json.loads(path.read_text().splitlines()[0])
+            men = {u['script_name']: u['initial'] for u in start['units']}
+            self.assertEqual(start['phase'], 'start')
+            self.assertEqual((men['cw2_attacker_0'], men['cw2_defender_2']), (21, 39))
+            self.assertEqual((men['cw2_attacker_1'], men['cw2_defender_1']), (100, 100))  # never grown
 
 @unittest.skipIf(LuaRuntime is None, 'Install lupa to run the Lua 5.1 harness')
 class LuaResultFallbackTests(unittest.TestCase):

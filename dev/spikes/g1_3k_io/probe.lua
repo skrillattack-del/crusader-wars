@@ -51,6 +51,26 @@ local function safe_emit(phase, won, source)
     local ok, err = pcall(emit, phase, won, source);
     if not ok then ModLog('CW2_G1_ERROR ' .. tostring(err)); end;
 end;
+-- 3K deploys every card at full strength; kill the surplus so each card has its
+-- rolled size (dev/battle_math/scale.py) before the start snapshot.
+local trim_to = @@TRIM@@;
+local function trim()
+    local alliances = bm:alliances();
+    for a = 1, alliances:count() do
+        local armies = alliances:item(a):armies();
+        for r = 1, armies:count() do
+            local units = armies:item(r):units();
+            for u = 1, units:count() do
+                local unit = units:item(u);
+                local target = trim_to[unit:name()];
+                local alive = unit:number_of_men_alive();
+                if target and alive > target then unit:kill_number_of_men(alive - target, true); end;
+            end;
+        end;
+    end;
+end;
+local trimmed, trim_err = pcall(trim);
+if not trimmed then ModLog('CW2_G1_ERROR trim ' .. tostring(trim_err)); end;
 safe_emit('start');
 bm:register_phase_change_callback('Deployed', function() safe_emit('deployed'); end);
 bm:register_phase_change_callback('VictoryCountdown', function() safe_emit('victory_countdown'); end);
