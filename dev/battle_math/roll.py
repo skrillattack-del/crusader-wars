@@ -33,9 +33,37 @@ PROVEN = {'3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'}
 RETINUE = 6
 CAPTAIN_PROWESS = 5
 BETA = 0.6
+# DRAFT (playtest-verification pending): faction-unique units by owning faction.
+# Unlisted keys are neutral and roll in every domain_focus.
+FACTION_TAGS = {
+    '3k_main_unit_fire_tiger_and_leopard_cavalry': 'wei',
+    '3k_main_unit_fire_heavy_tiger_and_leopard_cavalry': 'wei',
+    '3k_main_unit_metal_pearl_dragons': 'wu',
+    '3k_main_unit_fire_jade_dragons': 'wu',
+    '3k_main_unit_earth_yellow_dragons': 'shu',
+}
+OWN_FACTION_WEIGHT = 2.0  # own-faction uniques, relative to neutral keys in their tier
 
 def unit_name(key):
     return key.split('_', 4)[-1].replace('_', ' ').title()
+
+def pool_for(tier, domain_focus='custom'):
+    """Rollable keys for a tier plus their weights.
+
+    'custom' keeps the whole pool. A faction focus removes other factions'
+    uniques and doubles its own within the tier; neutral keys always roll.
+    """
+    keys = POOL[tier]
+    if domain_focus == 'custom':
+        return keys, [1.0] * len(keys)
+    allowed, weights = [], []
+    for key in keys:
+        tag = FACTION_TAGS.get(key)
+        if tag is not None and tag != domain_focus:
+            continue
+        allowed.append(key)
+        weights.append(OWN_FACTION_WEIGHT if tag == domain_focus else 1.0)
+    return tuple(allowed), weights
 
 def tier_probs(prowess: int) -> list[float]:
     p = min(max(prowess / 20, 0.0), 2.0)
@@ -56,7 +84,7 @@ def generals_of(commander: dict, knights: list[dict], g: int) -> list[dict]:
     picks = unique_picks[:g]
     return picks + [{"name": f"Captain {i+1}", "prowess": CAPTAIN_PROWESS} for i in range(g - len(picks))]
 
-def roll_side(side_spec, side, rng, mode='records'):
+def roll_side(side_spec, side, rng, mode='records', domain_focus='custom'):
     """Fill a scale.StagedSide's unit cards; generals lead six units each, in order."""
     kind = MODES[mode]['general']
     tiers = list(TIER_WEIGHTS.keys())
@@ -74,7 +102,8 @@ def roll_side(side_spec, side, rng, mode='records'):
         for _ in range(n):
             tier_idx = rng.choices(range(len(tiers)), probs)[0]
             tier = tiers[tier_idx]
-            key = rng.choice(POOL[tier])
+            keys, weights = pool_for(tier, domain_focus)
+            key = rng.choices(keys, weights)[0]
             units.append({'key': key, 'name': unit_name(key), 'tier': tier, 'men': side.card_men[unit_idx],
                           'proven': key in PROVEN})
             unit_idx += 1
@@ -84,9 +113,15 @@ def roll_side(side_spec, side, rng, mode='records'):
                     'kind': kind, 'men': side.card_men[g], 'units': units})
     return out
 
-def roll(attacker_spec, defender_spec, attacker_staged, defender_staged, seed, mode='records'):
-    """Stage the sides with scale.stage(...) first."""
+def roll(attacker_spec, defender_spec, attacker_staged, defender_staged, seed, mode='records',
+         domain_focus='custom'):
+    """Stage the sides with scale.stage(...) first.
+
+    domain_focus: 'custom' rolls the whole pool; 'wei'/'shu'/'wu' drop other
+    factions' unique units and favour their own.
+    """
     if mode not in MODES:
         raise ValueError(f'Unknown mode {mode!r}; use records or romance.')
     rng = random.Random(seed)
-    return roll_side(attacker_spec, attacker_staged, rng, mode), roll_side(defender_spec, defender_staged, rng, mode)
+    return (roll_side(attacker_spec, attacker_staged, rng, mode, domain_focus),
+            roll_side(defender_spec, defender_staged, rng, mode, domain_focus))

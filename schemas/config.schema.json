@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crusader-wars-2.local/schemas/config.schema.json",
+  "title": "Crusader Wars 2 options",
+  "description": "The one ledger: every CW2 option lives here and only here. Canon: docs tw3k frontend ui/Canon_ Crusader Wars 2 - UI_Mapping Architecture.pdf (schemas/config.schema.json). The launcher discovers config/cw2_config.json by walking up from the exe and validates it against this file.",
+  "type": "object",
+  "required": [
+    "show_mode",
+    "army_scale_factor",
+    "auto_battle_report",
+    "enable_tw3k_screenshots",
+    "domain_focus",
+    "injectivity_strict",
+    "cut_3d_voice"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "show_mode": {
+      "type": "string",
+      "enum": ["dramatic", "tactical", "minimal"],
+      "default": "dramatic",
+      "description": "Result/report density in the launcher: tactical shows the full per-unit table, minimal a one-line summary, dramatic the table plus a flavor line."
+    },
+    "army_scale_factor": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 10,
+      "default": 1.0,
+      "description": "Multiplier applied to both sides' CK3 fighting men before staging; Three Kingdoms army caps still apply on top."
+    },
+    "auto_battle_report": {
+      "type": "boolean",
+      "default": true,
+      "description": "When on, the launcher polls the Three Kingdoms battle log on the Fight step and advances to the result by itself; when off, the player presses Get the result manually."
+    },
+    "enable_tw3k_screenshots": {
+      "type": "boolean",
+      "default": false,
+      "description": "Request screenshots of the Three Kingdoms battle into the run folder. Only the request seam exists today; no capture backend yet."
+    },
+    "domain_focus": {
+      "type": "string",
+      "enum": ["wei", "shu", "wu", "custom"],
+      "default": "custom",
+      "description": "Faction focus for unit rolls: wei/shu/wu filter out other factions' unique units and favour their own (faction tags are a playtest draft); custom keeps the neutral pool."
+    },
+    "injectivity_strict": {
+      "type": "boolean",
+      "default": true,
+      "description": "Safety rail over config/slots.registry.json: when on, a CK3 character id or CW2 slot appearing twice aborts with an error; when off, violations are logged and the run continues."
+    },
+    "cut_3d_voice": {
+      "type": "boolean",
+      "default": true,
+      "description": "RESERVED - formally declared UNDEFINED (turn-2 section 4). Stored in the ledger for compatibility; no behavior may attach to this key."
+    }
+  }
+}

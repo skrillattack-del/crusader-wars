@@ -31,6 +31,7 @@ import probe  # battle pack: build, install, uninstall, read_result
 import preflight  # CK3 save reader: combat inventory
 from roll import MODES, roll
 from scale import stage
+import config  # the options ledger: load/validate/checksum (cw2_config.json)
 
 CK3_EXE = Path(r'C:\Program Files (x86)\Steam\steamapps\common\Crusader Kings III\binaries\ck3.exe')
 def _ck3_saves():
@@ -52,6 +53,9 @@ ARMY_OWNER = re.compile(r'type=army\b[^{}]*?owner=(\d+)[^{}]*?army=(\d+)')
 STAGING_NOTE = ('Three Kingdoms fights exactly this roll on the Records Xingyang map; '
                 'units bigger than their card are trimmed at deployment.')
 SESSION_NAME = 'cw2-launcher-session.json'
+# Launcher looks (dev/app/ui/skins). A display preference, so it lives in the
+# session file, not the options ledger.
+SKINS = ('ck3', '3k')
 # CW2's own 3K mod list; CA's launcher owns used_mods.txt (CW1 used used_mods_cw.txt for Attila).
 TK_MOD_LIST = 'used_mods_cw2.txt'
 # The CW2 button logs the battle name, then CK3 writes the save it triggered.
@@ -94,6 +98,34 @@ class Bridge:
                 self.session.update(json.loads(state.read_text(encoding='utf-8')))
             except (ValueError, OSError):
                 pass
+        self.config, self.config_path, self.config_sha256 = {}, None, None
+        self.config_error = None
+        self.slots_error = None
+        self.slots_violations = []
+        self._load_config()
+
+    def _load_config(self):
+        """(Re)load the options ledger; failures are surfaced, never fatal."""
+        self.config_error = None
+        try:
+            self.config, self.config_path, self.config_sha256 = config.load(self.base)
+        except ValueError as exc:
+            self.config_error = str(exc)
+            self.config, self.config_path, self.config_sha256 = {}, None, None
+        self.slots_error = None
+        self.slots_violations = []
+        try:
+            strict = bool(self.config.get('injectivity_strict', True))
+            self.slots_violations, _ = config.check_slots(self.base, strict=strict)
+        except ValueError as exc:
+            self.slots_error = str(exc)
+
+    def _config_block(self):
+        return {'path': str(self.config_path) if self.config_path else None,
+                'sha256': self.config_sha256,
+                'valid': self.config_error is None and self.slots_error is None,
+                'error': self.config_error or self.slots_error,
+                'slots_violations': self.slots_violations}
 
     @staticmethod
     def _default_base():
@@ -169,9 +201,48 @@ class Bridge:
                     'cw1_installed': self.cw1_dir.is_dir()
                                      or (self.ck3_mods / f'ugc_{CW1_WORKSHOP_ID}.mod').is_file(),
                     'paths': paths,
+                    'config': self._config_block(),
                     'gates': {'ck3': self.saves.is_dir(),
                               'probe': all(p['ok'] for p in paths
                                            if p['key'] in ('tk_exe', 'rpfm_cli'))}}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def get_config(self):
+        """The effective options ledger plus where it was found."""
+        try:
+            return {'ok': True, 'config': dict(self.config), 'path': str(self.config_path) if self.config_path else None,
+                    'sha256': self.config_sha256,
+                    'slots_ok': self.config_error is None and self.slots_error is None
+                                and not self.slots_violations}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def save_config(self, patch=None):
+        """Validate `patch` against the schema, merge it into the ledger, write back."""
+        try:
+            cfg, ledger, sha = config.save(self.base, patch)
+            self.config, self.config_path, self.config_sha256 = cfg, ledger, sha
+            strict = bool(cfg.get('injectivity_strict', True))
+            self.slots_violations, _ = config.check_slots(self.base, strict=strict)
+            self.slots_error = None
+            return {'ok': True, 'config': dict(cfg), 'path': str(ledger), 'sha256': sha}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def get_skin(self):
+        """The launcher look the player last picked; the first one by default."""
+        skin = self.session.get('skin')
+        return {'ok': True, 'skin': skin if skin in SKINS else SKINS[0], 'skins': list(SKINS)}
+
+    def set_skin(self, skin=None):
+        """Remember the launcher look in the session file."""
+        try:
+            if skin not in SKINS:
+                raise ValueError(f'Unknown launcher look {skin!r}; expected one of {", ".join(SKINS)}')
+            self.session['skin'] = skin
+            self._save_session()
+            return {'ok': True, 'skin': skin}
         except Exception as exc:
             return {'error': str(exc)}
 
@@ -309,26 +380,34 @@ class Bridge:
         """Stage both sides at one scale and roll vanilla 3K units onto the cards.
 
         mode: 'records' (generals lead a bodyguard card) or 'romance' (generals are single heroes).
+        The options ledger supplies army_scale_factor (both sides' CK3 men before staging)
+        and domain_focus (faction filter for the unit pool).
         """
         try:
             if not encounter or len(encounter.get('sides') or []) != 2:
                 raise ValueError('Pick a CK3 battle first.')
             if mode not in MODES:
                 raise ValueError(f'Unknown mode {mode!r}; use records or romance.')
+            factor = float(self.config.get('army_scale_factor') or 1.0)
+            domain = self.config.get('domain_focus') or 'custom'
             seed = int(seed) if seed not in (None, '') else random.randrange(1, 10**7)
-            scale, *staged = stage(*(float(s['fighting']) for s in encounter['sides']),
+            scale, *staged = stage(*(float(s['fighting']) * factor for s in encounter['sides']),
                                    general_size=MODES[mode]['general_size'])
-            rolled = roll(encounter['sides'][0], encounter['sides'][1], *staged, seed, mode)
+            rolled = roll(encounter['sides'][0], encounter['sides'][1], *staged, seed, mode,
+                          domain_focus=domain)
             sides = []
             for spec, side, generals in zip(encounter['sides'], staged, rolled):
                 sides.append({'role': spec['role'], 'name': spec['name'], 'fighting': spec['fighting'],
                               'yours': bool(spec.get('yours')),
                               'men': side.men, 'trim': side.trim, 'cards': side.cards,
                               'retinue': side.units, 'generals': generals})
-            note = STAGING_NOTE + (' Romance battles are not staged yet; the pack replaces Records Xingyang.'
-                                   if mode == 'romance' else '')
+            note = STAGING_NOTE + (f' Army scale x{factor:g} applied before staging.' if factor != 1.0 else '')
+            note += (' Romance battles are not staged yet; the pack replaces Records Xingyang.'
+                     if mode == 'romance' else '')
             return {'ok': True, 'seed': seed, 'mode': mode, 'deterministic': False, 'scale': scale,
-                    'note': note, 'sides': sides}
+                    'note': note, 'applied': {'army_scale_factor': factor, 'domain_focus': domain,
+                                              'show_mode': self.config.get('show_mode') or 'dramatic'},
+                    'sides': sides}
         except Exception as exc:
             return {'error': str(exc)}
 
@@ -471,6 +550,8 @@ class Bridge:
             manifest = json.loads((output / 'run.json').read_text(encoding='utf-8'))
             self.session.update(output=str(output), game=str(self.game))
             self._save_session()
+            (output / config.SNAPSHOT_NAME).write_text(json.dumps(
+                {'sha256': self.config_sha256, 'config': self.config}, indent=2), encoding='utf-8')
             self._emit('install', {'index': len(steps), 'label': 'Record run evidence', 'status': 'done'})
             staged = [sum(1 for u in manifest['expected_units'] if u['alliance'] == a) for a in (1, 2)]
             return {'ok': True, 'pack': probe.PACK_NAME,
@@ -484,6 +565,9 @@ class Bridge:
         try:
             if not (self.game / 'data' / probe.PACK_NAME).is_file():
                 raise ValueError('The battle pack is not installed. Send the armies to Three Kingdoms first.')
+            if self.session.get('output'):
+                config.maybe_request_screenshots(self.session['output'],
+                                                 bool(self.config.get('enable_tw3k_screenshots')))
             (self.game / TK_MOD_LIST).write_text(f'mod "{probe.PACK_NAME}";\n', encoding='utf-8')
             process = self._popen([str(self.game / 'Three_Kingdoms.exe'), f'{TK_MOD_LIST};'],
                                   cwd=str(self.game))
@@ -494,6 +578,7 @@ class Bridge:
     def read_result(self):
         try:
             run = self._require_run()
+            config.maybe_request_screenshots(run, bool(self.config.get('enable_tw3k_screenshots')))
             result = probe.read_result(run)
             staged = json.loads((run / 'run.json').read_text(encoding='utf-8')).get('sides') or []
             names = {s.get('role', '').lower(): s['name'] for s in staged}

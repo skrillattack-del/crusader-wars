@@ -1,11 +1,14 @@
 import copy
 from datetime import datetime
 import json
+import re
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 for _p in (str(HERE.parents[0] / 'spikes' / 'g1_3k_io'), str(HERE)):
@@ -13,6 +16,7 @@ for _p in (str(HERE.parents[0] / 'spikes' / 'g1_3k_io'), str(HERE)):
         sys.path.insert(0, _p)
 
 import probe
+import bridge as bridge_module
 from bridge import Bridge
 
 INDEX = HERE / 'ui' / 'index.html'
@@ -467,6 +471,125 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(result['was_installed'])
         self.assertIsNone(result['run'])
 
+    # ---- options ledger ----
+
+    REPO_ROOT = HERE.parents[1]
+    SCHEMA = REPO_ROOT / 'schemas' / 'config.schema.json'
+    LEDGER_DEFAULTS = json.loads((REPO_ROOT / 'config' / 'cw2_config.json').read_text(encoding='utf-8'))
+
+    def write_ledger(self, doc=None):
+        (self.root / 'schemas').mkdir(exist_ok=True)
+        shutil.copy2(self.SCHEMA, self.root / 'schemas' / self.SCHEMA.name)
+        (self.root / 'config').mkdir(exist_ok=True)
+        (self.root / 'config' / 'cw2_config.json').write_text(
+            json.dumps(self.LEDGER_DEFAULTS if doc is None else doc), encoding='utf-8')
+
+    def test_health_and_get_config_report_the_ledger(self):
+        self.write_ledger()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertTrue(health['config']['valid'], health['config'])
+        self.assertEqual(health['config']['path'], str(self.root / 'config' / 'cw2_config.json'))
+        self.assertEqual(health['config']['sha256'], bridge.config_sha256)
+        result = bridge.get_config()
+        self.assertEqual(result['config']['show_mode'], 'dramatic')
+        self.assertTrue(result['slots_ok'])
+
+    def test_skin_defaults_to_ck3_and_survives_a_restart(self):
+        self.assertEqual(self.bridge.get_skin()['skin'], 'ck3')
+        self.assertEqual(self.bridge.set_skin('3k'), {'ok': True, 'skin': '3k'})
+        reloaded = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        self.assertEqual(reloaded.get_skin()['skin'], '3k')
+        self.assertIn('error', reloaded.set_skin('warhammer'))
+        self.assertEqual(reloaded.get_skin()['skin'], '3k')
+
+    def test_invalid_ledger_is_surfaced_not_fatal(self):
+        self.write_ledger({'show_mode': 'arcade'})
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertFalse(health['config']['valid'])
+        self.assertIn('show_mode', health['config']['error'])
+
+    def test_save_config_merges_patch_and_validates(self):
+        self.write_ledger()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        saved = bridge.save_config({'army_scale_factor': 2.0, 'domain_focus': 'shu'})
+        self.assertTrue(saved['ok'], saved)
+        self.assertEqual((saved['config']['army_scale_factor'], saved['config']['domain_focus']),
+                         (2.0, 'shu'))
+        self.assertEqual(saved['config']['show_mode'], 'dramatic')
+        bad = bridge.save_config({'army_scale_factor': 0})
+        self.assertIn('army_scale_factor', bad['error'])
+        on_disk = json.loads((self.root / 'config' / 'cw2_config.json').read_text(encoding='utf-8'))
+        self.assertEqual(on_disk['army_scale_factor'], 2.0)  # the rejected patch left no trace
+
+    def test_roll_roster_applies_army_scale_factor_from_the_ledger(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'army_scale_factor': 2.0})
+        bridge, _ = self.write_save()
+        encounter = bridge.get_encounter(combat_id='500')
+        roster = bridge.roll_roster(encounter, 1702901)
+        self.assertTrue(roster['ok'], roster)
+        self.assertEqual(roster['applied']['army_scale_factor'], 2.0)
+        self.assertEqual(roster['applied']['domain_focus'], 'custom')
+        self.assertGreater(roster['sides'][0]['men'], 600)  # 340 men at x2, under the 3K cap
+        self.assertIn('Army scale x2 applied', roster['note'])
+
+    def test_prepare_snapshots_the_ledger_into_the_run(self):
+        self.write_ledger()
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+
+        def fake_build(game, cli, output, roster=None):
+            output.mkdir(parents=True, exist_ok=True)
+            (output / 'run.json').write_text(json.dumps(
+                {'pack_sha256': 'x', 'expected_units': [], 'sides': []}))
+
+        def fake_install(game, output):
+            target = game / 'data' / probe.PACK_NAME
+            target.write_bytes(b'pack')
+            return target
+
+        with mock.patch.object(bridge_module.probe, 'build', fake_build), \
+                mock.patch.object(bridge_module.probe, 'install', fake_install):
+            result = bridge.prepare_and_install(self.ROSTER)
+        self.assertTrue(result['ok'], result)
+        snapshot = json.loads((Path(result['run']) / 'cw2_config.snapshot.json').read_text(
+            encoding='utf-8'))
+        self.assertEqual(snapshot['sha256'], bridge.config_sha256)
+        self.assertEqual(snapshot['config']['show_mode'], 'dramatic')
+
+    def test_screenshot_request_flag_lands_in_the_run_folder(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'enable_tw3k_screenshots': True})
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        run = self.root / 'run'
+        run.mkdir()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), popen=FakePopen())
+        bridge.session.update(output=str(run), game=str(self.game))
+        self.assertTrue(bridge.launch_3k()['ok'])
+        self.assertTrue((run / 'screenshots_requested.flag').is_file())
+
+    def test_slots_violation_is_a_health_error_when_strict(self):
+        self.write_ledger()
+        (self.root / 'config' / 'slots.registry.json').write_text(json.dumps({'mappings': [
+            {'ck3_character_id': 1, 'slot': 'hero_1'},
+            {'ck3_character_id': 2, 'slot': 'hero_1'}]}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertFalse(health['config']['valid'])
+        self.assertIn('not injective', health['config']['error'])
+
+    def test_slots_violation_warns_when_not_strict(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'injectivity_strict': False})
+        (self.root / 'config' / 'slots.registry.json').write_text(json.dumps({'mappings': [
+            {'ck3_character_id': 1, 'slot': 'hero_1'},
+            {'ck3_character_id': 2, 'slot': 'hero_1'}]}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertTrue(health['config']['valid'])
+        self.assertTrue(health['config']['slots_violations'])
+        self.assertFalse(bridge.get_config()['slots_ok'])
+
     # ---- write-back ----
 
     def test_writeback_is_off_and_writes_no_save(self):
@@ -506,10 +629,15 @@ class BridgeTests(unittest.TestCase):
         for absent in ('MockBridge', 'simCk3', 'fonts.googleapis'):
             self.assertNotIn(absent, text, f'{absent} should not ship in the app UI')
 
-    def test_ui_preserves_tally_glyphs(self):
+    def test_ui_preserves_header_glyphs(self):
         text = INDEX.read_text(encoding='utf-8')
-        for glyph in (0x5DE6, 0x53F3, 0x5408):  # tally halves and the seal
+        for glyph in (0x5DE6, 0x6771, 0x5408):  # 3K brand mark, Three Kingdoms plaque, the seal
             self.assertIn(chr(glyph), text)
+
+    def test_ui_skin_art_ships_with_the_page(self):
+        text = INDEX.read_text(encoding='utf-8')
+        for ref in sorted(set(re.findall(r'url\("(skins/[^"]+)"\)', text))):
+            self.assertTrue((INDEX.parent / ref).is_file(), f'{ref} is referenced but missing')
 
 
 if __name__ == '__main__':

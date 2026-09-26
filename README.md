@@ -46,6 +46,29 @@ opener stalls, its steps are in that run's `frontend.log`.
 
 **Layout:** `dev/app` launcher, `dev/battle_math` army scaling and rolls,
 `dev/spikes/*` the pack builder, CK3 save reader and extractor, `dev/mod` the
-CK3 mod (local only, see `docs/third_party/CW1_LICENCE.md`).
+CK3 mod (local only, see `docs/third_party/CW1_LICENCE.md`), `config/` the
+options ledger, `schemas/` its contract.
+
+## Options
+
+One ledger holds every launcher option: `config/cw2_config.json`, validated
+against `schemas/config.schema.json`. The launcher discovers it by walking up
+from the exe and seeds the defaults on a first run; the gear button in the
+title bar opens an Options panel that edits it in-app (rejected keys bounce
+back with the schema's complaint), the setup screen shows the effective
+values, and every run folder keeps a `cw2_config.snapshot.json` of the ledger
+it ran under.
+
+- `show_mode` (`dramatic|tactical|minimal`): density of the result screen.
+- `army_scale_factor`: scales both CK3 armies before staging (3K caps still apply).
+- `auto_battle_report`: on, the Fight step advances to the result by itself.
+- `domain_focus` (`wei|shu|wu|custom`): filters other factions' unique units
+  out of rolls (faction tags are a playtest draft; `custom` keeps the full pool).
+- `injectivity_strict`: guards `config/slots.registry.json`, the CK3 character
+  ↔ CW2 general-slot bijection.
+- `enable_tw3k_screenshots`: records the request in the run folder; no capture
+  backend yet.
+- `cut_3d_voice`: reserved, formally UNDEFINED (canon, turn-2 §4) — stored, but
+  nothing reads it.
 
 Game installs, saves and anything extracted from the games stay out of git.

@@ -2,7 +2,7 @@
 import unittest
 from scale import GENERAL_SIZE, UNIT_SIZE, army_cap, round_half_up, shared_scale, stage, stage_side
 from result_to_ck3 import ck3_casualties, side_dead
-from roll import MODES, POOL, RETINUE, roll, unit_name
+from roll import FACTION_TAGS, MODES, POOL, RETINUE, pool_for, roll, unit_name
 
 KASR = (340.09632, 421.48395)  # run-002 inventory.json: fighting men, attacker and defender
 
@@ -97,5 +97,37 @@ class RollTests(unittest.TestCase):
     def test_unit_names_read_like_the_game(self):
         self.assertEqual(unit_name('3k_main_unit_wood_ji_militia'), 'Ji Militia')
         self.assertEqual(unit_name('3k_main_unit_fire_tiger_and_leopard_cavalry'), 'Tiger And Leopard Cavalry')
+
+    def test_pool_for_filters_other_factions_and_keeps_neutral_tiers(self):
+        keys, weights = pool_for('elite', 'wei')
+        self.assertEqual(keys, ('3k_main_unit_fire_tiger_and_leopard_cavalry',
+                                '3k_main_unit_fire_heavy_tiger_and_leopard_cavalry'))
+        self.assertEqual(weights, [2.0, 2.0])
+        neutral_keys, neutral_weights = pool_for('militia', 'wu')
+        self.assertEqual(neutral_keys, POOL['militia'])
+        self.assertEqual(neutral_weights, [1.0] * len(neutral_keys))
+        self.assertEqual(pool_for('elite', 'custom'), (POOL['elite'], [1.0] * len(POOL['elite'])))
+
+    def test_pool_for_bumps_own_faction_within_a_mixed_tier(self):
+        original = dict(POOL)
+        try:
+            POOL['mixed'] = ('3k_main_unit_fire_tiger_and_leopard_cavalry', '3k_main_unit_wood_ji_militia')
+            keys, weights = pool_for('mixed', 'wei')
+            self.assertEqual(keys, ('3k_main_unit_fire_tiger_and_leopard_cavalry', '3k_main_unit_wood_ji_militia'))
+            self.assertEqual(weights, [2.0, 1.0])
+        finally:
+            POOL.clear()
+            POOL.update(original)
+
+    def test_domain_focus_never_rolls_another_factions_uniques(self):
+        _, attacker, defender = stage(12400, 7900)
+        self.assertEqual(roll({}, {}, attacker, defender, 1702901),
+                         roll({}, {}, attacker, defender, 1702901, domain_focus='custom'))
+        for focus in ('wei', 'shu', 'wu'):
+            rolled = roll({}, {}, attacker, defender, 1702901, domain_focus=focus)
+            self.assertEqual(rolled, roll({}, {}, attacker, defender, 1702901, domain_focus=focus))
+            keys = {u['key'] for side in rolled for g in side for u in g['units']}
+            for key in keys:
+                self.assertIn(FACTION_TAGS.get(key, focus), (focus, None), f'{key} leaked into {focus}')
 
 if __name__ == '__main__': unittest.main()
