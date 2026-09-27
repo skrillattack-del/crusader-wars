@@ -1,9 +1,12 @@
 import copy
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 import probe
+import lobby  # lobby/lobby.py, on the path via probe
 
 class ResultValidationTests(unittest.TestCase):
     def setUp(self):
@@ -227,13 +230,48 @@ class GenerateTests(unittest.TestCase):
                          {(1, 'defender'), (2, 'attacker')})
         self.assertEqual([s['name'] for s in manifest['sides']], ['Kru', 'Gharb'])
 
-    def test_frontend_opener_is_bound_to_this_run(self):
+    def test_frontend_lobby_is_bound_to_this_run(self):
         manifest = self.generate(self.ROSTER)
-        opener = (self.output / 'pack' / probe.OPENER).read_text(encoding='utf-8')
-        self.assertNotIn('@@', opener)
-        self.assertIn(manifest['run_id'], opener)
-        self.assertIn(manifest['log_path'].replace('\\', '/'), opener)
-        self.assertTrue(probe.OPENER.startswith('script/frontend/mod/'))
+        script = (self.output / 'pack' / probe.LOBBY).read_text(encoding='utf-8')
+        self.assertNotIn('@@', script)
+        self.assertIn(manifest['run_id'], script)
+        self.assertIn(manifest['log_path'].replace('\\', '/'), script)
+        self.assertIn('"ui/cw2/cw2_lobby"', script)
+        self.assertTrue(probe.LOBBY.startswith('script/frontend/mod/'))
+        self.assertEqual(manifest['lobby']['run_id'], manifest['run_id'])
+        for name in (lobby.LAYOUT_PATH, *lobby.ART):
+            self.assertTrue((self.output / 'pack' / name).is_file(), name)
+
+    def test_lobby_layout_is_well_formed_with_unique_ids(self):
+        text = lobby.layout_xml()
+        root = ET.fromstring(text.split('\n', 1)[1])
+        ids = [c.get('id') for c in root.find('components')]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(set(ids) - {'root', 'cw2_lobby', 'cw2_panel'}, {*lobby.TEXT, *lobby.BUTTONS})
+        # every GUID is defined once; the hierarchy places defined components; references resolve
+        components = text.split('<components>', 1)[1]
+        defined = re.findall(r'\bthis="([0-9A-F-]+)"', components)
+        self.assertEqual(len(defined), len(set(defined)))
+        placed = re.findall(r'\bthis="([0-9A-F-]+)"', text.split('<components>', 1)[0])
+        self.assertEqual(set(placed), set(re.findall(r'<\w+ this="([0-9A-F-]+)" id=', components)))
+        states = set(re.findall(r'<\w+ this="([0-9A-F-]+)" name=', components))
+        self.assertLessEqual(set(re.findall(r'transition_m_target_state="([0-9A-F-]+)"', text)), states)
+        self.assertLessEqual(set(re.findall(r'currentstate="([0-9A-F-]+)"', text)), states)
+        images = set(re.findall(r'<component_image this="([0-9A-F-]+)"', text))
+        self.assertLessEqual(set(re.findall(r'componentimage="([0-9A-F-]+)"', text)), images)
+        self.assertLessEqual({p for p in re.findall(r'imagepath="([^"]+)"', text)}, set(lobby.ART))
+
+    def test_lobby_card_merges_units_and_reads_the_commander(self):
+        roster = copy.deepcopy(self.ROSTER)
+        roster['battle'] = 'Battle of "Hastings"'
+        roster['sides'][0]['commander'] = {'name': 'William', 'martial': 21, 'prowess': 16}
+        card = probe.lobby_card(roster, 'r1')
+        self.assertEqual(card['battle'], 'Battle of "Hastings"')
+        self.assertEqual(card['sides'][0]['commander'], 'William')
+        self.assertIsNone(card['sides'][1]['commander'])
+        self.assertEqual(sum(u['cards'] for u in card['sides'][1]['units']),
+                         sum(len(g['units']) for g in roster['sides'][1]['generals']))
+        self.assertIn('[\"battle\"] = \"Battle of \\\"Hastings\\\"\"', probe._lua(card))
 
     def test_default_roster_is_the_g1_three_cards(self):
         manifest = self.generate(None)

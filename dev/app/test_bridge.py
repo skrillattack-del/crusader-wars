@@ -1,6 +1,7 @@
 import copy
 from datetime import datetime
 import json
+import os
 import re
 from pathlib import Path
 import shutil
@@ -112,6 +113,12 @@ class BridgeTests(unittest.TestCase):
 
     # ---- CK3 mod and Crusader Wars 1 ----
 
+    def test_ck3_fight_button_is_clickable_before_first_casualty(self):
+        gui = (HERE.parent / 'mod' / 'cw2_ck3_mod' / 'gui' / 'window_combat.gui').read_text()
+        casualty_gate = ('enabled = "[GreaterThan_CFixedPoint('
+                          "CombatWindow.GetLeftCombatSide.GetSoftCasualties, '(CFixedPoint)0')]\"")
+        self.assertNotIn(casualty_gate, gui)
+
     def test_install_ck3_mod_registers_it_and_health_sees_it(self):
         source = self.root / 'mod_src' / 'cw2_ck3_mod'
         source.mkdir(parents=True)
@@ -202,17 +209,24 @@ class BridgeTests(unittest.TestCase):
 
     # ---- CK3 encounter and roll ----
 
-    def write_save(self, name='battle.ck3'):
+    def write_save(self, name='battle.ck3', commanders=False):
         """Plaintext CK3 save with the Kasr al-Kabir strengths and a smaller skirmish.
 
         Army 1001 is the player's own; 1002 belongs to someone else, as in the real fixture.
+        With `commanders`, battle 500's sides are led by characters 101 (named, skilled)
+        and 102 (no record in the save).
         """
         saves = self.root / 'saves'
         saves.mkdir(exist_ok=True)
+        leader = {1002: 101, 1001: 102} if commanders else {}
         side = lambda army, initial, fighting: (  # one scalar per line, as in real saves
-            f'{{\n\t\tarmies={{ {army} }}\n\t\tinitial_men={initial}\n\t\ttotal_fighting_men={fighting}\n\t}}')
+            f'{{\n\t\tarmies={{ {army} }}\n\t\tinitial_men={initial}\n\t\ttotal_fighting_men={fighting}'
+            + (f'\n\t\tcommander={leader[army]}' if army in leader else '') + '\n\t}')
+        living = (['living={', '\t10={ first_name="Nobody" skill={ 1 1 1 1 1 1 } }',
+                   '\t101={', '\t\tfirst_name="Ya\'qub"', '\t\tskill={ 8 21 5 7 6 16 }', '\t}', '}']
+                  if commanders else [])
         text = '\n'.join([
-            'meta_data={ meta_date=908.8.27 }', 'date=908.8.27',
+            'meta_data={ meta_date=908.8.27 }', 'date=908.8.27', *living,
             'currently_played_characters={ 59850 }',
             'armies={ regiments={ } army_regiments={ } armies={ } }',
             'units={', '\t2001={ type=army location=1 owner=77 army=1001 }',
@@ -240,6 +254,33 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(all(side['commander'] is None and side['knights'] == []
                             for side in picked['sides']))
         self.assertIn('not in', bridge.get_encounter(combat_id='999')['error'])
+
+    def test_encounter_skips_newer_binary_saves(self):
+        bridge, path = self.write_save()
+        exit_save = path.parent / 'autosave_exit.ck3'
+        exit_save.write_bytes(b'SAV010391c6b076000083aa\x00\x01binary')
+        os.utime(exit_save, (path.stat().st_mtime + 60,) * 2)  # CK3 writes it after the button's save
+        self.assertEqual(bridge.get_encounter()['save_name'], path.name)
+        path.unlink()
+        self.assertIn("binary format", bridge.get_encounter()['error'])
+
+    def test_encounter_names_commanders_and_the_season(self):
+        bridge, _ = self.write_save(commanders=True)
+        picked = bridge.get_encounter(combat_id='500')
+        self.assertEqual(picked['sides'][0]['commander'],
+                         {'id': '101', 'name': "Ya'qub", 'martial': 21, 'prowess': 16})
+        self.assertIsNone(picked['sides'][1]['commander'])  # 102 has no character record
+        self.assertEqual(picked['season'], 'Summer')  # 908.8.27
+        self.assertIsNone(picked['battle'])  # no CW2 button line in debug.log
+        roster = bridge.roll_roster(picked, seed=3)
+        self.assertEqual(roster['sides'][0]['commander']['name'], "Ya'qub")
+        self.assertEqual((roster['date'], roster['season']), ('908.8.27', 'Summer'))
+
+    def test_season_follows_the_month(self):
+        self.assertEqual([bridge_module._season(f'1066.{m}.1') for m in (12, 1, 3, 6, 9, 11)],
+                         ['Winter', 'Winter', 'Spring', 'Summer', 'Autumn', 'Autumn'])
+        self.assertIsNone(bridge_module._season(None))
+        self.assertIsNone(bridge_module._season('1066.13.1'))
 
     def test_encounter_without_saves_or_battles_explains(self):
         empty = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=self.root)
@@ -633,6 +674,13 @@ class BridgeTests(unittest.TestCase):
         text = INDEX.read_text(encoding='utf-8')
         for glyph in (0x5DE6, 0x6771, 0x5408):  # 3K brand mark, Three Kingdoms plaque, the seal
             self.assertIn(chr(glyph), text)
+
+    def test_ck3_localisation_has_the_utf8_bom(self):
+        # Without it CK3 skips the file ("Missing UTF8 BOM") and shows raw keys.
+        files = list((INDEX.parents[2] / 'mod' / 'cw2_ck3_mod' / 'localization').rglob('*.yml'))
+        self.assertTrue(files)
+        for path in files:
+            self.assertTrue(path.read_bytes().startswith(b'\xef\xbb\xbf'), path.name)
 
     def test_ui_skin_art_ships_with_the_page(self):
         text = INDEX.read_text(encoding='utf-8')

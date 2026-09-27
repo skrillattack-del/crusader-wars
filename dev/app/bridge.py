@@ -64,6 +64,15 @@ SIGNAL_WINDOW = 300  # seconds allowed between that log line and the save
 SAVE_SETTLE = 2  # seconds a save must stay unchanged before it is read
 
 
+def _season(date):
+    """'Winter'..'Autumn' for a CK3 date such as '1066.10.14'; None when it can't be read."""
+    try:
+        month = int(str(date).split('.')[1])
+    except (IndexError, ValueError):
+        return None
+    return ('Winter', 'Spring', 'Summer', 'Autumn')[month % 12 // 3] if 1 <= month <= 12 else None
+
+
 def _default_tasklist(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True,
                             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
@@ -74,7 +83,7 @@ class Bridge:
 
     def __init__(self, base=None, game=None, cli=None, tasklist=None, saves=None,
                  ck3_mods=None, cw1_dir=None, mod_source=None, popen=None):
-        self.base = Path(base) if base else self._default_base()
+        self.base = Path(base) if base else _HERE
         self.game = Path(game) if game else probe.GAME
         self.saves = Path(saves) if saves else CK3_SAVES
         self.ck3_mods = Path(ck3_mods) if ck3_mods else self.saves.parent / 'mod'
@@ -126,12 +135,6 @@ class Bridge:
                 'valid': self.config_error is None and self.slots_error is None,
                 'error': self.config_error or self.slots_error,
                 'slots_violations': self.slots_violations}
-
-    @staticmethod
-    def _default_base():
-        if getattr(sys, 'frozen', False):
-            return Path(sys.executable).parent
-        return _HERE
 
     def _find_cli(self):
         override = os.environ.get('CW2_RPFM_CLI')
@@ -246,11 +249,30 @@ class Bridge:
         except Exception as exc:
             return {'error': str(exc)}
 
+    @staticmethod
+    def _readable(path):
+        """False for CK3's binary saves: header 'SAV01' + '01' or '03' (autosaves, exit saves).
+
+        '00' and '02' are plain text (the CW2 button writes one); a file without the
+        header is read as plain text too.
+        """
+        try:
+            with open(path, 'rb') as file:
+                head = file.read(7)
+        except OSError:
+            return False
+        return not head.startswith(b'SAV01') or head[5:7] in (b'00', b'02')
+
     def _latest_save(self):
-        saves = [p for p in self.saves.glob('*.ck3') if p.is_file()]
+        saves = sorted((p for p in self.saves.glob('*.ck3') if p.is_file()),
+                       key=lambda p: p.stat().st_mtime, reverse=True)
         if not saves:
             raise ValueError(f'No .ck3 saves in {self.saves}. Pause during a battle in CK3 and save.')
-        return max(saves, key=lambda p: p.stat().st_mtime)
+        readable = next((p for p in saves if self._readable(p)), None)
+        if readable is None:
+            raise ValueError('No readable CK3 save: every save is in CK3\'s binary format. '
+                             'Press the crossed swords in a CK3 battle; it writes a readable save.')
+        return readable
 
     @staticmethod
     def _top_block(text, key):
@@ -264,6 +286,24 @@ class Bridge:
             return preflight.unique(text, key)
         start += len(marker) - 1
         return text[start:preflight.block_end(text, start)]
+
+    @staticmethod
+    def _character(living, char_id):
+        """{'id', 'name', 'martial', 'prowess'} for a character in the save's `living` block, or None."""
+        if not char_id or not living:
+            return None
+        found = re.search(rf'(?m)^[ \t]*{re.escape(str(char_id))}=\{{', living)
+        if not found:
+            return None
+        start = found.end() - 1
+        block = living[start:preflight.block_end(living, start)]
+        name = re.search(r'\bfirst_name="([^"]*)"', block)
+        skills = re.search(r'\bskill=\{([^}]*)\}', block)
+        values = [int(v) for v in skills.group(1).split()] if skills else []
+        # CK3 skill order: diplomacy, martial, stewardship, intrigue, learning, prowess.
+        return {'id': str(char_id), 'name': name.group(1) if name else None,
+                'martial': values[1] if len(values) >= 6 else None,
+                'prowess': values[5] if len(values) >= 6 else None}
 
     def _battles(self, path):
         """Active combats in a save, read-only, cached per file version."""
@@ -281,6 +321,10 @@ class Bridge:
             units = ''  # without unit records, no battle is marked as yours
         owner = {army: who for who, army in ARMY_OWNER.findall(units)}
         date = re.search(r'(?m)^date=([\d.]+)', text)
+        try:
+            living = self._top_block(text, 'living')
+        except ValueError:
+            living = ''  # without character records, commanders stay unnamed
         battles = []
         for row in rows:
             sides = []
@@ -290,11 +334,10 @@ class Bridge:
                               'name': f"{role.title()} · army {', '.join(data['army_ids'])}",
                               'initial': float(data['initial_men']),
                               'fighting': float(data['total_fighting_men']),
-                              # A save identifies the commander/leader, but its combat
-                              # contribution rows do not identify knights. Until the CK3
-                              # mod export is ingested, roll neutral captains instead of
-                              # inventing names or prowess values.
-                              'commander': None,
+                              # The commander's name and skills come from the save's
+                              # character records. Combat contribution rows do not
+                              # identify knights, so none are listed.
+                              'commander': self._character(living, data.get('commander')),
                               'knights': [],
                               'commander_id': data.get('commander'),
                               'leader_id': data.get('leader'),
@@ -369,6 +412,7 @@ class Bridge:
                 battles, key=lambda b: sum(s['fighting'] for s in b['sides']))
             return {'ok': True, 'id': f"ck3:{chosen['combat_id']}", 'combat_id': chosen['combat_id'],
                     'save': str(path), 'save_name': path.name, 'date': data['date'],
+                    'season': _season(data['date']), 'battle': self._cw2_battle_for(path.stat().st_mtime),
                     'phase': chosen['phase'], 'yours': chosen['yours'],
                     'battles': [{'combat_id': b['combat_id'], 'yours': b['yours'], 'phase': b['phase'],
                                  'men': [round(s['fighting']) for s in b['sides']]} for b in battles],
@@ -398,13 +442,16 @@ class Bridge:
             sides = []
             for spec, side, generals in zip(encounter['sides'], staged, rolled):
                 sides.append({'role': spec['role'], 'name': spec['name'], 'fighting': spec['fighting'],
-                              'yours': bool(spec.get('yours')),
+                              'yours': bool(spec.get('yours')), 'commander': spec.get('commander'),
                               'men': side.men, 'trim': side.trim, 'cards': side.cards,
                               'retinue': side.units, 'generals': generals})
             note = STAGING_NOTE + (f' Army scale x{factor:g} applied before staging.' if factor != 1.0 else '')
             note += (' Romance battles are not staged yet; the pack replaces Records Xingyang.'
                      if mode == 'romance' else '')
             return {'ok': True, 'seed': seed, 'mode': mode, 'deterministic': False, 'scale': scale,
+                    # shown by the in-game lobby (probe.LOBBY)
+                    'battle': encounter.get('battle'), 'date': encounter.get('date'),
+                    'season': encounter.get('season'),
                     'note': note, 'applied': {'army_scale_factor': factor, 'domain_focus': domain,
                                               'show_mode': self.config.get('show_mode') or 'dramatic'},
                     'sides': sides}
@@ -637,15 +684,13 @@ class Bridge:
     def _run_for_installed_pack(self, target):
         """The recorded run whose pack SHA-256 matches the installed pack, or None.
 
-        Checks this session's run first, then every run folder: the launcher's
-        own and dev/dist/runs, where the probe exe records its runs.
+        Checks this session's run first, then every folder in the launcher's runs.
         """
         installed_sha = probe.digest(target)
         candidates = []
         if self.session.get('output'):
             candidates.append(Path(self.session['output']) / 'run.json')
-        for folder in dict.fromkeys((self.base / 'runs', _HERE.parent / 'dist' / 'runs')):
-            candidates.extend(sorted(folder.glob('*/run.json')))
+        candidates.extend(sorted((self.base / 'runs').glob('*/run.json')))
         for manifest_path in candidates:
             try:
                 manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
@@ -654,16 +699,6 @@ class Bridge:
             if manifest.get('pack_sha256') == installed_sha:
                 return manifest_path.parent
         return None
-
-    def _get_run_dir(self):
-        # Find the latest run folder
-        runs_dir = _HERE.parents[0] / 'dist' / 'runs'
-        if not runs_dir.exists():
-            return None
-        dirs = [d for d in runs_dir.iterdir() if d.is_dir()]
-        if not dirs:
-            return None
-        return max(dirs, key=lambda d: d.stat().st_mtime)
 
     def preview_writeback(self):
         return {

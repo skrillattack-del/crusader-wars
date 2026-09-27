@@ -14,11 +14,14 @@ import uuid
 import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE / 'lobby'))
+import lobby  # the in-game lobby's twui layout and art (lobby/lobby.py)
 GAME = Path(r'C:\Program Files (x86)\Steam\steamapps\common\Total War THREE KINGDOMS')
 PACK_NAME = 'crusader_wars_2.pack'
 BATTLE = 'script/battle/historical_battle/historical_battle_xinyang'
 # 3K's frontend loader (script/frontend_mod_scripting.lua) runs every Lua file here.
-OPENER = 'script/frontend/mod/cw2_open_battle.lua'
+# The lobby script adds BATTLE > CRUSADER WARS II and opens the staged battle on FIGHT.
+LOBBY = 'script/frontend/mod/cw2_lobby.lua'
 ROW = 6          # unit cards per formation row
 SPACING = 30.0   # metres between cards, across and between rows
 CARD_WIDTH = '25.00'
@@ -64,7 +67,61 @@ def formation(units, generals, centre, facing):
 def _lua_string(text):
     return '"' + str(text).replace('\\', '/').replace('"', '\\"') + '"'
 
-def generate(native, output, lua_template, roster=None, opener_template=None):
+def _lua(value):
+    """A Lua 5.1 literal for JSON-like data (the lobby's battle card)."""
+    if value is None:
+        return 'nil'
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return repr(value) if math.isfinite(value) else 'nil'
+    if isinstance(value, str):
+        escaped = ''.join({'\\': '\\\\', '"': '\\"', '\n': '\\n', '\r': '\\r'}.get(c, c) for c in value)
+        return f'"{escaped}"'
+    if isinstance(value, (list, tuple)):
+        return '{' + ', '.join(_lua(v) for v in value) + '}'
+    if isinstance(value, dict):
+        return '{' + ', '.join(f'[{_lua(str(k))}] = {_lua(v)}' for k, v in value.items()) + '}'
+    raise TypeError(f'cannot write {type(value).__name__} as Lua')
+
+def lobby_card(roster, run_id):
+    """What the in-game lobby shows: the CK3 battle and the staged roll, per side.
+
+    Units of the same kind are merged into one row (cards and men summed) in
+    the order they were rolled.
+    """
+    sides = []
+    for side in roster.get('sides') or []:
+        commander = side.get('commander') or {}
+        units = {}
+        for general in side.get('generals') or []:
+            for unit in general.get('units') or []:
+                row = units.setdefault(unit.get('name') or unit['key'], {'name': unit.get('name') or unit['key'],
+                                                                         'cards': 0, 'men': 0})
+                row['cards'] += 1
+                row['men'] += int(unit['men'])
+        sides.append({'role': side.get('role') or 'Side', 'yours': bool(side.get('yours')),
+                      'commander': commander.get('name'), 'martial': commander.get('martial'),
+                      'prowess': commander.get('prowess'),
+                      'ck3_men': round(float(side['fighting'])) if side.get('fighting') is not None else None,
+                      'men': sum(g.get('men', 0) for g in side.get('generals') or [])
+                             + sum(u['men'] for u in units.values()),
+                      'generals': [g.get('name') for g in side.get('generals') or []],
+                      'units': list(units.values())})
+    return {'run_id': run_id, 'battle': roster.get('battle') or 'CK3 battle', 'date': roster.get('date'),
+            'season': roster.get('season'), 'mode': 'Records', 'seed': roster.get('seed'), 'sides': sides}
+
+def lobby_script(run_id, battle_log, frontend_log, card, template=None):
+    """frontend_lobby.lua bound to one run: its logs, the lobby layout and its battle card."""
+    path = lambda p: str(p).replace('\\', '/').replace('"', '\\"')
+    script = Path(template or HERE / 'frontend_lobby.lua').read_text(encoding='utf-8')
+    return (script.replace('@@RUN_ID@@', run_id)
+            .replace('@@OUTPUT_PATH@@', path(battle_log))
+            .replace('@@FRONTEND_LOG@@', path(frontend_log))
+            .replace('@@LAYOUT@@', lobby.LAYOUT_PATH.removesuffix('.twui.xml'))
+            .replace('@@LOBBY@@', _lua(card)))
+
+def generate(native, output, lua_template, roster=None, lobby_template=None):
     """Stage `roster` (bridge.roll_roster's result) on the natively installed Records Xingyang map."""
     roster = roster or DEFAULT_ROSTER
     if roster.get('mode', 'records') != 'records':
@@ -147,15 +204,15 @@ def generate(native, output, lua_template, roster=None, opener_template=None):
     lua = lua.replace('@@OUTPUT_PATH@@', str(log).replace('\\', '/').replace('"', '\\"'))
     lua = lua.replace('@@TRIM@@', trim)
     (stage / 'battle_script.lua').write_text(lua, encoding='utf-8')
-    opener = (opener_template or lua_template.parent / 'frontend_open.lua').read_text(encoding='utf-8')
-    opener = (opener.replace('@@RUN_ID@@', run_id)
-              .replace('@@OUTPUT_PATH@@', str(log).replace('\\', '/').replace('"', '\\"'))
-              .replace('@@FRONTEND_LOG@@', str(output.resolve() / 'frontend.log').replace('\\', '/').replace('"', '\\"')))
-    (output / 'pack' / OPENER).parent.mkdir(parents=True, exist_ok=True)
-    (output / 'pack' / OPENER).write_text(opener, encoding='utf-8')
+    card = lobby_card(roster, run_id)
+    script = lobby_script(run_id, log, output.resolve() / 'frontend.log', card,
+                          lobby_template or lua_template.parent / 'frontend_lobby.lua')
+    (output / 'pack' / LOBBY).parent.mkdir(parents=True, exist_ok=True)
+    (output / 'pack' / LOBBY).write_text(script, encoding='utf-8')
+    lobby.stage(output / 'pack')
     manifest = {'schema': 1, 'kind': 'g1_runtime_unverified', 'run_id': run_id,
                 'mode': 'Records', 'entry': BATTLE, 'source_sha256': digest(source),
-                'log_path': str(log), 'sides': staged, 'expected_units': expected}
+                'log_path': str(log), 'sides': staged, 'expected_units': expected, 'lobby': card}
     (output / 'run.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     return manifest
 
@@ -178,7 +235,7 @@ def build(game, cli, output, native=None, roster=None):
     # panics in this old build; validate the newly created header instead.
     if pack.read_bytes()[:8] != b'PFH5\x03\x00\x00\x00':
         raise ValueError('RPFM did not create the expected PFH5 mod pack.')
-    files = [f'{BATTLE}/battle.xml', f'{BATTLE}/battle_script.lua', OPENER]
+    files = [f'{BATTLE}/battle.xml', f'{BATTLE}/battle_script.lua', LOBBY, lobby.LAYOUT_PATH, *lobby.ART]
     for name in files:
         run_cli(cli, 'add', '--pack-path', pack, '--file-path', f'{output / "pack" / name};{name}')
     listed = run_cli(cli, 'list', '--pack-path', pack).splitlines()

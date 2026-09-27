@@ -1,6 +1,6 @@
 {
   "show_mode": "dramatic",
-  "army_scale_factor": 1.0,
+  "army_scale_factor": 10,
   "auto_battle_report": true,
   "enable_tw3k_screenshots": false,
   "domain_focus": "custom",

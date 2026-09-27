@@ -185,7 +185,7 @@ async function click(action, data = {}) {
   expect('Send to Three Kingdoms installs the pack', main().includes('Next: fight') && log().includes('installed crusader_wars_2.pack')
     && log().includes('replaced the previous battle pack'));
   await click('toBattle');
-  expect('fight screen is a step-by-step checklist', main().includes('opens the battle by itself') && main().includes('Battle of Xingyang') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
+  expect('fight screen is a step-by-step checklist', main().includes('lobby by itself') && main().includes('FIGHT') && main().includes('Battle of Xingyang') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
   expect('auto battle report arms a poll on the fight step', !!timers[4000]);
   await click('launch');
   expect('after launch the checklist says so', main().includes('Three Kingdoms is starting') && main().includes('crusader_wars_2'));

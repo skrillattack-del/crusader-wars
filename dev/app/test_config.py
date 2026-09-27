@@ -14,7 +14,9 @@ import config
 
 REPO_ROOT = HERE.parents[1]
 SCHEMA_PATH = REPO_ROOT / 'schemas' / 'config.schema.json'
-DEFAULTS = json.loads((REPO_ROOT / 'config' / 'cw2_config.json').read_text(encoding='utf-8'))
+# The schema's defaults, not the live config/cw2_config.json: players edit that one.
+DEFAULTS = {key: spec['default'] for key, spec in
+            json.loads(SCHEMA_PATH.read_text(encoding='utf-8'))['properties'].items()}
 
 
 class TempBase(unittest.TestCase):

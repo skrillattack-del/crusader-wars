@@ -1,0 +1,4 @@
+# Run the launcher from source: python dev/app/main.py
+pywebview>=6.2
+# Tests only: the Lua 5.1 harnesses for the battle script and the in-game lobby.
+lupa>=2.8

@@ -1,7 +1,8 @@
-l_english:
+﻿l_english:
  # Original keys
  CW2_FIGHT_TOOLTIP_HEADER: "FIGHT THIS BATTLE IN THREE KINGDOMS"
- CW2_FIGHT_TOOLTIP_DESC: "Up to 1,503 men a side at full strength. Larger hosts shrink together."
+ CW2_FIGHT_TOOLTIP_DESC: "Only battles commanded by you or fought by your own army can be sent to Three Kingdoms."
+ CW2_NO_KNIGHTS: "No champions"
  CW2_ATTACKER: "ATTACKER"
  CW2_DEFENDER: "DEFENDER"
  # Battle Bridge window

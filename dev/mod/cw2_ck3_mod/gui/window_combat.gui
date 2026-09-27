@@ -1006,7 +1006,6 @@ window = {
 		button = { name = Play_Battle
 			visible = "[And(Or(CombatWindow.GetLeftSideCommander.IsPlayer, CombatWindow.GetLeftSideMainParticipant.IsPlayer), Not(CombatWindow.IsCombatInPursuitPhase))]"
 			tooltip = "CW2_FIGHT_TOOLTIP_HEADER"
-			enabled = "[GreaterThan_CFixedPoint(CombatWindow.GetLeftCombatSide.GetSoftCasualties, '(CFixedPoint)0')]"
 			parentanchor = center
 			position = { 0 20 }
 			texture = "gfx/interface/icons/map_icons/combat_map_icon.dds"
@@ -1081,7 +1080,6 @@ window = {
 		button = { name = Play_Battle_Pause
 			visible = "[And(And(Or(CombatWindow.GetLeftSideCommander.IsPlayer, CombatWindow.GetLeftSideMainParticipant.IsPlayer), Not(CombatWindow.IsCombatInPursuitPhase)), Not(IsManuallyPaused))]"
 			tooltip = "CW2_FIGHT_TOOLTIP_HEADER"
-			enabled = "[GreaterThan_CFixedPoint(CombatWindow.GetLeftCombatSide.GetSoftCasualties, '(CFixedPoint)0')]"
 			parentanchor = center
 			position = { 0 20 }
 			texture = "gfx/interface/icons/map_icons/combat_map_icon.dds"
