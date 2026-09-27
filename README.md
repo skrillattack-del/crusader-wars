@@ -7,7 +7,8 @@ project's `.venv`; a desktop shortcut can point at it), then in CK3
 press **Fight this battle in Three Kingdoms** on a battle. The launcher picks up
 the save, rolls both armies, installs the battle pack and starts 3K, which opens
 the **CRUSADER WARS II** lobby. Check both armies, press **FIGHT**, fight the
-battle, then read the result in the launcher.
+battle, then read the result in the launcher and press
+**Return to CK3** to continue your CK3 save.
 
 **Setup:** Python 3.12 with `pip install -r dev/requirements.txt`, and RPFM's CLI
 in `dev/tools/rpfm/` (git-ignored). There is no build step.
@@ -30,8 +31,10 @@ in `dev/tools/rpfm/` (git-ignored). There is no build step.
    fresh battle, showing both CK3 commanders and the staged roll. **FIGHT**
    clicks Battle → Historical Battle → Xingyang → Start.
 5. **Result**: `read_result` checks the run's battle log against `run.json` and
-   shows who won and each side's losses. Writing results back into the CK3
-   save is off for now.
+   shows who won and each side's losses (a unit wiped out in 3K disappears from
+   its results capture, so it is read back as fully lost). **Return to CK3**
+   closes Three Kingdoms and starts CK3, whose Continue button resumes the
+   campaign save. Writing results back into the CK3 save is off for now.
 
 Each run keeps its pack, manifest and logs in `dev/app/runs/<time>/`. The
 lobby logs every step to that run's `frontend.log`; 3K's own mod loader writes

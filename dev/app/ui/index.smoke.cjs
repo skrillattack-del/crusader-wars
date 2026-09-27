@@ -42,7 +42,7 @@ global.setInterval = (fn, ms) => { const id = {fn, ms}; timers[ms] = id; return 
 global.clearInterval = id => { for (const k of Object.keys(timers)) if (timers[k] === id) delete timers[k]; };
 const tick = ms => { const t = timers[ms]; return t ? t.fn() : null; };
 
-let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
+let readAttempts = 0, seed = 1702900, ck3Launches = 0, returnCalls = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
 let signal = null, tkLaunches = 0, lastSave, savedSkin = '3k';
 let configDoc = {show_mode: 'tactical', army_scale_factor: 1.0, auto_battle_report: true,
   enable_tw3k_screenshots: false, domain_focus: 'custom', injectivity_strict: true, cut_3d_voice: true};
@@ -93,6 +93,8 @@ const api = {
   async prepare_and_install() { return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
     removed_previous: 'C:/dist/runs/old'}; },
   async launch_3k() { tkLaunches += 1; return {ok: true, pid: null}; },
+  async return_to_ck3() { returnCalls += 1; return {ok: true, was_running: true, forced: false,
+    note: 'closed gently', continue: {title: 'autosave_exit', desc: 'Playing as Count John-Matux of Liege'}}; },
   async poll_battle() { const s = signal; signal = null; return s || {ok: true, save: null}; },
   async read_result() {
     readAttempts += 1;
@@ -201,6 +203,10 @@ async function click(action, data = {}) {
   expect('dramatic show mode names the CK3 battle', main().includes('held the field at Hastings'));
   configDoc.show_mode = 'tactical'; await click('recheck');
   expect('tactical show mode restores the full table', main().includes('<th>Side</th>'));
+  await click('returnCk3');
+  expect('Return to CK3 closes Three Kingdoms and names the save CK3 continues',
+    returnCalls === 1 && main().includes('press <b>Continue</b>') && main().includes('Count John-Matux')
+      && log().includes('returned to CK3: closed gently'));
   await click('removeProbe');
   expect('pack removal is confirmed', main().includes('Battle pack removed') && log().includes('removed crusader_wars_2.pack'));
   await click('restart');
@@ -216,6 +222,9 @@ async function click(action, data = {}) {
   tick(4000); await settle();
   expect('auto battle report advances to the result by itself', main().includes('Victory')
     && log().includes('result arrived on its own'));
+  await click('returnCk3');
+  expect('the result screen closes the loop', returnCalls === 2
+    && main().includes('to go back to your save'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
   process.exit(failed ? 1 : 0);
 })().catch(error => { console.error('smoke crashed:', error); process.exit(1); });

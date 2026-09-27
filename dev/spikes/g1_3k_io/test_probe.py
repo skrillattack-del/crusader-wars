@@ -109,6 +109,34 @@ class ResultValidationTests(unittest.TestCase):
             self.write([self.start, event])
             with self.assertRaises(ValueError): probe.read_result(self.root)
 
+    def test_destroyed_unit_is_injected(self):
+        # 3K drops a completely destroyed unit from its final event capture
+        self.final['units'].pop(0)  # remove u0
+        self.write([self.start, self.final])
+        result = probe.read_result(self.root)
+        self.assertEqual(len(result['units']), 6)
+        lost_unit = next(u for u in result['units'] if u['script_name'] == 'u0')
+        self.assertEqual(lost_unit['survivors'], 0)
+        self.assertTrue(lost_unit['routing'])
+
+    def test_rejects_missing_unit_in_start(self):
+        self.start['units'].pop(0)
+        self.write([self.start, self.final])
+        with self.assertRaisesRegex(ValueError, 'missing at start: u0'):
+            probe.read_result(self.root)
+
+    def test_rejects_an_unknown_unit_in_the_result(self):
+        self.final['units'][0]['script_name'] = 'stranger'
+        self.write([self.start, self.final])
+        with self.assertRaisesRegex(ValueError, 'extra: stranger'):
+            probe.read_result(self.root)
+
+    def test_rejects_duplicate_units_in_a_capture(self):
+        self.final['units'].append(copy.deepcopy(self.final['units'][0]))
+        self.write([self.start, self.final])
+        with self.assertRaisesRegex(ValueError, 'Duplicate unit'):
+            probe.read_result(self.root)
+
     def test_removal_refuses_changed_pack_and_preserves_other_files(self):
         game = self.root / 'game'
         (game / 'data').mkdir(parents=True)

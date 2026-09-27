@@ -232,7 +232,7 @@ local function refresh_lobby()
     end;
     local done = fought();
     pcall(function() part("cw2_btn_fight"):SetState(done and "inactive" or "active"); end);
-    set_text(part("cw2_status"), done and "This battle has been fought. Send the next one from the launcher."
+    set_text(part("cw2_status"), done and "This battle has been fought. In the launcher, read the result, then press Return to CK3."
         or "Armies ready for battle");
 end;
 

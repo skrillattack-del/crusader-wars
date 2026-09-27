@@ -198,6 +198,10 @@ def generate(native, output, lua_template, roster=None, lobby_template=None):
     ET.indent(root)
     ET.ElementTree(root).write(stage / 'battle.xml', encoding='utf-8', xml_declaration=True)
     log = output.resolve() / f'{run_id}.jsonl'
+    # A stale log from a previous run at this output path must not survive;
+    # read_result compares the log's units against the new manifest.
+    if log.exists():
+        log.unlink()
     trim = '{' + ', '.join(f'[{_lua_string(u["script_name"])}] = {u["target_men"]}' for u in expected) + '}'
     lua = lua_template.read_text(encoding='utf-8').replace('@@RUN_ID@@', run_id).replace('@@BATTLE@@', BATTLE)
     # JSON quoting yields Lua-compatible escaping for an ASCII Windows path.
@@ -280,9 +284,33 @@ def read_result(output):
     for event in (starts[0], finals[-1]):
         if event.get('battle') != manifest['entry']:
             raise ValueError('Event battle identifier differs from the staged battle.')
-        units = event['units']
-        if len(units) != len(expected) or {u['script_name'] for u in units} != set(expected):
-            raise ValueError('Loaded roster differs from the staged roster.')
+        units = list(event['units'])
+        loaded_names = {u['script_name'] for u in units}
+        expected_names = set(expected)
+        is_start = event is starts[0]
+        extra = loaded_names - expected_names
+        if len(units) != len(loaded_names):
+            raise ValueError('Duplicate unit in the battle capture.')
+        if extra:
+            raise ValueError(f'Loaded roster differs from the staged roster '
+                             f'(extra: {", ".join(sorted(extra))}). '
+                             'Close Three Kingdoms, send the armies again, and re-launch.')
+        if is_start:
+            # The start capture must match the staged roster exactly.
+            if loaded_names != expected_names:
+                missing = expected_names - loaded_names
+                raise ValueError(f'Loaded roster differs from the staged roster '
+                                 f'(missing at start: {", ".join(sorted(missing))}). '
+                                 'Close Three Kingdoms, send the armies again, and re-launch.')
+        else:
+            # Final capture: 3K drops units destroyed in battle (0 survivors).
+            # Inject them back as fully lost so the report counts every staged unit.
+            for name in sorted(expected_names - loaded_names):
+                match = expected[name]
+                units.append({'script_name': name, 'unit_type': match['unit_type'],
+                              'alliance': match['alliance'], 'army': 1,
+                              'initial': start_counts[name], 'survivors': 0, 'routing': True})
+            event['units'] = units
         for unit in units:
             match = expected[unit['script_name']]
             if unit['unit_type'] != match['unit_type'] or unit['alliance'] != match['alliance'] or unit['army'] != 1:
@@ -292,7 +320,7 @@ def read_result(output):
                 raise ValueError('Missing routing state.')
             if type(initial) is not int or type(alive) is not int or not 0 <= alive <= initial or initial <= 0:
                 raise ValueError('Invalid soldier counts.')
-            if event is starts[0]:
+            if is_start:
                 if alive != initial:
                     raise ValueError('Initial capture is inconsistent.')
                 start_counts[unit['script_name']] = initial

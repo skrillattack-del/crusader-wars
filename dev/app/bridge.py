@@ -62,6 +62,7 @@ TK_MOD_LIST = 'used_mods_cw2.txt'
 CW2_BATTLE_LINE = re.compile(r'(?m)^\[(\d\d):(\d\d):(\d\d)\][^\n]*?\(CW2_Battle:effect\): BATTLE_NAME:([^\r\n]*)')
 SIGNAL_WINDOW = 300  # seconds allowed between that log line and the save
 SAVE_SETTLE = 2  # seconds a save must stay unchanged before it is read
+CLOSE_GRACE = 10  # seconds Three Kingdoms gets to close before taskkill /F
 
 
 def _season(date):
@@ -78,11 +79,16 @@ def _default_tasklist(cmd):
                             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     return result.returncode, result.stdout
 
+def _default_taskkill(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True,
+                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    return result.returncode, result.stdout
+
 class Bridge:
     """js_api for the launcher window. See dev/app/ui/index.html for callers."""
 
     def __init__(self, base=None, game=None, cli=None, tasklist=None, saves=None,
-                 ck3_mods=None, cw1_dir=None, mod_source=None, popen=None):
+                 ck3_mods=None, cw1_dir=None, mod_source=None, popen=None, taskkill=None):
         self.base = Path(base) if base else _HERE
         self.game = Path(game) if game else probe.GAME
         self.saves = Path(saves) if saves else CK3_SAVES
@@ -98,6 +104,7 @@ class Bridge:
         self._signal_pending = None
         self.cli = Path(cli) if cli else self._find_cli()
         self._tasklist = tasklist or _default_tasklist
+        self._taskkill = taskkill or _default_taskkill
         self._popen = popen or subprocess.Popen
         self._window = None
         self.session = {'output': None}
@@ -577,6 +584,16 @@ class Bridge:
             if target.exists() and previous is None:
                 raise ValueError('An unrecognised battle pack is installed: it matches no recorded run, '
                                  'so CW2 will not delete it. Remove it by hand.')
+            # Remove the previous runtime log so read_result can't
+            # accidentally read stale data from a different roster.
+            if previous:
+                try:
+                    prev_manifest = json.loads((previous / 'run.json').read_text(encoding='utf-8'))
+                    prev_log = Path(prev_manifest.get('log_path', ''))
+                    if prev_log.is_file():
+                        prev_log.unlink()
+                except (ValueError, OSError, KeyError):
+                    pass  # best-effort; the pack replacement is the authoritative guard
             output = self.base / 'runs' / datetime.now().strftime('%Y%m%d-%H%M%S-%f')
             steps = [('Build and verify the battle pack with RPFM',
                       lambda: probe.build(self.game, self.cli, output, roster=roster)),
@@ -610,6 +627,11 @@ class Bridge:
     def launch_3k(self):
         """Start Three Kingdoms with only the battle pack enabled, skipping CA's mod manager."""
         try:
+            # A running 3K has already cached its battle XML. Launching a second
+            # instance would load the old pack, not the one we just installed.
+            if self._process_running('Three_Kingdoms.exe'):
+                raise ValueError('Three Kingdoms is already running. Close it first so '
+                                 'it loads the new battle pack on the next launch.')
             if not (self.game / 'data' / probe.PACK_NAME).is_file():
                 raise ValueError('The battle pack is not installed. Send the armies to Three Kingdoms first.')
             if self.session.get('output'):
@@ -619,6 +641,21 @@ class Bridge:
             process = self._popen([str(self.game / 'Three_Kingdoms.exe'), f'{TK_MOD_LIST};'],
                                   cwd=str(self.game))
             return {'ok': True, 'pid': process.pid, 'note': f'started with {TK_MOD_LIST}'}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def verify_pack(self):
+        """Check the installed pack still matches the current run's manifest."""
+        try:
+            run = self._require_run()
+            manifest = json.loads((run / 'run.json').read_text(encoding='utf-8'))
+            target = self.game / 'data' / probe.PACK_NAME
+            if not target.exists():
+                return {'ok': True, 'match': False, 'reason': 'Pack not installed.'}
+            installed_sha = probe.digest(target)
+            match = installed_sha == manifest.get('pack_sha256')
+            return {'ok': True, 'match': match,
+                    'reason': None if match else 'Installed pack differs from the current run.'}
         except Exception as exc:
             return {'error': str(exc)}
 
@@ -710,5 +747,57 @@ class Bridge:
             'error': 'Writing results into CK3 saves is off in this build. The result is kept as observed_result.json in the run folder.'
         }
 
+    def close_3k(self, timeout=None):
+        """Ask Three Kingdoms to exit gently, then force it if it hangs.
 
+        taskkill without /F lets the game shut down cleanly; /F is only sent
+        once the process is still there `timeout` seconds later.
+        """
+        timeout = CLOSE_GRACE if timeout is None else max(0, timeout)
+        try:
+            if not self._process_running('Three_Kingdoms.exe'):
+                return {'ok': True, 'was_running': False, 'forced': False, 'note': 'not running'}
+            self._taskkill(['taskkill', '/IM', 'Three_Kingdoms.exe'])
+            if self._wait_3k_closed(timeout):
+                return {'ok': True, 'was_running': True, 'forced': False, 'note': 'closed gently'}
+            self._taskkill(['taskkill', '/F', '/IM', 'Three_Kingdoms.exe'])
+            if self._wait_3k_closed(timeout):
+                return {'ok': True, 'was_running': True, 'forced': True, 'note': 'closed forcefully'}
+            raise ValueError('Three Kingdoms refused to close. Close it by hand, '
+                             'then press Return to CK3 again.')
+        except Exception as exc:
+            return {'error': str(exc)}
 
+    def _wait_3k_closed(self, timeout):
+        """True once Three Kingdoms is gone; polls until `timeout` runs out."""
+        deadline = time.monotonic() + timeout
+        while self._process_running('Three_Kingdoms.exe'):
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.5)
+        return True
+
+    def return_to_ck3(self):
+        """Close Three Kingdoms, then start CK3 so the player continues the save."""
+        try:
+            closed = self.close_3k()
+            if closed.get('error'):
+                return closed  # CK3 is never started while Three Kingdoms still runs
+            os.startfile(STEAM_CK3)
+            return {'ok': True, 'was_running': closed['was_running'], 'forced': closed['forced'],
+                    'note': closed['note'], 'continue': self._ck3_continue()}
+        except Exception as exc:
+            return {'error': str(exc)}
+
+    def _ck3_continue(self):
+        """The save CK3's own Continue button will load (continue_game.json), or None.
+
+        CK3 has no launch flag that loads a save, so the player presses Continue
+        in its main menu; this names the campaign that click resumes.
+        """
+        try:
+            data = json.loads((self.saves.parent / 'continue_game.json').read_text(encoding='utf-8'))
+        except (ValueError, OSError):
+            return None
+        info = {'title': data.get('title'), 'desc': data.get('desc'), 'date': data.get('date')}
+        return info if info['title'] or info['desc'] else None

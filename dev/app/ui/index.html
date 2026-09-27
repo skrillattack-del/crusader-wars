@@ -539,10 +539,12 @@ function friendly(m){
   if(/No runtime log/.test(m)) return "No battle has been fought with this pack yet. Finish the battle in Three Kingdoms, then try again.";
   if(/exactly one start/.test(m)) return "This battle was restarted or replayed, so its result can't be used. Send the armies again and fight it once.";
   if(/undetermined/.test(m)) return "Neither side fully broke, so there's no winner yet. Fight until one army routs.";
+  if(/Loaded roster differs/.test(m)) return "Three Kingdoms loaded different units than expected. This usually means it was already running when the armies were sent. Close Three Kingdoms, go back to step 3, press \"Send to Three Kingdoms\" again, then re-launch.";
+  if(/refused to close/.test(m)) return "Three Kingdoms refused to close. Please close it manually before continuing.";
+  if(/already running/.test(m)) return "Three Kingdoms is already running. Close it first so it picks up the new battle pack.";
   if(/Close Three Kingdoms/.test(m)) return "Close Three Kingdoms first, then try again.";
   if(/No \.ck3 saves/.test(m)) return "No CK3 saves found yet. In CK3, open a battle and press the crossed swords (or save by hand), then try again.";
   if(/no battle in progress/.test(m)) return "Your latest save has no battle in progress. Save while your armies are fighting.";
-  if(/Binary\/tokenized/.test(m)) return "That save is in CK3's compressed format, which can't be read. Press the crossed swords in a CK3 battle; it writes a readable save.";
   return m;
 }
 const fail = e => { const m = err(e); log(`error: ${m}`); return friendly(m); };
@@ -557,7 +559,7 @@ const STEPS=[
 ];
 const S={view:0, reached:0, sealed:false, busy:false, mode:"records", cw1Hint:false,
   health:null, enc:null, roster:null, install:[], installed:false,
-  launched:false, removed:false, result:null, error:null,
+  launched:false, removed:false, result:null, error:null, packMismatch:false, returnedToCk3:false, ck3Continue:null,
   config:null, configPath:null, configSha:null};
 
 function log(msg){const el=document.getElementById("log");
@@ -717,6 +719,7 @@ const V={
     <details class="more"><summary>Roll details</summary><p class="muted">Seed <code>${r.seed}</code>, mode ${esc(r.mode||S.mode)}.</p></details>`;
   },
   battle(){
+    const packWarn=S.packMismatch?`<p class="notice" role="alert" style="margin-top:16px">The installed battle pack doesn't match this run. <button class="btn-quiet btn-sm" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button></p>`:"";
     return `<h2>Fight in Three Kingdoms</h2>
     <p class="lede">The battle is ready. Follow these steps, then come back for the result.</p>
     <ol class="howto panel parchment">
@@ -724,9 +727,11 @@ const V={
       <li>Three Kingdoms opens the <b>CRUSADER WARS II</b> lobby by itself (also under <b>Battle</b> in its main menu). Check both armies and press <b>FIGHT</b>. If the lobby doesn't appear: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
       <li>Fight until one army breaks. Stay on the results screen for a few seconds, and don't press Rematch.</li>
     </ol>
+    ${packWarn}
     ${errorBox()}
     <div class="actions">
       <button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Get the result</button>
+      ${S.error&&/roster differs|already running/i.test(S.error)?`<button class="btn-quiet" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button>`:""}
     </div>`;
   },
   result(){
@@ -745,9 +750,11 @@ const V={
       <p class="muted">${r.sides.map(s=>`${esc(s.role)}: ${fmt(s.men)} fought, ${fmt(s.lost)} lost.`).join(" ")}</p>
       <p class="muted">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
       ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+      ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
       ${errorBox()}
       <div class="actions">
-        <button class="btn-primary" data-action="restart">Fight another battle</button>
+        <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+        <button class="btn-quiet" data-action="restart">Fight another battle</button>
         ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
       </div>`;
     const rows=r.sides.map((s,i)=>`<tr><td>${esc(s.role)}${i===r.player_side?" (you)":""}${r.winner===i?" · won":""}</td>
@@ -759,9 +766,11 @@ const V={
       <tbody>${rows}</tbody></table></div>
     <p class="muted" style="margin-top:14px">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
     ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+    ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
     ${errorBox()}
     <div class="actions">
-      <button class="btn-primary" data-action="restart">Fight another battle</button>
+      <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+      <button class="btn-quiet" data-action="restart">Fight another battle</button>
       ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
     </div>`;
   }
@@ -894,7 +903,10 @@ const A={
       log(`installed ${r.pack} sha256=${r.sha256}`); log(`run folder: ${r.run}`);}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async toBattle(){go(3);},
+  async toBattle(){S.packMismatch=false;
+    try{const v=await call("verify_pack"); if(v.match===false){S.packMismatch=true; log(`pack check: ${v.reason}`);}
+    }catch(e){log(`pack check skipped: ${err(e)}`);}
+    go(3);},
   async launch(){
     try{await call("launch_3k"); S.launched=true; log("3K launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
@@ -902,6 +914,11 @@ const A={
     try{S.result=await call("read_result");
       log(`result outcome=${S.result.player_outcome} source=${S.result.result_source}`);
       S.busy=false; go(4); return;}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();},
+  async returnCk3(){S.busy=true;S.error=null;render();
+    try{const r=await call("return_to_ck3"); S.returnedToCk3=true; S.ck3Continue=r.continue||null;
+      log(`returned to CK3: ${r.note}${S.ck3Continue&&S.ck3Continue.desc?` — continue "${S.ck3Continue.desc}"`:""}`);}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
   async removeProbe(){S.busy=true;S.error=null;render();
@@ -912,14 +929,25 @@ const A={
     S.busy=false; render();},
   async restart(){clearInterval(resultTimer); resultTimer=null;
     Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
-      install:[],installed:false,launched:false,removed:false,result:null,error:null});
+      install:[],installed:false,launched:false,removed:false,result:null,error:null,packMismatch:false,returnedToCk3:false,ck3Continue:null});
     await A.recheck();},
   /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
   async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
     await A.toEncounter(null,sig.save); if(!S.enc) return;
     await A.toRoster(); if(!S.roster) return;
     await A.install(); if(!S.installed) return;
-    go(3); await A.launch();}
+    go(3); await A.launch();},
+  /* Recovery: resend the current roster and relaunch 3K in one click. */
+  async resendAndRelaunch(){S.busy=true;S.error=null;S.packMismatch=false;render();
+    log("resend: removing old pack, reinstalling, relaunching");
+    try{await call("remove_probe");}catch(e){log(`resend remove: ${err(e)}`);}
+    try{const r=await call("prepare_and_install",S.roster); S.installed=true;
+      log(`resend installed ${r.pack} sha256=${r.sha256}`);}
+    catch(e){S.error=fail(e); S.busy=false; render(); return;}
+    S.launched=false;
+    try{await call("launch_3k"); S.launched=true; log("resend: 3K relaunched");}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();}
 };
 
 let watching=false;
@@ -945,6 +973,7 @@ window.addEventListener("pywebviewready",async ()=>{log("Python bridge ready");
   render(); A.recheck(); setInterval(watch,3000);});
 log("launcher started; waiting for the Python bridge...");
 render();
+
 </script>
 </body>
 </html>

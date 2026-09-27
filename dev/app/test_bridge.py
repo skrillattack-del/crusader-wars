@@ -41,6 +41,27 @@ class FakePopen:
         return type('Process', (), {'pid': 4242})()
 
 
+class FakeTaskkill:
+    """Records taskkill commands and drops the image from the fake tasklist.
+
+    force_needed: the game ignores the gentle close and only dies to /F.
+    stubborn: the game survives every attempt.
+    """
+
+    def __init__(self, tasklist, force_needed=False, stubborn=()):
+        self.tasklist = tasklist
+        self.calls = []
+        self.force_needed = force_needed
+        self.stubborn = set(stubborn)
+
+    def __call__(self, cmd):
+        self.calls.append(cmd)
+        image = cmd[cmd.index('/IM') + 1]
+        if image not in self.stubborn and ('/F' in cmd or not self.force_needed):
+            self.tasklist.names = [n for n in self.tasklist.names if n != image]
+        return 0, ''
+
+
 class BridgeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -655,6 +676,72 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(popen.calls, [([str(self.game / 'Three_Kingdoms.exe'), 'used_mods_cw2.txt;'], str(self.game))])
         self.assertEqual((self.game / 'used_mods_cw2.txt').read_text(encoding='utf-8'), f'mod "{probe.PACK_NAME}";\n')
         self.assertEqual((self.game / 'used_mods.txt').read_text(encoding='utf-8'), 'mod "someone_elses.pack";')
+
+    # ---- return to CK3 ----
+
+    def test_close_3k_is_a_noop_when_three_kingdoms_is_not_running(self):
+        kill = FakeTaskkill(FakeTasklist())
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': False, 'forced': False, 'note': 'not running'})
+        self.assertEqual(kill.calls, [])
+
+    def test_close_3k_shuts_the_game_down_gently(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': True, 'forced': False, 'note': 'closed gently'})
+        self.assertEqual(kill.calls, [['taskkill', '/IM', 'Three_Kingdoms.exe']])
+
+    def test_close_3k_forces_a_game_that_ignores_the_gentle_close(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist, force_needed=True)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': True, 'forced': True, 'note': 'closed forcefully'})
+        self.assertEqual(kill.calls, [['taskkill', '/IM', 'Three_Kingdoms.exe'],
+                                      ['taskkill', '/F', '/IM', 'Three_Kingdoms.exe']])
+
+    def test_close_3k_reports_a_game_that_refuses_to_die(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist, stubborn=['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertIn('refused to close', bridge.close_3k(timeout=0)['error'])
+        self.assertEqual(len(kill.calls), 2)  # gentle, then forced
+
+    def test_return_to_ck3_closes_three_kingdoms_then_starts_ck3(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist,
+                        taskkill=FakeTaskkill(tasklist))
+        with mock.patch('bridge.os.startfile') as start:
+            result = bridge.return_to_ck3()
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['was_running'])
+        start.assert_called_once_with(bridge_module.STEAM_CK3)
+
+    def test_return_to_ck3_never_starts_ck3_while_three_kingdoms_runs(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist,
+                        taskkill=FakeTaskkill(tasklist, stubborn=['Three_Kingdoms.exe']))
+        with mock.patch('bridge.os.startfile') as start:
+            result = bridge.return_to_ck3()
+        self.assertIn('refused to close', result['error'])
+        start.assert_not_called()
+
+    def test_return_to_ck3_names_the_save_ck3_continues(self):
+        docs = self.root / 'ck3' / 'Crusader Kings III'
+        (docs / 'save games').mkdir(parents=True)
+        (docs / 'continue_game.json').write_text(json.dumps(
+            {'title': 'autosave_exit', 'desc': 'Playing as Count John-Matux of Liege',
+             'date': '2026-09-26 19:36:12'}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(),
+                        saves=docs / 'save games')
+        with mock.patch('bridge.os.startfile'):
+            result = bridge.return_to_ck3()
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['was_running'])
+        self.assertEqual(result['continue']['desc'], 'Playing as Count John-Matux of Liege')
 
     def test_session_persists_between_launches(self):
         self.bridge.session.update(output=str(self.root / 'run'), game=str(self.game))
