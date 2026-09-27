@@ -1,23 +1,12 @@
 """Crusader Wars 2 launcher: a pywebview window whose js_api is dev/app/bridge.py.
 
-Assets ship inside the exe (sys._MEIPASS); runs and session state are written
-beside the exe.
+Runs from source: `python dev/app/main.py`. Runs, backups and session state are
+written beside this file (dev/app/runs, dev/app/backups, cw2-launcher-session.json).
 """
 import argparse
 from pathlib import Path
-import sys
 
-
-def _assets_root():
-    if getattr(sys, 'frozen', False):
-        return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parent
-
-
-def _data_root():
-    if getattr(sys, 'frozen', False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parent
 
 
 def main():
@@ -26,28 +15,30 @@ def main():
                         help='verify assets and the bridge without opening a window')
     args = parser.parse_args()
 
-    index = _assets_root() / 'ui' / 'index.html'
+    index = HERE / 'ui' / 'index.html'
     if not index.is_file():
         raise RuntimeError(f'Launcher UI asset is missing: {index}')
 
     from bridge import Bridge
-    bridge = Bridge(base=_data_root())
+    bridge = Bridge(base=HERE)
 
     if args.smoke_test:
         health = bridge.get_health()
         if health.get('error') or not health.get('paths'):
             raise RuntimeError(f'health check failed: {health}')
+        if not health.get('config', {}).get('valid'):
+            raise RuntimeError(f'options ledger is invalid: {health["config"]}')
         # A fixed battle: the newest CK3 save may be a binary autosave or hold no battle.
         sides = [{'role': role, 'name': role, 'fighting': men} for role, men in (('Attacker', 340.0), ('Defender', 421.0))]
         roster = bridge.roll_roster({'sides': sides}, seed=1)
         if roster.get('error') or not all(side['generals'] for side in roster['sides']):
             raise RuntimeError(f'roster roll failed: {roster}')
-        if getattr(sys, 'frozen', False):
-            import probe
-            for resource in ('probe.lua', 'frontend_open.lua'):
-                if not (probe.HERE / resource).is_file():
-                    raise RuntimeError(f'Packaged Lua resource is missing: {resource}')
-        import webview  # verifies pywebview and its Windows backend landed in the bundle
+        skins = HERE / 'ui' / 'skins'
+        for art in ('ck3/cinzel.ttf', 'ck3/two.jpg', 'ck3/rail.jpg',
+                    '3k/head.jpg', '3k/dragon.jpg'):
+            if not (skins / art).is_file():
+                raise RuntimeError(f'Launcher skin asset is missing: {skins / art}')
+        import webview  # the window library: pip install pywebview
         print('launcher smoke OK')
         return
 

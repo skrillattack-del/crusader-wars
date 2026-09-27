@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "CW2 Options Ledger",
+  "description": "The one ledger of user-facing options. cut_3d_voice is formally declared UNDEFINED (turn-2 §4) and must not be accepted.",
+  "$comment": "cut_3d_voice: UNDEFINED per turn-2 §4. Rejected by additionalProperties:false.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "show_mode": {
+      "type": "string",
+      "enum": ["dramatic", "tactical", "minimal"],
+      "default": "dramatic"
+    },
+    "army_scale_factor": {
+      "type": "number",
+      "default": 1.0,
+      "exclusiveMinimum": 0
+    },
+    "auto_battle_report": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_tw3k_screenshots": {
+      "type": "boolean",
+      "default": false
+    },
+    "domain_focus": {
+      "type": "string",
+      "enum": ["wei", "shu", "wu", "custom"],
+      "default": "wei"
+    },
+    "injectivity_strict": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

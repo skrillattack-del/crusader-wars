@@ -1,4 +1,4 @@
-clear_log = {
+﻿clear_log = {
     effect = {
         debug_log = "CW2_BRIDGE"
     }

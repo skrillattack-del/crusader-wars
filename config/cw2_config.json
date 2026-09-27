@@ -1,0 +1,9 @@
+{
+  "show_mode": "dramatic",
+  "army_scale_factor": 10,
+  "auto_battle_report": true,
+  "enable_tw3k_screenshots": false,
+  "domain_focus": "custom",
+  "injectivity_strict": true,
+  "cut_3d_voice": true
+}

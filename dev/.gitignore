@@ -1,11 +1,9 @@
 __pycache__/
-build/
-dist/
-*.spec
 spikes/g1_3k_io/generated/
 spikes/g1_3k_io/evidence/*-index.txt
 app/runs/
 app/cw2-launcher-session.json
+app/backups/
 tools/
 reference/
 spikes/g3_frontend/generated/

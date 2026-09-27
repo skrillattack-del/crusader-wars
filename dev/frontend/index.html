@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#22221f">
+  <title>Crusader Wars II | Battle Bridge</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="world" aria-hidden="true"></div>
+  <div class="layout">
+    <nav class="menu" aria-label="Main menu">
+      <a class="sigil" href="index.html" aria-label="Crusader Wars home">CW<span>II</span></a>
+      <section><h2>Campaign</h2><button disabled>New</button><button disabled>Multiplayer</button></section>
+      <section><h2>Battle</h2><button disabled>New</button><button disabled>Multiplayer</button><button class="selected" data-command="battle" aria-current="page">Crusader Wars II</button><button disabled>Dynasty mode</button><button disabled>Replays</button></section>
+      <section><h2>Extra</h2><button data-command="options">Options</button><button data-command="credits">Credits</button><button disabled>DLC</button></section>
+      <span class="connection"><i></i>Frontend preview</span>
+    </nav>
+    <main class="battle-screen" id="battle-screen">
+      <header class="masthead">
+        <div class="brand"><h1>Crusader Wars <span>II</span></h1><p>CK3 Battle Bridge</p></div>
+        <span class="campaign-date">England <b>1066</b></span>
+      </header>
+      <div class="battle-grid">
+        <section class="army attacker" aria-labelledby="attacker-heading">
+          <h2 class="ribbon" id="attacker-heading">Attacker</h2>
+          <div class="commander"><div class="portrait"><img src="assets/william.jpg" alt="William the Conqueror"></div><div class="commander-info"><span class="allegiance">Duchy of Normandy</span><h3>Duke William</h3><dl class="attributes"><div><dt><span data-icon="swords"></span>Martial</dt><dd>21</dd></div><div><dt><span data-icon="shield"></span>Prowess</dt><dd>16</dd></div></dl></div></div>
+          <div class="strength"><span data-icon="users"></span><strong id="attacker-total">5,103</strong><span>Soldiers</span></div>
+          <div class="knights"><span data-icon="crown"></span><span>Knights</span><strong>7</strong></div>
+          <div class="roster-heading"><span>Army composition</span><span>Men</span></div>
+          <ul class="roster" id="attacker-roster"></ul>
+          <div class="army-footer"><span class="faction-mark">N</span><div>For crown and conquest<small>Norman host</small></div></div>
+        </section>
+        <section class="encounter" aria-labelledby="battle-title">
+          <div class="encounter-heading"><span class="eyebrow">14 October, 1066</span><h2 id="battle-title">Battle of Hastings</h2><span class="fine-rule"></span></div>
+          <figure class="landscape"><img src="assets/battlefield.jpg" alt="Historic English castle and surrounding countryside"><figcaption>Sussex, Kingdom of England</figcaption></figure>
+          <dl class="conditions"><div><dt><span data-icon="mountain"></span>Terrain</dt><dd>Plains</dd></div><div><dt><span data-icon="leaf"></span>Season</dt><dd>Autumn</dd></div></dl>
+          <div class="roll-area"><span class="eyebrow">Army roll</span><div class="roll-count"><strong id="roll-number">03</strong><span>/ 06</span></div><span class="roll-status" id="roll-status" aria-live="polite">Uncommitted roster</span></div>
+          <div class="roll-actions"><button class="metal-button" id="shuffle" data-command="shuffle"><span data-icon="dices"></span>Shuffle</button><button class="metal-button" id="lock" data-command="lock" aria-pressed="false"><span data-icon="lock-keyhole"></span><span id="lock-label">Lock</span></button></div>
+          <p class="balance" id="balance">Norman advantage <strong>+282</strong></p>
+        </section>
+        <section class="army defender" aria-labelledby="defender-heading">
+          <h2 class="ribbon" id="defender-heading">Defender</h2>
+          <div class="commander"><div class="portrait"><img src="assets/harold.jpg" alt="Harold Godwinson"></div><div class="commander-info"><span class="allegiance">Kingdom of England</span><h3>King Harold</h3><dl class="attributes"><div><dt><span data-icon="swords"></span>Martial</dt><dd>18</dd></div><div><dt><span data-icon="shield"></span>Prowess</dt><dd>22</dd></div></dl></div></div>
+          <div class="strength"><span data-icon="users"></span><strong id="defender-total">4,821</strong><span>Soldiers</span></div>
+          <div class="knights"><span data-icon="crown"></span><span>Knights</span><strong>5</strong></div>
+          <div class="roster-heading"><span>Army composition</span><span>Men</span></div>
+          <ul class="roster" id="defender-roster"></ul>
+          <div class="army-footer"><span class="faction-mark">E</span><div>For hearth and kingdom<small>English host</small></div></div>
+        </section>
+      </div>
+      <footer class="battle-footer"><button class="back-button" data-command="back"><span data-icon="arrow-left"></span>Back</button><span class="footer-state" id="footer-state"><span data-icon="shield"></span>Awaiting your command</span><button class="fight-button" data-command="fight"><span data-icon="swords"></span>Fight</button></footer>
+    </main>
+  </div>
+  <span class="edition">CRUSADER WARS II <span> / </span> FRONTEND STUDY 01</span>
+  <dialog id="modal" aria-labelledby="modal-title"><form method="dialog"><button class="close-button" aria-label="Close dialog" title="Close"><span data-icon="x"></span></button></form><div id="modal-content"></div></dialog>
+  <script src="assets/lucide.min.js" defer></script>
+</body>
+</html>

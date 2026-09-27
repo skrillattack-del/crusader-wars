@@ -1,11 +1,15 @@
 import copy
 from datetime import datetime
 import json
+import os
+import re
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 for _p in (str(HERE.parents[0] / 'spikes' / 'g1_3k_io'), str(HERE)):
@@ -13,6 +17,7 @@ for _p in (str(HERE.parents[0] / 'spikes' / 'g1_3k_io'), str(HERE)):
         sys.path.insert(0, _p)
 
 import probe
+import bridge as bridge_module
 from bridge import Bridge
 
 INDEX = HERE / 'ui' / 'index.html'
@@ -34,6 +39,27 @@ class FakePopen:
     def __call__(self, args, cwd=None):
         self.calls.append((args, cwd))
         return type('Process', (), {'pid': 4242})()
+
+
+class FakeTaskkill:
+    """Records taskkill commands and drops the image from the fake tasklist.
+
+    force_needed: the game ignores the gentle close and only dies to /F.
+    stubborn: the game survives every attempt.
+    """
+
+    def __init__(self, tasklist, force_needed=False, stubborn=()):
+        self.tasklist = tasklist
+        self.calls = []
+        self.force_needed = force_needed
+        self.stubborn = set(stubborn)
+
+    def __call__(self, cmd):
+        self.calls.append(cmd)
+        image = cmd[cmd.index('/IM') + 1]
+        if image not in self.stubborn and ('/F' in cmd or not self.force_needed):
+            self.tasklist.names = [n for n in self.tasklist.names if n != image]
+        return 0, ''
 
 
 class BridgeTests(unittest.TestCase):
@@ -107,6 +133,12 @@ class BridgeTests(unittest.TestCase):
     # ---- staged encounter and roster ----
 
     # ---- CK3 mod and Crusader Wars 1 ----
+
+    def test_ck3_fight_button_is_clickable_before_first_casualty(self):
+        gui = (HERE.parent / 'mod' / 'cw2_ck3_mod' / 'gui' / 'window_combat.gui').read_text()
+        casualty_gate = ('enabled = "[GreaterThan_CFixedPoint('
+                          "CombatWindow.GetLeftCombatSide.GetSoftCasualties, '(CFixedPoint)0')]\"")
+        self.assertNotIn(casualty_gate, gui)
 
     def test_install_ck3_mod_registers_it_and_health_sees_it(self):
         source = self.root / 'mod_src' / 'cw2_ck3_mod'
@@ -198,17 +230,24 @@ class BridgeTests(unittest.TestCase):
 
     # ---- CK3 encounter and roll ----
 
-    def write_save(self, name='battle.ck3'):
+    def write_save(self, name='battle.ck3', commanders=False):
         """Plaintext CK3 save with the Kasr al-Kabir strengths and a smaller skirmish.
 
         Army 1001 is the player's own; 1002 belongs to someone else, as in the real fixture.
+        With `commanders`, battle 500's sides are led by characters 101 (named, skilled)
+        and 102 (no record in the save).
         """
         saves = self.root / 'saves'
         saves.mkdir(exist_ok=True)
+        leader = {1002: 101, 1001: 102} if commanders else {}
         side = lambda army, initial, fighting: (  # one scalar per line, as in real saves
-            f'{{\n\t\tarmies={{ {army} }}\n\t\tinitial_men={initial}\n\t\ttotal_fighting_men={fighting}\n\t}}')
+            f'{{\n\t\tarmies={{ {army} }}\n\t\tinitial_men={initial}\n\t\ttotal_fighting_men={fighting}'
+            + (f'\n\t\tcommander={leader[army]}' if army in leader else '') + '\n\t}')
+        living = (['living={', '\t10={ first_name="Nobody" skill={ 1 1 1 1 1 1 } }',
+                   '\t101={', '\t\tfirst_name="Ya\'qub"', '\t\tskill={ 8 21 5 7 6 16 }', '\t}', '}']
+                  if commanders else [])
         text = '\n'.join([
-            'meta_data={ meta_date=908.8.27 }', 'date=908.8.27',
+            'meta_data={ meta_date=908.8.27 }', 'date=908.8.27', *living,
             'currently_played_characters={ 59850 }',
             'armies={ regiments={ } army_regiments={ } armies={ } }',
             'units={', '\t2001={ type=army location=1 owner=77 army=1001 }',
@@ -236,6 +275,33 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(all(side['commander'] is None and side['knights'] == []
                             for side in picked['sides']))
         self.assertIn('not in', bridge.get_encounter(combat_id='999')['error'])
+
+    def test_encounter_skips_newer_binary_saves(self):
+        bridge, path = self.write_save()
+        exit_save = path.parent / 'autosave_exit.ck3'
+        exit_save.write_bytes(b'SAV010391c6b076000083aa\x00\x01binary')
+        os.utime(exit_save, (path.stat().st_mtime + 60,) * 2)  # CK3 writes it after the button's save
+        self.assertEqual(bridge.get_encounter()['save_name'], path.name)
+        path.unlink()
+        self.assertIn("binary format", bridge.get_encounter()['error'])
+
+    def test_encounter_names_commanders_and_the_season(self):
+        bridge, _ = self.write_save(commanders=True)
+        picked = bridge.get_encounter(combat_id='500')
+        self.assertEqual(picked['sides'][0]['commander'],
+                         {'id': '101', 'name': "Ya'qub", 'martial': 21, 'prowess': 16})
+        self.assertIsNone(picked['sides'][1]['commander'])  # 102 has no character record
+        self.assertEqual(picked['season'], 'Summer')  # 908.8.27
+        self.assertIsNone(picked['battle'])  # no CW2 button line in debug.log
+        roster = bridge.roll_roster(picked, seed=3)
+        self.assertEqual(roster['sides'][0]['commander']['name'], "Ya'qub")
+        self.assertEqual((roster['date'], roster['season']), ('908.8.27', 'Summer'))
+
+    def test_season_follows_the_month(self):
+        self.assertEqual([bridge_module._season(f'1066.{m}.1') for m in (12, 1, 3, 6, 9, 11)],
+                         ['Winter', 'Winter', 'Spring', 'Summer', 'Autumn', 'Autumn'])
+        self.assertIsNone(bridge_module._season(None))
+        self.assertIsNone(bridge_module._season('1066.13.1'))
 
     def test_encounter_without_saves_or_battles_explains(self):
         empty = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), saves=self.root)
@@ -467,6 +533,125 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(result['was_installed'])
         self.assertIsNone(result['run'])
 
+    # ---- options ledger ----
+
+    REPO_ROOT = HERE.parents[1]
+    SCHEMA = REPO_ROOT / 'schemas' / 'config.schema.json'
+    LEDGER_DEFAULTS = json.loads((REPO_ROOT / 'config' / 'cw2_config.json').read_text(encoding='utf-8'))
+
+    def write_ledger(self, doc=None):
+        (self.root / 'schemas').mkdir(exist_ok=True)
+        shutil.copy2(self.SCHEMA, self.root / 'schemas' / self.SCHEMA.name)
+        (self.root / 'config').mkdir(exist_ok=True)
+        (self.root / 'config' / 'cw2_config.json').write_text(
+            json.dumps(self.LEDGER_DEFAULTS if doc is None else doc), encoding='utf-8')
+
+    def test_health_and_get_config_report_the_ledger(self):
+        self.write_ledger()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertTrue(health['config']['valid'], health['config'])
+        self.assertEqual(health['config']['path'], str(self.root / 'config' / 'cw2_config.json'))
+        self.assertEqual(health['config']['sha256'], bridge.config_sha256)
+        result = bridge.get_config()
+        self.assertEqual(result['config']['show_mode'], 'dramatic')
+        self.assertTrue(result['slots_ok'])
+
+    def test_skin_defaults_to_ck3_and_survives_a_restart(self):
+        self.assertEqual(self.bridge.get_skin()['skin'], 'ck3')
+        self.assertEqual(self.bridge.set_skin('3k'), {'ok': True, 'skin': '3k'})
+        reloaded = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        self.assertEqual(reloaded.get_skin()['skin'], '3k')
+        self.assertIn('error', reloaded.set_skin('warhammer'))
+        self.assertEqual(reloaded.get_skin()['skin'], '3k')
+
+    def test_invalid_ledger_is_surfaced_not_fatal(self):
+        self.write_ledger({'show_mode': 'arcade'})
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertFalse(health['config']['valid'])
+        self.assertIn('show_mode', health['config']['error'])
+
+    def test_save_config_merges_patch_and_validates(self):
+        self.write_ledger()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        saved = bridge.save_config({'army_scale_factor': 2.0, 'domain_focus': 'shu'})
+        self.assertTrue(saved['ok'], saved)
+        self.assertEqual((saved['config']['army_scale_factor'], saved['config']['domain_focus']),
+                         (2.0, 'shu'))
+        self.assertEqual(saved['config']['show_mode'], 'dramatic')
+        bad = bridge.save_config({'army_scale_factor': 0})
+        self.assertIn('army_scale_factor', bad['error'])
+        on_disk = json.loads((self.root / 'config' / 'cw2_config.json').read_text(encoding='utf-8'))
+        self.assertEqual(on_disk['army_scale_factor'], 2.0)  # the rejected patch left no trace
+
+    def test_roll_roster_applies_army_scale_factor_from_the_ledger(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'army_scale_factor': 2.0})
+        bridge, _ = self.write_save()
+        encounter = bridge.get_encounter(combat_id='500')
+        roster = bridge.roll_roster(encounter, 1702901)
+        self.assertTrue(roster['ok'], roster)
+        self.assertEqual(roster['applied']['army_scale_factor'], 2.0)
+        self.assertEqual(roster['applied']['domain_focus'], 'custom')
+        self.assertGreater(roster['sides'][0]['men'], 600)  # 340 men at x2, under the 3K cap
+        self.assertIn('Army scale x2 applied', roster['note'])
+
+    def test_prepare_snapshots_the_ledger_into_the_run(self):
+        self.write_ledger()
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+
+        def fake_build(game, cli, output, roster=None):
+            output.mkdir(parents=True, exist_ok=True)
+            (output / 'run.json').write_text(json.dumps(
+                {'pack_sha256': 'x', 'expected_units': [], 'sides': []}))
+
+        def fake_install(game, output):
+            target = game / 'data' / probe.PACK_NAME
+            target.write_bytes(b'pack')
+            return target
+
+        with mock.patch.object(bridge_module.probe, 'build', fake_build), \
+                mock.patch.object(bridge_module.probe, 'install', fake_install):
+            result = bridge.prepare_and_install(self.ROSTER)
+        self.assertTrue(result['ok'], result)
+        snapshot = json.loads((Path(result['run']) / 'cw2_config.snapshot.json').read_text(
+            encoding='utf-8'))
+        self.assertEqual(snapshot['sha256'], bridge.config_sha256)
+        self.assertEqual(snapshot['config']['show_mode'], 'dramatic')
+
+    def test_screenshot_request_flag_lands_in_the_run_folder(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'enable_tw3k_screenshots': True})
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        run = self.root / 'run'
+        run.mkdir()
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), popen=FakePopen())
+        bridge.session.update(output=str(run), game=str(self.game))
+        self.assertTrue(bridge.launch_3k()['ok'])
+        self.assertTrue((run / 'screenshots_requested.flag').is_file())
+
+    def test_slots_violation_is_a_health_error_when_strict(self):
+        self.write_ledger()
+        (self.root / 'config' / 'slots.registry.json').write_text(json.dumps({'mappings': [
+            {'ck3_character_id': 1, 'slot': 'hero_1'},
+            {'ck3_character_id': 2, 'slot': 'hero_1'}]}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertFalse(health['config']['valid'])
+        self.assertIn('not injective', health['config']['error'])
+
+    def test_slots_violation_warns_when_not_strict(self):
+        self.write_ledger({**self.LEDGER_DEFAULTS, 'injectivity_strict': False})
+        (self.root / 'config' / 'slots.registry.json').write_text(json.dumps({'mappings': [
+            {'ck3_character_id': 1, 'slot': 'hero_1'},
+            {'ck3_character_id': 2, 'slot': 'hero_1'}]}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist())
+        health = bridge.get_health()
+        self.assertTrue(health['config']['valid'])
+        self.assertTrue(health['config']['slots_violations'])
+        self.assertFalse(bridge.get_config()['slots_ok'])
+
     # ---- write-back ----
 
     def test_writeback_is_off_and_writes_no_save(self):
@@ -492,6 +677,72 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual((self.game / 'used_mods_cw2.txt').read_text(encoding='utf-8'), f'mod "{probe.PACK_NAME}";\n')
         self.assertEqual((self.game / 'used_mods.txt').read_text(encoding='utf-8'), 'mod "someone_elses.pack";')
 
+    # ---- return to CK3 ----
+
+    def test_close_3k_is_a_noop_when_three_kingdoms_is_not_running(self):
+        kill = FakeTaskkill(FakeTasklist())
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': False, 'forced': False, 'note': 'not running'})
+        self.assertEqual(kill.calls, [])
+
+    def test_close_3k_shuts_the_game_down_gently(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': True, 'forced': False, 'note': 'closed gently'})
+        self.assertEqual(kill.calls, [['taskkill', '/IM', 'Three_Kingdoms.exe']])
+
+    def test_close_3k_forces_a_game_that_ignores_the_gentle_close(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist, force_needed=True)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertEqual(bridge.close_3k(timeout=0),
+                         {'ok': True, 'was_running': True, 'forced': True, 'note': 'closed forcefully'})
+        self.assertEqual(kill.calls, [['taskkill', '/IM', 'Three_Kingdoms.exe'],
+                                      ['taskkill', '/F', '/IM', 'Three_Kingdoms.exe']])
+
+    def test_close_3k_reports_a_game_that_refuses_to_die(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        kill = FakeTaskkill(tasklist, stubborn=['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill)
+        self.assertIn('refused to close', bridge.close_3k(timeout=0)['error'])
+        self.assertEqual(len(kill.calls), 2)  # gentle, then forced
+
+    def test_return_to_ck3_closes_three_kingdoms_then_starts_ck3(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist,
+                        taskkill=FakeTaskkill(tasklist))
+        with mock.patch('bridge.os.startfile') as start:
+            result = bridge.return_to_ck3()
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['was_running'])
+        start.assert_called_once_with(bridge_module.STEAM_CK3)
+
+    def test_return_to_ck3_never_starts_ck3_while_three_kingdoms_runs(self):
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist,
+                        taskkill=FakeTaskkill(tasklist, stubborn=['Three_Kingdoms.exe']))
+        with mock.patch('bridge.os.startfile') as start:
+            result = bridge.return_to_ck3()
+        self.assertIn('refused to close', result['error'])
+        start.assert_not_called()
+
+    def test_return_to_ck3_names_the_save_ck3_continues(self):
+        docs = self.root / 'ck3' / 'Crusader Kings III'
+        (docs / 'save games').mkdir(parents=True)
+        (docs / 'continue_game.json').write_text(json.dumps(
+            {'title': 'autosave_exit', 'desc': 'Playing as Count John-Matux of Liege',
+             'date': '2026-09-26 19:36:12'}))
+        bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(),
+                        saves=docs / 'save games')
+        with mock.patch('bridge.os.startfile'):
+            result = bridge.return_to_ck3()
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['was_running'])
+        self.assertEqual(result['continue']['desc'], 'Playing as Count John-Matux of Liege')
+
     def test_session_persists_between_launches(self):
         self.bridge.session.update(output=str(self.root / 'run'), game=str(self.game))
         self.bridge._save_session()
@@ -506,10 +757,22 @@ class BridgeTests(unittest.TestCase):
         for absent in ('MockBridge', 'simCk3', 'fonts.googleapis'):
             self.assertNotIn(absent, text, f'{absent} should not ship in the app UI')
 
-    def test_ui_preserves_tally_glyphs(self):
+    def test_ui_preserves_header_glyphs(self):
         text = INDEX.read_text(encoding='utf-8')
-        for glyph in (0x5DE6, 0x53F3, 0x5408):  # tally halves and the seal
+        for glyph in (0x5DE6, 0x6771, 0x5408):  # 3K brand mark, Three Kingdoms plaque, the seal
             self.assertIn(chr(glyph), text)
+
+    def test_ck3_localisation_has_the_utf8_bom(self):
+        # Without it CK3 skips the file ("Missing UTF8 BOM") and shows raw keys.
+        files = list((INDEX.parents[2] / 'mod' / 'cw2_ck3_mod' / 'localization').rglob('*.yml'))
+        self.assertTrue(files)
+        for path in files:
+            self.assertTrue(path.read_bytes().startswith(b'\xef\xbb\xbf'), path.name)
+
+    def test_ui_skin_art_ships_with_the_page(self):
+        text = INDEX.read_text(encoding='utf-8')
+        for ref in sorted(set(re.findall(r'url\("(skins/[^"]+)"\)', text))):
+            self.assertTrue((INDEX.parent / ref).is_file(), f'{ref} is referenced but missing')
 
 
 if __name__ == '__main__':

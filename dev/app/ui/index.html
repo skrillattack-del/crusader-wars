@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-skin="ck3">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,6 +15,7 @@
   --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --han:"Noto Serif SC", "Songti SC", "SimSun", serif;
   --r-s:4px; --r-m:10px;
+  --accent-dim:rgba(184,146,79,.18);
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -24,26 +25,35 @@ body{background:var(--patina-900);color:var(--bone);font:16px/1.5 var(--body);
 button{font:inherit;cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.45}
 
-/* ---------- header: the tally ---------- */
-.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;
-  padding:14px 24px;background:var(--patina-950);border-bottom:1px solid var(--line)}
+/* ---------- header: brand + the two game plaques ----------
+   The plaques pick the launcher look (data-skin on <html>) and still work as
+   the round-trip tally: they close one notch per finished step and the seal
+   lands between them once the round trip is done. */
+.top{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;
+  align-items:center;gap:24px;padding:14px 24px;background:var(--patina-950);border-bottom:1px solid var(--line)}
+.top>*{position:relative;z-index:1}
 .brand{font-family:var(--display);font-size:1.25rem;letter-spacing:.01em;margin:0;white-space:nowrap}
 .brand small{display:block;font-family:var(--body);font-size:.8rem;color:var(--bone-dim)}
-.tally{width:100%;max-width:340px;height:auto;justify-self:center;overflow:visible}
-.tally .half path{fill:url(#bronze);stroke:var(--bronze-lo);stroke-width:1.5}
-.tally .half{transition:transform .6s cubic-bezier(.3,.7,.2,1)}
-.tally-lbl{font:700 12px var(--body);fill:var(--patina-900)}
-.tally-han{font:700 18px var(--han);fill:var(--patina-900)}
-.seal{opacity:0;transform-origin:200px 32px;transform:scale(1.6) rotate(-8deg);
+.brand-mark{display:none}
+.plaques{position:relative;justify-self:center;display:flex;align-items:center;gap:6px}
+.plaque{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;
+  background:linear-gradient(#dcbb7a,#b8924f 55%,#8a6a36);color:var(--patina-900);font-weight:700;
+  border:1px solid var(--bronze-lo);border-radius:var(--r-s);padding:8px 16px;
+  transition:transform .6s cubic-bezier(.3,.7,.2,1),filter .18s,opacity .18s}
+.plaque[aria-pressed="false"]{opacity:.6;filter:saturate(.55)}
+.plaque:hover{opacity:1;filter:none}
+.plaque-mark{font:700 1.2rem/1 var(--han)}
+.seal{position:absolute;left:50%;top:50%;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;
+  display:grid;place-items:center;border-radius:4px;background:var(--cinnabar);border:1.5px solid #8e2019;
+  color:var(--bone);font:700 26px/1 var(--han);pointer-events:none;
+  opacity:0;transform:scale(1.6) rotate(-8deg);
   transition:opacity .25s ease-out .45s, transform .35s cubic-bezier(.2,1.4,.4,1) .45s}
-.seal rect{fill:var(--cinnabar);stroke:#8e2019;stroke-width:1.5}
-.seal text{font:700 26px var(--han);fill:var(--bone)}
 .seal.on{opacity:1;transform:scale(1) rotate(-4deg)}
 .stepline{font-size:.9rem;color:var(--bone-dim);text-align:right;white-space:nowrap}
 .stepline b{color:var(--bone);font-weight:700}
 
 /* ---------- body ---------- */
-.frame{display:grid;grid-template-columns:220px 1fr;min-height:0}
+.frame{display:grid;grid-template-columns:240px 1fr;min-height:0}
 .rail{border-right:1px solid var(--line);padding:20px 12px;background:var(--patina-900)}
 .rail ol{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .rail button{width:100%;display:grid;grid-template-columns:28px 1fr;align-items:center;gap:10px;
@@ -56,6 +66,7 @@ button:disabled{cursor:not-allowed;opacity:.45}
 .rail button[data-state="locked"]{opacity:.5}
 
 main{padding:28px 36px 40px;overflow:auto}
+main:focus{outline:none} /* focused by go() for screen readers, not keyboard travel */
 main h2{font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.15;margin:0 0 6px}
 .lede{color:var(--bone-dim);margin:0 0 24px;max-width:62ch}
 .panel{background:var(--patina-800);border:1px solid var(--line);border-radius:var(--r-m);padding:18px 20px}
@@ -167,13 +178,282 @@ details.more summary{cursor:pointer;margin-bottom:10px}
 .log{margin:0;padding:0 24px 14px;max-height:170px;overflow:auto;
   font:12.5px/1.6 Consolas, "Cascadia Mono", monospace;color:var(--bone-dim);white-space:pre-wrap}
 
-@media (max-width: 1060px){ .stepline{display:none} }
+/* ---- settings gear button ---- */
+.btn-gear{background:none;border:1.5px solid var(--bronze-lo);border-radius:var(--r-s);
+  color:var(--bone-dim);padding:7px 10px;display:grid;place-items:center;line-height:1;
+  font-size:1.05rem;transition:color .15s,border-color .15s}
+.btn-gear:hover:not(:disabled){color:var(--bronze-hi);border-color:var(--bronze-hi)}
+.btn-gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+
+/* ---- settings modal overlay ---- */
+.settings-overlay{position:fixed;inset:0;background:rgba(17,32,33,.78);backdrop-filter:blur(6px);
+  display:grid;place-items:center;z-index:9000;opacity:0;pointer-events:none;
+  transition:opacity .22s ease}
+.settings-overlay.open{opacity:1;pointer-events:all}
+.settings-modal{background:var(--patina-900);border:1px solid var(--line);border-radius:14px;
+  width:min(540px,93vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 24px 64px rgba(0,0,0,.7);transform:translateY(10px);transition:transform .22s ease}
+.settings-overlay.open .settings-modal{transform:translateY(0)}
+.settings-head{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.settings-head h2{font-family:var(--display);font-weight:400;font-size:1.35rem;margin:0}
+.settings-head p{font-size:.82rem;color:var(--bone-dim);margin:3px 0 0}
+.settings-close{background:none;border:none;color:var(--bone-dim);font-size:1.4rem;
+  padding:4px 8px;border-radius:var(--r-s);cursor:pointer;line-height:1}
+.settings-close:hover{color:var(--bone)}
+.settings-body{overflow-y:auto;padding:18px 22px;display:grid;gap:0}
+.sfield{display:grid;gap:6px;padding:14px 0;border-bottom:1px solid var(--line)}
+.sfield:last-child{border-bottom:0}
+.sfield-label{font-size:.9rem;font-weight:600;color:var(--bone)}
+.sfield-desc{font-size:.8rem;color:var(--bone-dim)}
+/* segmented choice */
+.seg-sm{display:flex;flex-wrap:wrap;gap:6px}
+.seg-sm button{background:var(--patina-800);border:1px solid var(--line);color:var(--bone-dim);
+  padding:6px 14px;border-radius:var(--r-s);font:inherit;font-size:.88rem;cursor:pointer;white-space:nowrap}
+.seg-sm button[aria-pressed="true"],.seg-sm-btn[aria-pressed="true"]{background:var(--accent-dim);border-color:var(--bronze);
+  color:var(--bronze-hi)}
+.seg-sm button:hover:not([aria-pressed="true"]),.seg-sm-btn:hover:not([aria-pressed="true"]){border-color:var(--bone-dim);color:var(--bone)}
+.seg-sm-btn{background:var(--patina-800);border:1px solid var(--line);color:var(--bone-dim);
+  padding:6px 14px;border-radius:var(--r-s);font:inherit;font-size:.88rem;cursor:pointer;white-space:nowrap}
+/* toggle chip */
+.toggle-row{display:flex;align-items:center;gap:12px}
+.toggle-chip{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-chip input{opacity:0;width:0;height:0;position:absolute}
+.toggle-chip .track{position:absolute;inset:0;border-radius:12px;background:var(--patina-800);
+  border:1.5px solid var(--line);transition:background .18s,border-color .18s}
+.toggle-chip input:checked+.track{background:var(--verdigris);border-color:var(--verdigris)}
+.toggle-chip .thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--bone-dim);transition:transform .18s,background .18s}
+.toggle-chip input:checked~.thumb{transform:translateX(20px);background:var(--patina-950)}
+/* number spinner */
+.num-row{display:flex;align-items:center;gap:10px}
+.num-row input[type=number]{background:var(--patina-800);color:var(--bone);border:1px solid var(--line);
+  border-radius:var(--r-s);padding:7px 10px;font:inherit;width:100px;font-variant-numeric:tabular-nums;
+  appearance:textfield}
+.num-row input[type=number]:focus{border-color:var(--bronze-hi);outline:none}
+/* settings footer */
+.settings-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:12px;
+  justify-content:flex-end;align-items:center}
+.settings-status{font-size:.82rem;color:var(--verdigris);flex:1}
+.settings-status.err{color:var(--cinnabar)}
+
+/* =====================================================================
+   Skins. Everything above is the shared layout; a skin re-points the
+   colour/font tokens and adds its artwork. Art in skins/ is cropped from
+   the concept mockups in "docs launcher gui/".
+   ===================================================================== */
+@font-face{font-family:"Cinzel";src:url("skins/ck3/cinzel.ttf") format("truetype");font-weight:400 900;font-display:swap}
+@font-face{font-family:"Crimson Text";src:url("skins/ck3/crimson-regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Crimson Text";src:url("skins/ck3/crimson-semibold.ttf") format("truetype");font-weight:600;font-display:swap}
+@font-face{font-family:"Crimson Text";src:url("skins/ck3/crimson-bold.ttf") format("truetype");font-weight:700;font-display:swap}
+:root{
+  --i-swords:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='14.5 17.5 3 6 3 3 6 3 17.5 14.5'/><line x1='13' x2='19' y1='19' y2='13'/><line x1='16' x2='20' y1='16' y2='20'/><line x1='19' x2='21' y1='21' y2='19'/><polyline points='14.5 6.5 18 3 21 3 21 6 17.5 9.5'/><line x1='5' x2='9' y1='14' y2='18'/><line x1='7' x2='4' y1='17' y2='20'/><line x1='3' x2='5' y1='19' y2='21'/></svg>");
+  --i-crown:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z'/><path d='M5 21h14'/></svg>");
+  --i-refresh:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'/><path d='M21 3v5h-5'/><path d='M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'/><path d='M8 16H3v5'/></svg>");
+  --i-list:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'/></svg>");
+  --brush:polygon(0 14%,4% 0,30% 6%,62% 0,96% 5%,100% 24%,97% 50%,100% 78%,95% 100%,60% 93%,28% 100%,3% 94%,0 70%,2% 42%);
+}
+
+/* ---------- Crusader Kings III: blue-black, gold frames, parchment, red brush ---------- */
+:root[data-skin="ck3"]{
+  --patina-950:#0a0e11; --patina-900:#0e1417; --patina-800:#151a1d; --patina-700:#1f2629;
+  --line:#3d3a31;
+  --verdigris:#79d57a; --bronze:#b8924f; --bronze-hi:#e2c57f; --bronze-lo:#7a6436;
+  --cinnabar:#9b221b; --cinnabar-hi:#b42c22;
+  --bone:#ece3cf; --bone-dim:#a7a292;
+  --display:"Cinzel", Georgia, serif;
+  --body:"Crimson Text", Georgia, "Times New Roman", serif;
+  --r-s:2px; --r-m:3px;
+  --frame:#6e5b36;
+  --ink:#1d130d; --ink-red:#7b1812;
+}
+:root[data-skin="ck3"] body{font-size:18px;background:radial-gradient(ellipse at 60% 40%,#131a1d,#0a0e11 75%)}
+:root[data-skin="ck3"] .top{min-height:112px;padding:16px 28px;border-bottom:3px double var(--frame);
+  background:linear-gradient(90deg,#0c1013,#12181b 50%,#171d1f)}
+:root[data-skin="ck3"] .top::after{content:"";position:absolute;top:0;right:0;bottom:0;width:300px;
+  background:url("skins/ck3/head-right.jpg") right center/cover no-repeat;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 45%);mask-image:linear-gradient(90deg,transparent,#000 45%)}
+:root[data-skin="ck3"] .brand-name{font:600 2.5rem/1 var(--display);color:#e6cf97;text-shadow:0 2px 3px #000;letter-spacing:.01em}
+:root[data-skin="ck3"] .brand-two{display:inline-block;width:46px;height:64px;margin:-18px 0 0 2px;vertical-align:-12px;
+  background:url("skins/ck3/two.jpg") center/contain no-repeat;color:transparent;overflow:hidden;
+  -webkit-mask-image:radial-gradient(closest-side,#000 72%,transparent);mask-image:radial-gradient(closest-side,#000 72%,transparent)}
+:root[data-skin="ck3"] .brand small{font:400 1.12rem var(--body);color:var(--bone);margin-top:6px}
+:root[data-skin="ck3"] .plaques::before{content:"";position:absolute;right:100%;top:-34px;bottom:-34px;width:150px;margin-right:4px;
+  background:url("skins/ck3/head-left.jpg") center/cover no-repeat;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 75%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 75%,transparent)}
+:root[data-skin="ck3"] .plaque{border:0;border-radius:0;padding:13px 34px;gap:12px;color:var(--ink);font:700 1.1rem var(--body);
+  background:linear-gradient(rgba(238,217,166,.72),rgba(194,158,96,.82)),url("skins/ck3/paper.jpg") center/300px;
+  clip-path:polygon(0 0,100% 0,95% 50%,100% 100%,0 100%,5% 50%);box-shadow:inset 0 0 0 2px rgba(92,62,26,.5)}
+:root[data-skin="ck3"] .plaque-mark{font-size:1.7rem;color:var(--ink)}
+:root[data-skin="ck3"] .plaque-mark.lion{width:28px;height:31px;background:url("skins/ck3/lion.jpg") center/cover;color:transparent;
+  overflow:hidden;mix-blend-mode:multiply}
+:root[data-skin="ck3"] .stepline{text-shadow:0 1px 3px #000}
+:root[data-skin="ck3"] .btn-gear{background:rgba(10,14,17,.7);border-color:var(--frame)}
+
+:root[data-skin="ck3"] .frame{border-inline:1px solid var(--frame);margin:0 8px}
+:root[data-skin="ck3"] .rail{position:relative;border-right:1px solid var(--frame);padding:26px 14px;
+  background:linear-gradient(#070d11 50%,rgba(7,13,17,0) 66%),url("skins/ck3/rail.jpg") center bottom/100% auto no-repeat,#070d11}
+:root[data-skin="ck3"] .rail ol{gap:8px}
+:root[data-skin="ck3"] .rail button{grid-template-columns:36px 1fr;gap:14px;font-size:1.28rem;white-space:nowrap;padding:9px 12px;border-radius:0;color:#b6b2a4}
+:root[data-skin="ck3"] .rail button .n{width:36px;height:36px;font-size:1.15rem;border:1.5px solid #5b5e5d;color:#b6b2a4}
+:root[data-skin="ck3"] .rail button[data-state="current"]{color:#fbf1d9;font-weight:600;
+  background:linear-gradient(90deg,#8e1d17,#ad281f 55%,rgba(173,40,31,.35) 85%,rgba(173,40,31,0));clip-path:var(--brush)}
+:root[data-skin="ck3"] .rail button[data-state="current"] .n{background:#1a130e;color:#f1dfb2;border:2px solid #d8b56c;
+  box-shadow:0 0 0 2px #1a130e,0 0 0 3px #8c6d38}
+:root[data-skin="ck3"] .rail button[data-state="done"] .n{border-color:#8c6d38;color:#e2c57f}
+
+:root[data-skin="ck3"] main{padding:30px 34px 40px}
+:root[data-skin="ck3"] main h2{font-size:2rem;color:#e6cf97}
+:root[data-skin="ck3"] .panel{position:relative;border-radius:0;border:1px solid var(--frame);
+  background:linear-gradient(#151a1d,#11161a);box-shadow:inset 0 0 0 3px #0e1417,inset 0 0 0 4px rgba(184,146,79,.28)}
+:root[data-skin="ck3"] .panel.art{padding:14px 30px 14px 42px;
+  background:linear-gradient(90deg,#141a1d 42%,rgba(20,26,29,.55) 70%,rgba(20,26,29,.1)),url("skins/ck3/panel.jpg") right center/auto 100% no-repeat,#141a1d}
+:root[data-skin="ck3"] .checklist li{gap:26px;padding:13px 0;font-size:1.25rem;border-bottom-color:rgba(184,146,79,.22)}
+:root[data-skin="ck3"] .checklist .dot{width:22px;height:22px}
+:root[data-skin="ck3"] .dot{background:radial-gradient(circle at 40% 35%,#b9f5b3,#58c75a 55%,#2f8a36);box-shadow:0 0 8px rgba(98,210,100,.55)}
+:root[data-skin="ck3"] .dot.bad{background:radial-gradient(circle at 40% 35%,#ffb3a6,#d8453a 55%,#8e1f18);box-shadow:0 0 8px rgba(216,69,58,.55)}
+:root[data-skin="ck3"] .dot.warn{background:radial-gradient(circle at 40% 35%,#ffe3a0,#d9a441 55%,#8a6420);box-shadow:0 0 8px rgba(217,164,65,.5)}
+
+:root[data-skin="ck3"] .panel.parchment{color:var(--ink);border:1px solid #5d4b2c;padding:24px 30px 26px;
+  background:radial-gradient(ellipse at center,rgba(240,228,203,.55),rgba(196,172,128,.6)),url("skins/ck3/paper.jpg") center/600px,#e0cfb4;
+  box-shadow:inset 0 0 22px rgba(92,64,28,.55),0 2px 8px rgba(0,0,0,.6)}
+:root[data-skin="ck3"] .panel.parchment::after{content:"";position:absolute;right:1px;bottom:1px;width:156px;height:min(62%,176px);
+  pointer-events:none;background:url("skins/ck3/parch.jpg") right bottom/cover no-repeat;
+  -webkit-mask-image:radial-gradient(ellipse at 100% 100%,#000 55%,transparent 80%);mask-image:radial-gradient(ellipse at 100% 100%,#000 55%,transparent 80%)}
+:root[data-skin="ck3"] .parchment .panel-title{display:flex;align-items:center;gap:18px;color:var(--ink-red);
+  font:700 2.05rem/1.1 var(--body);margin:0 0 16px;white-space:nowrap}
+:root[data-skin="ck3"] .parchment .panel-title::after{content:"";flex:1 1 auto;max-width:340px;min-width:40px;height:14px;
+  background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'><path d='M7 1 13 7 7 13 1 7Z' fill='%23d9bf8a' stroke='%23875f2c' stroke-width='1.5'/><path d='M7 4.5 9.5 7 7 9.5 4.5 7Z' fill='%23875f2c'/></svg>") 38% 50%/14px no-repeat,
+    linear-gradient(90deg,#875f2c,#b89160 40%,rgba(184,145,96,0)) center/100% 1.5px no-repeat}
+:root[data-skin="ck3"] .parchment .howto,:root[data-skin="ck3"] .howto.parchment{list-style:none;counter-reset:step;gap:18px;font-size:1.2rem;line-height:1.4}
+:root[data-skin="ck3"] .parchment .howto{padding:0 150px 0 0}
+:root[data-skin="ck3"] .howto.parchment{padding:24px 150px 26px 30px}
+:root[data-skin="ck3"] .parchment .howto li,:root[data-skin="ck3"] .howto.parchment li{counter-increment:step;position:relative;padding:6px 0 6px 66px;min-height:44px}
+:root[data-skin="ck3"] .parchment .howto li::before,:root[data-skin="ck3"] .howto.parchment li::before{content:counter(step);position:absolute;left:0;top:50%;transform:translateY(-50%) rotate(-4deg);
+  width:52px;height:40px;display:grid;place-items:center;color:#f7ead0;font:700 1.35rem var(--body);
+  background:radial-gradient(ellipse at 45% 45%,#a8261d,#7d1711 70%);clip-path:var(--brush)}
+:root[data-skin="ck3"] .parchment b{color:var(--ink-red)}
+:root[data-skin="ck3"] .parchment .muted{color:#5b4a36}
+
+:root[data-skin="ck3"] .actions{gap:18px}
+:root[data-skin="ck3"] .btn-primary,:root[data-skin="ck3"] .btn-quiet{display:inline-flex;align-items:center;justify-content:center;gap:14px}
+:root[data-skin="ck3"] .btn-primary{border:0;border-radius:0;padding:15px 40px;color:#f7ead0;font:600 1.45rem var(--body);
+  background:radial-gradient(ellipse at 50% 40%,#b0291f,#861b15 55%,#5f110d);clip-path:var(--brush);
+  box-shadow:inset 0 0 0 2px rgba(231,187,120,.45)}
+:root[data-skin="ck3"] .btn-primary:hover:not(:disabled){background:radial-gradient(ellipse at 50% 40%,#c83327,#9b221b 55%,#6d140f)}
+:root[data-skin="ck3"] .btn-quiet{border-radius:1px;border:1px solid #9a8158;color:var(--bone);padding:12px 30px;font:400 1.2rem var(--body);
+  background:rgba(8,12,14,.75);box-shadow:inset 0 0 0 2px #0a0e11,inset 0 0 0 3px rgba(154,129,88,.3)}
+:root[data-skin="ck3"] .btn-quiet:hover:not(:disabled){border-color:#e2c57f;color:#fff6e0}
+:root[data-skin="ck3"] .btn-sm{padding:6px 16px;font-size:1rem}
+:root[data-skin="ck3"] [data-action="toEncounter"].btn-primary::before,:root[data-skin="ck3"] [data-action="install"]::before,
+:root[data-skin="ck3"] [data-action="launchCk3"]::before,:root[data-skin="ck3"] [data-action="recheck"]::before{
+  content:"";width:1.3em;height:1.3em;flex-shrink:0;background:currentColor;
+  -webkit-mask:var(--i-swords) center/contain no-repeat;mask:var(--i-swords) center/contain no-repeat}
+:root[data-skin="ck3"] [data-action="toEncounter"].btn-primary::before{width:1.5em;height:1.5em}
+:root[data-skin="ck3"] [data-action="launchCk3"]::before{-webkit-mask-image:var(--i-crown);mask-image:var(--i-crown);color:#e2c57f;background:#e2c57f}
+:root[data-skin="ck3"] [data-action="recheck"]::before{-webkit-mask-image:var(--i-refresh);mask-image:var(--i-refresh)}
+
+:root[data-skin="ck3"] details.more{border:1px solid var(--frame);background:rgba(10,14,17,.8);padding:14px 22px;
+  box-shadow:inset 0 0 0 3px #0a0e11,inset 0 0 0 4px rgba(184,146,79,.2)}
+:root[data-skin="ck3"] details.more summary{margin:0;font-size:1.25rem;color:var(--bone)}
+:root[data-skin="ck3"] details.more[open] summary{margin-bottom:10px}
+:root[data-skin="ck3"] .drawer{border-top:3px double var(--frame);background:#0b1013;margin:0 8px}
+:root[data-skin="ck3"] .drawer summary{font-size:1.2rem;color:var(--bone);align-items:center}
+:root[data-skin="ck3"] .drawer summary>span{display:inline-flex;align-items:center;gap:14px}
+:root[data-skin="ck3"] .drawer summary>span::before{content:"";width:22px;height:22px;background:var(--bone-dim);
+  -webkit-mask:var(--i-list) center/contain no-repeat;mask:var(--i-list) center/contain no-repeat}
+:root[data-skin="ck3"] .settings-overlay{background:rgba(6,9,11,.8)}
+:root[data-skin="ck3"] .settings-modal{border-radius:2px;border-color:var(--frame)}
+
+/* ---------- Three Kingdoms: dark teal, gold line frames, dragons, red lacquer ---------- */
+:root[data-skin="3k"]{
+  --patina-950:#0f2025; --patina-900:#13282d; --patina-800:#1a3236; --patina-700:#21404a;
+  --line:#2f5454;
+  --verdigris:#8fdcc6; --bronze:#c9a45a; --bronze-hi:#f2c75c; --bronze-lo:#8a6d35;
+  --cinnabar:#7a2a1d; --cinnabar-hi:#933424;
+  --bone:#f4eedf; --bone-dim:#b7d1c8;
+  --display:Georgia, "Times New Roman", serif;
+  --body:"Segoe UI", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --r-s:6px; --r-m:4px;
+  --gold-line:#c9a45a;
+}
+:root[data-skin="3k"] body{font-size:17px}
+:root[data-skin="3k"] .top{min-height:104px;padding:16px 28px;border-bottom:1px solid #2c4146;
+  background:linear-gradient(100deg,#111314 40%,#3a1510 58%,#6d2418 76%,#7a2a1d)}
+:root[data-skin="3k"] .top::after{content:"";position:absolute;top:0;right:0;bottom:0;width:40%;
+  background:url("skins/3k/head.jpg") right center/auto 100% repeat-x;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 40%);mask-image:linear-gradient(90deg,transparent,#000 40%)}
+:root[data-skin="3k"] .brand{display:grid;grid-template-columns:auto auto;column-gap:16px;align-items:center;justify-content:start}
+:root[data-skin="3k"] .brand-mark{display:block;grid-row:1/3;font:700 2.6rem/1 var(--han);color:var(--bronze-hi)}
+:root[data-skin="3k"] .brand-name{font:700 1.7rem/1.1 var(--body);text-transform:uppercase;color:var(--bronze-hi);letter-spacing:.02em}
+:root[data-skin="3k"] .brand small{grid-column:2;font-size:1.02rem;color:var(--bone-dim);margin-top:4px}
+:root[data-skin="3k"] .plaques{gap:22px}
+:root[data-skin="3k"] .plaque{border:2px solid #e3c580;border-radius:999px;padding:11px 34px;font:700 1.05rem var(--body);
+  color:#2e2210;background:linear-gradient(#f0d58d,#d6ad5c 60%,#b88a3e);box-shadow:0 2px 6px rgba(0,0,0,.45)}
+:root[data-skin="3k"] .plaque[aria-pressed="true"]{color:#fff4dc;
+  background:linear-gradient(rgba(150,48,30,.72),rgba(104,32,20,.85)),url("skins/3k/head.jpg") center/150px}
+:root[data-skin="3k"] .plaque[aria-pressed="false"]{opacity:.9;filter:none}
+:root[data-skin="3k"] .plaque-mark{display:none}
+:root[data-skin="3k"] .btn-gear{background:rgba(15,32,37,.7);border-color:#e3c580;color:#f4eedf}
+
+:root[data-skin="3k"] .frame{position:relative;background:linear-gradient(#13282d,#0e2024)}
+:root[data-skin="3k"] .frame::after{content:"";position:absolute;right:0;bottom:0;width:340px;height:235px;pointer-events:none;
+  background:url("skins/3k/dragon.jpg") center/cover no-repeat;opacity:.9;
+  -webkit-mask-image:radial-gradient(ellipse at 62% 55%,#000 62%,transparent 90%);mask-image:radial-gradient(ellipse at 62% 55%,#000 62%,transparent 90%)}
+:root[data-skin="3k"] main{position:relative;z-index:1}
+:root[data-skin="3k"] .rail{background:#15282e;border-right:1px solid #2c4a4f;padding:26px 16px}
+:root[data-skin="3k"] .rail ol{gap:10px}
+:root[data-skin="3k"] .rail button{white-space:nowrap;grid-template-columns:36px 1fr;gap:14px;font-size:1.2rem;font-weight:600;color:#cfe6de;padding:10px 12px}
+:root[data-skin="3k"] .rail button .n{width:36px;height:36px;font-size:1.05rem;border:1.5px solid #9fcfc2;color:#cfe6de}
+:root[data-skin="3k"] .rail button[data-state="current"]{color:#fff1d8;background:linear-gradient(#7a2c23,#5c1f19);
+  box-shadow:inset 0 0 0 1px #9a3f33}
+:root[data-skin="3k"] .rail button[data-state="current"] .n{background:transparent;border:2px solid #f0c7a8;color:#fff1d8;
+  box-shadow:0 0 0 2px #b6452f}
+:root[data-skin="3k"] .rail button[data-state="done"] .n{border-color:var(--verdigris);color:var(--verdigris)}
+
+:root[data-skin="3k"] main h2{font-weight:700;color:var(--bronze-hi)}
+:root[data-skin="3k"] .panel{position:relative;border-radius:0;border:1px solid var(--gold-line);background:#1a3236;
+  box-shadow:inset 0 0 0 4px #1a3236,inset 0 0 0 5px rgba(201,164,90,.5)}
+:root[data-skin="3k"] .panel.art,:root[data-skin="3k"] .panel.parchment{padding:18px 30px 20px 84px}
+:root[data-skin="3k"] .panel.art{background:url("skins/3k/panel.jpg") right bottom/auto 100% no-repeat,#1a3236}
+:root[data-skin="3k"] .panel.art::before,:root[data-skin="3k"] .panel.parchment::before{content:"";position:absolute;left:1px;top:1px;
+  width:72px;height:88px;background:url("skins/3k/corner.jpg") left top/cover no-repeat}
+:root[data-skin="3k"] .checklist li{padding:12px 0;font-size:1.2rem;font-weight:600;border-bottom:0}
+:root[data-skin="3k"] .checklist .dot{width:16px;height:16px}
+:root[data-skin="3k"] .dot{background:var(--verdigris);box-shadow:0 0 6px rgba(143,220,198,.45)}
+:root[data-skin="3k"] .dot.bad{background:#e0634f;box-shadow:0 0 6px rgba(224,99,79,.5)}
+:root[data-skin="3k"] .dot.warn{background:var(--bronze-hi)}
+:root[data-skin="3k"] .parchment .panel-title{font:700 1.6rem var(--display);color:var(--bronze-hi);margin:4px 0 12px}
+:root[data-skin="3k"] .howto{font-size:1.15rem;font-weight:600;line-height:1.45}
+:root[data-skin="3k"] .howto b{color:var(--bronze-hi)}
+:root[data-skin="3k"] .howto.parchment{padding-left:104px}
+
+:root[data-skin="3k"] .btn-primary{border:2px solid #e0b863;border-radius:6px;padding:12px 28px;color:var(--bronze-hi);font-size:1.2rem;
+  background:linear-gradient(rgba(142,52,34,.82),rgba(100,32,22,.92)),url("skins/3k/head.jpg") center/140px}
+:root[data-skin="3k"] .btn-primary:hover:not(:disabled){background:linear-gradient(rgba(166,62,40,.85),rgba(118,38,26,.92)),url("skins/3k/head.jpg") center/140px}
+:root[data-skin="3k"] .btn-quiet{border:2px solid #e8d59a;border-radius:6px;color:var(--bone);background:#10262b;padding:11px 26px;font-size:1.15rem}
+:root[data-skin="3k"] .btn-quiet:hover:not(:disabled){border-color:var(--bronze-hi);color:#fff}
+:root[data-skin="3k"] .btn-sm{padding:5px 14px;font-size:.95rem}
+:root[data-skin="3k"] details.more summary{font-size:1.2rem;color:var(--bone-dim)}
+:root[data-skin="3k"] .drawer{background:#111f22;border-top:1px solid #2c4146}
+:root[data-skin="3k"] .drawer summary{font-size:1.1rem;color:var(--bone)}
+:root[data-skin="3k"] .settings-modal{border-color:var(--gold-line);border-radius:4px}
+
+@media (max-width: 1060px){
+  .stepline{display:none}
+  :root[data-skin="ck3"] .plaques::before{display:none}
+  :root[data-skin="ck3"] .brand-name{font-size:2.05rem}
+  :root[data-skin="ck3"] .plaque,:root[data-skin="3k"] .plaque{padding-inline:22px}
+}
 @media (max-width: 860px){
   .seg{grid-template-columns:1fr}
   .top{grid-template-columns:1fr;gap:10px}
   .stepline{text-align:left}
-  .frame{grid-template-columns:1fr}
+  .frame{grid-template-columns:minmax(0,1fr)}
   .rail{border-right:0;border-bottom:1px solid var(--line);padding:10px}
+  .btn-gear{justify-self:start}
+  :root[data-skin="ck3"] .rail{background:#070d11;border-right:0;border-bottom:1px solid var(--frame)}
   .rail ol{grid-auto-flow:column;overflow-x:auto}
   .rail button{grid-template-columns:28px auto;white-space:nowrap}
   main{padding:20px}
@@ -190,32 +470,41 @@ details.more summary{cursor:pointer;margin-bottom:10px}
 <body>
 
 <header class="top">
-  <h1 class="brand">Crusader Wars 2<small>CK3 battles, fought in Three Kingdoms</small></h1>
-  <svg class="tally" viewBox="0 0 400 64" role="img" aria-labelledby="tallyTitle tallyDesc">
-    <title id="tallyTitle">Round-trip tally</title>
-    <desc id="tallyDesc">The two halves close as each step finishes and are sealed when the result save is installed in CK3.</desc>
-    <defs>
-      <linearGradient id="bronze" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#dcbb7a"/><stop offset=".55" stop-color="#b8924f"/><stop offset="1" stop-color="#8a6a36"/>
-      </linearGradient>
-    </defs>
-    <g id="halfL" class="half">
-      <path d="M20,8 H190 L200,18 L190,28 L200,38 L190,48 L200,56 H20 Q8,56 8,44 V20 Q8,8 20,8 Z"/>
-      <text x="22" y="39" class="tally-han">左</text>
-      <text x="50" y="37" class="tally-lbl">Crusader Kings III</text>
-    </g>
-    <g id="halfR" class="half">
-      <path d="M190,8 H380 Q392,8 392,20 V44 Q392,56 380,56 H200 L190,48 L200,38 L190,28 L200,18 Z"/>
-      <text x="378" y="39" class="tally-han" text-anchor="end">右</text>
-      <text x="350" y="37" class="tally-lbl" text-anchor="end">Three Kingdoms</text>
-    </g>
-    <g id="seal" class="seal" aria-hidden="true">
-      <rect x="178" y="10" width="44" height="44" rx="4"/>
-      <text x="200" y="42" text-anchor="middle">合</text>
-    </g>
-  </svg>
+  <h1 class="brand"><span class="brand-mark" aria-hidden="true">左</span><span class="brand-name">Crusader Wars <span class="brand-two">2</span></span><small>CK3 battles, fought in Three Kingdoms</small></h1>
+  <div class="plaques" role="group" aria-label="Launcher look">
+    <button class="plaque" id="halfL" data-action="setSkin" data-skin="ck3" aria-pressed="true"
+      title="Crusader Kings III look"><span class="plaque-mark lion" aria-hidden="true">獅</span>Crusader Kings III</button>
+    <button class="plaque" id="halfR" data-action="setSkin" data-skin="3k" aria-pressed="false"
+      title="Three Kingdoms look"><span class="plaque-mark" aria-hidden="true">東</span>Three Kingdoms</button>
+    <span class="seal" id="seal" aria-hidden="true">合</span>
+  </div>
   <p class="stepline" id="stepline" aria-live="polite"></p>
+  <button class="btn-gear" id="btn-settings" data-action="openSettings" aria-label="Options" title="Options (⚙)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
 </header>
+
+<!-- Settings overlay (JS populates #settings-root) -->
+<div class="settings-overlay" id="settings-overlay" role="dialog" aria-modal="true" aria-label="Options">
+  <div class="settings-modal">
+    <div class="settings-head">
+      <div>
+        <h2>Options</h2>
+        <p>Saved to <code>config/cw2_config.json</code> · rejected keys are blocked by the schema</p>
+      </div>
+      <button class="settings-close" id="settings-close" data-action="closeSettings" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-body" id="settings-body">Loading…</div>
+    <div class="settings-foot">
+      <span class="settings-status" id="settings-status"></span>
+      <button class="btn-quiet" id="settings-cancel" data-action="closeSettings">Cancel</button>
+      <button class="btn-primary" id="settings-save" data-action="saveSettings">Save</button>
+    </div>
+  </div>
+</div>
 
 <div class="frame">
   <nav class="rail" aria-label="Round-trip steps"><ol id="rail"></ol></nav>
@@ -250,6 +539,9 @@ function friendly(m){
   if(/No runtime log/.test(m)) return "No battle has been fought with this pack yet. Finish the battle in Three Kingdoms, then try again.";
   if(/exactly one start/.test(m)) return "This battle was restarted or replayed, so its result can't be used. Send the armies again and fight it once.";
   if(/undetermined/.test(m)) return "Neither side fully broke, so there's no winner yet. Fight until one army routs.";
+  if(/Loaded roster differs/.test(m)) return "Three Kingdoms loaded different units than expected. This usually means it was already running when the armies were sent. Close Three Kingdoms, go back to step 3, press \"Send to Three Kingdoms\" again, then re-launch.";
+  if(/refused to close/.test(m)) return "Three Kingdoms refused to close. Please close it manually before continuing.";
+  if(/already running/.test(m)) return "Three Kingdoms is already running. Close it first so it picks up the new battle pack.";
   if(/Close Three Kingdoms/.test(m)) return "Close Three Kingdoms first, then try again.";
   if(/No \.ck3 saves/.test(m)) return "No CK3 saves found yet. In CK3, open a battle and press the crossed swords (or save by hand), then try again.";
   if(/no battle in progress/.test(m)) return "Your latest save has no battle in progress. Save while your armies are fighting.";
@@ -267,7 +559,8 @@ const STEPS=[
 ];
 const S={view:0, reached:0, sealed:false, busy:false, mode:"records", cw1Hint:false,
   health:null, enc:null, roster:null, install:[], installed:false,
-  launched:false, removed:false, result:null, error:null};
+  launched:false, removed:false, result:null, error:null, packMismatch:false, returnedToCk3:false, ck3Continue:null,
+  config:null, configPath:null, configSha:null};
 
 function log(msg){const el=document.getElementById("log");
   el.textContent+=`[${new Date().toLocaleTimeString("en-CA",{hour12:false})}] ${msg}\n`;el.scrollTop=el.scrollHeight;}
@@ -279,6 +572,13 @@ function setTally(){
   document.getElementById("halfR").style.transform=`translateX(${g}px)`;
   document.getElementById("seal").classList.toggle("on",S.sealed);
   document.getElementById("stepline").innerHTML=`Step <b>${S.view+1}</b> of 5: ${STEPS[S.view].title}`;
+}
+
+/* launcher look: the header plaques switch it; the bridge remembers it */
+function applySkin(skin){
+  document.documentElement.dataset.skin=skin;
+  for(const id of ["halfL","halfR"]){const b=document.getElementById(id);
+    b.setAttribute("aria-pressed",String(b.dataset.skin===skin));}
 }
 
 function renderRail(){
@@ -293,7 +593,23 @@ function render(){
   renderRail(); setTally();
   document.getElementById("main").innerHTML=V[STEPS[S.view].id]();
 }
-function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render(); document.getElementById("main").focus();}
+function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render(); document.getElementById("main").focus(); armResultWatch();}
+
+/* auto_battle_report: on the Fight step, poll the 3K battle log and advance by
+   ourselves; off (or no ledger), the player presses Get the result. */
+let resultTimer=null;
+function armResultWatch(){
+  clearInterval(resultTimer); resultTimer=null;
+  if(STEPS[S.view].id!=="battle"||!S.config||S.config.auto_battle_report!==true) return;
+  resultTimer=setInterval(pollResult,4000);
+}
+async function pollResult(){
+  if(S.busy||STEPS[S.view].id!=="battle") return;
+  try{const r=await call("read_result"); S.result=r;
+    log(`result arrived on its own: outcome=${r.player_outcome}`);
+    go(4);}
+  catch(e){/* the battle is still running; stay on the Fight step */}
+}
 const errorBox=()=>S.error?`<p class="notice" role="alert" style="margin-top:16px">${esc(S.error)}</p>`:"";
 const check=(state,text,fix="")=>`<li><span class="dot ${state}" aria-label="${state==="bad"?"Needs fixing":state==="warn"?"Warning":"Ready"}"></span><span>${text}</span>${fix}</li>`;
 
@@ -320,10 +636,11 @@ const V={
       check(ok("rpfm_cli")?"":"bad", ok("rpfm_cli")?"The battle pack builder is ready":"The battle pack builder (RPFM) is missing")];
     return `<h2>Get ready</h2>
     <p class="lede">Fight your Crusader Kings III battles in Three Kingdoms. Check the list, then start a battle in CK3.</p>
-    <ul class="panel checklist">${items.join("")}</ul>
+    <ul class="panel checklist art">${items.join("")}</ul>
+    ${h.config&&!h.config.valid?`<p class="notice" role="alert" style="margin-top:16px">The options ledger is invalid: ${esc(h.config.error||"unknown error")}. Defaults are in use.</p>`:""}
     ${S.cw1Hint?`<p class="notice ok" style="margin-top:16px">Steam is opening Crusader Wars 1's Workshop page. Click <b>Unsubscribe</b> there, then press Check again.</p>`:""}
     ${h.tk_running?`<p class="notice" style="margin-top:16px">Three Kingdoms is running. Close it before sending a battle.</p>`:""}
-    <section class="panel" style="margin-top:16px"><h3 class="panel-title">How a battle starts</h3>
+    <section class="panel parchment" style="margin-top:16px"><h3 class="panel-title">How a battle starts</h3>
       <ol class="howto">
         <li>Get every line above ready. <b>Add to playset</b> puts the CW2 mod last in your active playset for you.</li>
         <li>Play CK3. When your armies meet, open the battle and press the <b>crossed swords</b>. The game pauses and saves.</li>
@@ -337,7 +654,10 @@ const V={
     </div>
     <details class="more"><summary>File locations</summary>
       <div class="paths">${h.paths.map(p=>`<div class="pathrow"><span class="dot ${p.ok?"":"bad"}"></span>
-        <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}</div>
+        <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}
+      ${S.config?`<div class="pathrow"><span class="dot"></span><span>Options ledger</span>
+        <code title="${esc(S.configPath||"")}">${esc(`show_mode ${S.config.show_mode} · scale ×${S.config.army_scale_factor} · domain ${S.config.domain_focus} · auto-report ${S.config.auto_battle_report?"on":"off"}`)}</code></div>`:""}
+      </div>
     </details>`;
   },
   enc(){
@@ -386,6 +706,7 @@ const V={
       `<button data-action="setMode" data-mode="${m}" aria-pressed="${S.mode===m}" ${S.installed||S.busy?"disabled":""}><b>${t}</b><small>${d}</small></button>`).join("")}</div>
     <div class="cols">${col(r.sides[0])}${col(r.sides[1])}</div>
     <p class="muted" style="margin-top:14px">${esc(r.note)}</p>
+    ${r.applied?`<p class="muted" style="margin-top:8px">Options ledger: army scale ×${r.applied.army_scale_factor}, domain ${esc(r.applied.domain_focus)}.</p>`:""}
     ${prog}
     ${packOk?"":`<p class="notice" style="margin-top:16px">Three Kingdoms or the battle pack builder is missing. Check the first step.</p>`}
     ${errorBox()}
@@ -398,16 +719,19 @@ const V={
     <details class="more"><summary>Roll details</summary><p class="muted">Seed <code>${r.seed}</code>, mode ${esc(r.mode||S.mode)}.</p></details>`;
   },
   battle(){
+    const packWarn=S.packMismatch?`<p class="notice" role="alert" style="margin-top:16px">The installed battle pack doesn't match this run. <button class="btn-quiet btn-sm" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button></p>`:"";
     return `<h2>Fight in Three Kingdoms</h2>
     <p class="lede">The battle is ready. Follow these steps, then come back for the result.</p>
-    <ol class="howto panel">
+    <ol class="howto panel parchment">
       <li>${S.launched?"Three Kingdoms is starting with only the <b>crusader_wars_2</b> battle pack on.":`<button class="btn-quiet btn-sm" data-action="launch">Launch Three Kingdoms</button>`}</li>
-      <li>Three Kingdoms opens the battle by itself. If it stops at a menu: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
+      <li>Three Kingdoms opens the <b>CRUSADER WARS II</b> lobby by itself (also under <b>Battle</b> in its main menu). Check both armies and press <b>FIGHT</b>. If the lobby doesn't appear: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
       <li>Fight until one army breaks. Stay on the results screen for a few seconds, and don't press Rematch.</li>
     </ol>
+    ${packWarn}
     ${errorBox()}
     <div class="actions">
       <button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Get the result</button>
+      ${S.error&&/roster differs|already running/i.test(S.error)?`<button class="btn-quiet" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button>`:""}
     </div>`;
   },
   result(){
@@ -415,29 +739,103 @@ const V={
     if(!r) return `<h2>Result</h2><p class="lede">No result yet.</p>
       <div class="actions"><button class="btn-primary" data-action="toBattle">Back to the fight</button></div>`;
     const won=r.player_outcome==="victory";
+    const mode=S.config?S.config.show_mode:"tactical";
+    const battle=r.battle||"the battle";
+    const sub=mode==="dramatic"
+      ?`${won?`Your side held the field at ${battle}.`:`Your side broke at ${battle}.`}`
+      :(won?"Your side held the field.":"Your side broke first.");
+    if(mode==="minimal")
+      return `<h2>Result</h2>
+      <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${esc(sub)}</small></p>
+      <p class="muted">${r.sides.map(s=>`${esc(s.role)}: ${fmt(s.men)} fought, ${fmt(s.lost)} lost.`).join(" ")}</p>
+      <p class="muted">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
+      ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+      ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
+      ${errorBox()}
+      <div class="actions">
+        <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+        <button class="btn-quiet" data-action="restart">Fight another battle</button>
+        ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
+      </div>`;
     const rows=r.sides.map((s,i)=>`<tr><td>${esc(s.role)}${i===r.player_side?" (you)":""}${r.winner===i?" · won":""}</td>
       <td class="num">${fmt(s.men)}</td><td class="num">${fmt(s.lost)}</td><td class="num">${fmt(s.men-s.lost)}</td></tr>`).join("");
     return `<h2>Result</h2>
-    <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${won?"Your side held the field.":"Your side broke first."}</small></p>
+    <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${esc(sub)}</small></p>
     <div class="panel"><table>
       <thead><tr><th>Side</th><th class="num">Fought</th><th class="num">Lost</th><th class="num">Left</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
     <p class="muted" style="margin-top:14px">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
     ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+    ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
     ${errorBox()}
     <div class="actions">
-      <button class="btn-primary" data-action="restart">Fight another battle</button>
+      <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+      <button class="btn-quiet" data-action="restart">Fight another battle</button>
       ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
     </div>`;
   }
 };
 
-/* ---- actions ---- */
+/* ---- options panel: edits the ledger through bridge.get_config/save_config ----
+   One row per ledger key; cut_3d_voice is formally UNDEFINED (canon, turn-2 §4)
+   and deliberately has no row. */
+const OPT_FIELDS=[
+  {key:"show_mode", label:"Presentation", kind:"seg", options:["dramatic","tactical","minimal"],
+   desc:"How the result reads: dramatic adds the CK3 battle name, tactical shows the full table, minimal one line."},
+  {key:"army_scale_factor", label:"Army scale", kind:"number",
+   desc:"Multiplies both CK3 armies before staging; Three Kingdoms army caps still apply. Above 0, up to 10."},
+  {key:"domain_focus", label:"Domain", kind:"seg", options:["wei","shu","wu","custom"],
+   desc:"Faction focus for unit rolls: the other factions' unique units drop out. Custom keeps the whole pool."},
+  {key:"auto_battle_report", label:"Automatic battle report", kind:"toggle",
+   desc:"After the fight, advance to the result by yourself instead of waiting for the button."},
+  {key:"enable_tw3k_screenshots", label:"Three Kingdoms screenshots", kind:"toggle",
+   desc:"Request battle screenshots into the run folder. Only the request is recorded today; no capture backend yet."},
+  {key:"injectivity_strict", label:"Strict unit mapping", kind:"toggle",
+   desc:"Treat a non-injective config/slots.registry.json as an error instead of a warning."},
+];
+let settingsDraft=null;
+
+function settingsOverlay(){return document.getElementById("settings-overlay");}
+
+function setSettingsStatus(message, isErr){
+  const el=document.getElementById("settings-status");
+  el.textContent=message||"";
+  el.classList.toggle("err", !!isErr);
+}
+
+/* Read the free-form controls (number, toggles) into the draft; segmented
+   buttons write the draft directly. */
+function collectSettings(){
+  if(!settingsDraft) return;
+  const num=document.getElementById("set-army_scale_factor");
+  if(num){
+    const raw=String(num.value).trim();
+    settingsDraft.army_scale_factor=raw===""?null:Number(raw);
+  }
+  for(const f of OPT_FIELDS) if(f.kind==="toggle")
+    settingsDraft[f.key]=!!document.getElementById("set-"+f.key).checked;
+}
+
+function renderSettingsBody(){
+  document.getElementById("settings-body").innerHTML=OPT_FIELDS.map(f=>{
+    const v=settingsDraft[f.key];
+    const control=f.kind==="seg"
+      ?`<div class="seg-sm">${f.options.map(o=>
+          `<button data-action="optSeg" data-key="${f.key}" data-value="${o}" aria-pressed="${v===o}">${o}</button>`).join("")}</div>`
+      :f.kind==="number"
+      ?`<div class="num-row"><input id="set-${f.key}" type="number" min="0.1" max="10" step="0.1" value="${v}"></div>`
+      :`<div class="toggle-row"><span class="toggle-chip"><input id="set-${f.key}" type="checkbox" ${v?"checked":""}><span class="track"></span><span class="thumb"></span></span></div>`;
+    return `<div class="sfield"><span class="sfield-label">${f.label}</span>${control}<span class="sfield-desc">${f.desc}</span></div>`;
+  }).join("");
+}
+
 window.cw2.on("install",p=>{S.install[p.index]={label:p.label,status:p.status}; if(STEPS[S.view].id==="roster") render();});
 
 const A={
   async recheck(){S.error=null;
     try{S.health=await call("get_health");
+      const c=await call("get_config");
+      S.config=c.config; S.configPath=c.path; S.configSha=c.sha256;
       log(`checked: ck3_mod=${S.health.ck3_mod} cw1=${S.health.cw1_installed} pack_ready=${S.health.gates.probe}`);}
     catch(e){S.error=fail(e);} render();},
   async installMod(){S.busy=true; S.error=null; render();
@@ -456,6 +854,37 @@ const A={
   async launchCk3(){
     try{await call("launch_ck3"); log("CK3 launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
+  async openSettings(){
+    setSettingsStatus("", false);
+    try{
+      const r=await call("get_config");
+      if(!r.config||!Object.keys(r.config).length){
+        settingsDraft=null;
+        document.getElementById("settings-body").innerHTML=
+          `<p class="notice" role="alert">The options ledger is not available (${esc(r.path||"not found")}). Fix it on disk and press Check again.</p>`;
+      }else{
+        settingsDraft=Object.fromEntries(OPT_FIELDS.map(f=>[f.key, r.config[f.key]]));
+        renderSettingsBody();
+      }
+      settingsOverlay().classList.add("open");
+      log(`options opened (ledger: ${r.path})`);
+    }catch(e){S.error=fail(e); render();}
+  },
+  closeSettings(){settingsOverlay().classList.remove("open");},
+  async setSkin(b){applySkin(b.dataset.skin);
+    try{await call("set_skin",b.dataset.skin); log(`look: ${b.dataset.skin}`);}
+    catch(e){log(`look not saved: ${err(e)}`);}},
+  async saveSettings(){
+    if(!settingsDraft) return;
+    collectSettings();
+    try{
+      const r=await call("save_config", settingsDraft);
+      S.config=r.config; S.configPath=r.path; S.configSha=r.sha256;
+      log(`options saved: sha256=${r.sha256}`);
+      A.closeSettings(); render(); armResultWatch();
+    }catch(e){setSettingsStatus(err(e), true);}
+  },
+  optSeg(b){collectSettings(); settingsDraft[b.dataset.key]=b.dataset.value; renderSettingsBody();},
   async toEncounter(_,save=null){go(1); S.enc=null; S.roster=null; render();
     try{S.enc=await call("get_encounter",save); log(`CK3 save ${S.enc.save_name}: battle ${S.enc.combat_id} of ${S.enc.battles.length}`);}
     catch(e){S.error=fail(e);} render();},
@@ -474,7 +903,10 @@ const A={
       log(`installed ${r.pack} sha256=${r.sha256}`); log(`run folder: ${r.run}`);}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async toBattle(){go(3);},
+  async toBattle(){S.packMismatch=false;
+    try{const v=await call("verify_pack"); if(v.match===false){S.packMismatch=true; log(`pack check: ${v.reason}`);}
+    }catch(e){log(`pack check skipped: ${err(e)}`);}
+    go(3);},
   async launch(){
     try{await call("launch_3k"); S.launched=true; log("3K launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
@@ -484,21 +916,38 @@ const A={
       S.busy=false; go(4); return;}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
+  async returnCk3(){S.busy=true;S.error=null;render();
+    try{const r=await call("return_to_ck3"); S.returnedToCk3=true; S.ck3Continue=r.continue||null;
+      log(`returned to CK3: ${r.note}${S.ck3Continue&&S.ck3Continue.desc?` — continue "${S.ck3Continue.desc}"`:""}`);}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();},
   async removeProbe(){S.busy=true;S.error=null;render();
     try{const r=await call("remove_probe"); S.removed=true;
       log(`removed ${r.removed}${r.run?" (run: "+r.run+")":""}`);
       await A.recheck();}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async restart(){Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
-      install:[],installed:false,launched:false,removed:false,result:null,error:null});
+  async restart(){clearInterval(resultTimer); resultTimer=null;
+    Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
+      install:[],installed:false,launched:false,removed:false,result:null,error:null,packMismatch:false,returnedToCk3:false,ck3Continue:null});
     await A.recheck();},
   /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
   async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
     await A.toEncounter(null,sig.save); if(!S.enc) return;
     await A.toRoster(); if(!S.roster) return;
     await A.install(); if(!S.installed) return;
-    go(3); await A.launch();}
+    go(3); await A.launch();},
+  /* Recovery: resend the current roster and relaunch 3K in one click. */
+  async resendAndRelaunch(){S.busy=true;S.error=null;S.packMismatch=false;render();
+    log("resend: removing old pack, reinstalling, relaunching");
+    try{await call("remove_probe");}catch(e){log(`resend remove: ${err(e)}`);}
+    try{const r=await call("prepare_and_install",S.roster); S.installed=true;
+      log(`resend installed ${r.pack} sha256=${r.sha256}`);}
+    catch(e){S.error=fail(e); S.busy=false; render(); return;}
+    S.launched=false;
+    try{await call("launch_3k"); S.launched=true; log("resend: 3K relaunched");}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();}
 };
 
 let watching=false;
@@ -511,13 +960,20 @@ async function watch(){
 }
 
 document.addEventListener("click",async ev=>{
+  if(ev.target&&ev.target.id==="settings-overlay"){await A.closeSettings(); return;}
   const g=ev.target.closest("[data-go]"); if(g&&!g.disabled){go(+g.dataset.go);return;}
   const b=ev.target.closest("[data-action]"); if(b&&!b.disabled&&A[b.dataset.action]) await A[b.dataset.action](b);
 });
+document.addEventListener("keydown",ev=>{
+  if(ev.key==="Escape"&&settingsOverlay().classList.contains("open")) A.closeSettings();
+});
 
-window.addEventListener("pywebviewready",()=>{log("Python bridge ready"); render(); A.recheck(); setInterval(watch,3000);});
+window.addEventListener("pywebviewready",async ()=>{log("Python bridge ready");
+  try{applySkin((await call("get_skin")).skin);}catch(e){log(`look: ${err(e)}`);}
+  render(); A.recheck(); setInterval(watch,3000);});
 log("launcher started; waiting for the Python bridge...");
 render();
+
 </script>
 </body>
 </html>

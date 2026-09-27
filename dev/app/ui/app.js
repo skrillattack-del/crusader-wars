@@ -19,6 +19,9 @@ function friendly(m){
   if(/No runtime log/.test(m)) return "No battle has been fought with this pack yet. Finish the battle in Three Kingdoms, then try again.";
   if(/exactly one start/.test(m)) return "This battle was restarted or replayed, so its result can't be used. Send the armies again and fight it once.";
   if(/undetermined/.test(m)) return "Neither side fully broke, so there's no winner yet. Fight until one army routs.";
+  if(/Loaded roster differs/.test(m)) return "Three Kingdoms loaded different units than expected. This usually means it was already running when the armies were sent. Close Three Kingdoms, go back to step 3, press \"Send to Three Kingdoms\" again, then re-launch.";
+  if(/refused to close/.test(m)) return "Three Kingdoms refused to close. Please close it manually before continuing.";
+  if(/already running/.test(m)) return "Three Kingdoms is already running. Close it first so it picks up the new battle pack.";
   if(/Close Three Kingdoms/.test(m)) return "Close Three Kingdoms first, then try again.";
   if(/No \.ck3 saves/.test(m)) return "No CK3 saves found yet. In CK3, open a battle and press the crossed swords (or save by hand), then try again.";
   if(/no battle in progress/.test(m)) return "Your latest save has no battle in progress. Save while your armies are fighting.";
@@ -36,7 +39,8 @@ const STEPS=[
 ];
 const S={view:0, reached:0, sealed:false, busy:false, mode:"records", cw1Hint:false,
   health:null, enc:null, roster:null, install:[], installed:false,
-  launched:false, removed:false, result:null, error:null};
+  launched:false, removed:false, result:null, error:null, packMismatch:false, returnedToCk3:false, ck3Continue:null,
+  config:null, configPath:null, configSha:null};
 
 function log(msg){const el=document.getElementById("log");
   el.textContent+=`[${new Date().toLocaleTimeString("en-CA",{hour12:false})}] ${msg}\n`;el.scrollTop=el.scrollHeight;}
@@ -48,6 +52,13 @@ function setTally(){
   document.getElementById("halfR").style.transform=`translateX(${g}px)`;
   document.getElementById("seal").classList.toggle("on",S.sealed);
   document.getElementById("stepline").innerHTML=`Step <b>${S.view+1}</b> of 5: ${STEPS[S.view].title}`;
+}
+
+/* launcher look: the header plaques switch it; the bridge remembers it */
+function applySkin(skin){
+  document.documentElement.dataset.skin=skin;
+  for(const id of ["halfL","halfR"]){const b=document.getElementById(id);
+    b.setAttribute("aria-pressed",String(b.dataset.skin===skin));}
 }
 
 function renderRail(){
@@ -62,7 +73,23 @@ function render(){
   renderRail(); setTally();
   document.getElementById("main").innerHTML=V[STEPS[S.view].id]();
 }
-function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render(); document.getElementById("main").focus();}
+function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render(); document.getElementById("main").focus(); armResultWatch();}
+
+/* auto_battle_report: on the Fight step, poll the 3K battle log and advance by
+   ourselves; off (or no ledger), the player presses Get the result. */
+let resultTimer=null;
+function armResultWatch(){
+  clearInterval(resultTimer); resultTimer=null;
+  if(STEPS[S.view].id!=="battle"||!S.config||S.config.auto_battle_report!==true) return;
+  resultTimer=setInterval(pollResult,4000);
+}
+async function pollResult(){
+  if(S.busy||STEPS[S.view].id!=="battle") return;
+  try{const r=await call("read_result"); S.result=r;
+    log(`result arrived on its own: outcome=${r.player_outcome}`);
+    go(4);}
+  catch(e){/* the battle is still running; stay on the Fight step */}
+}
 const errorBox=()=>S.error?`<p class="notice" role="alert" style="margin-top:16px">${esc(S.error)}</p>`:"";
 const check=(state,text,fix="")=>`<li><span class="dot ${state}" aria-label="${state==="bad"?"Needs fixing":state==="warn"?"Warning":"Ready"}"></span><span>${text}</span>${fix}</li>`;
 
@@ -89,10 +116,11 @@ const V={
       check(ok("rpfm_cli")?"":"bad", ok("rpfm_cli")?"The battle pack builder is ready":"The battle pack builder (RPFM) is missing")];
     return `<h2>Get ready</h2>
     <p class="lede">Fight your Crusader Kings III battles in Three Kingdoms. Check the list, then start a battle in CK3.</p>
-    <ul class="panel checklist">${items.join("")}</ul>
+    <ul class="panel checklist art">${items.join("")}</ul>
+    ${h.config&&!h.config.valid?`<p class="notice" role="alert" style="margin-top:16px">The options ledger is invalid: ${esc(h.config.error||"unknown error")}. Defaults are in use.</p>`:""}
     ${S.cw1Hint?`<p class="notice ok" style="margin-top:16px">Steam is opening Crusader Wars 1's Workshop page. Click <b>Unsubscribe</b> there, then press Check again.</p>`:""}
     ${h.tk_running?`<p class="notice" style="margin-top:16px">Three Kingdoms is running. Close it before sending a battle.</p>`:""}
-    <section class="panel" style="margin-top:16px"><h3 class="panel-title">How a battle starts</h3>
+    <section class="panel parchment" style="margin-top:16px"><h3 class="panel-title">How a battle starts</h3>
       <ol class="howto">
         <li>Get every line above ready. <b>Add to playset</b> puts the CW2 mod last in your active playset for you.</li>
         <li>Play CK3. When your armies meet, open the battle and press the <b>crossed swords</b>. The game pauses and saves.</li>
@@ -106,7 +134,10 @@ const V={
     </div>
     <details class="more"><summary>File locations</summary>
       <div class="paths">${h.paths.map(p=>`<div class="pathrow"><span class="dot ${p.ok?"":"bad"}"></span>
-        <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}</div>
+        <span>${esc(p.label)}</span><code title="${esc(p.value)}">${esc(p.value)}</code></div>`).join("")}
+      ${S.config?`<div class="pathrow"><span class="dot"></span><span>Options ledger</span>
+        <code title="${esc(S.configPath||"")}">${esc(`show_mode ${S.config.show_mode} · scale ×${S.config.army_scale_factor} · domain ${S.config.domain_focus} · auto-report ${S.config.auto_battle_report?"on":"off"}`)}</code></div>`:""}
+      </div>
     </details>`;
   },
   enc(){
@@ -155,6 +186,7 @@ const V={
       `<button data-action="setMode" data-mode="${m}" aria-pressed="${S.mode===m}" ${S.installed||S.busy?"disabled":""}><b>${t}</b><small>${d}</small></button>`).join("")}</div>
     <div class="cols">${col(r.sides[0])}${col(r.sides[1])}</div>
     <p class="muted" style="margin-top:14px">${esc(r.note)}</p>
+    ${r.applied?`<p class="muted" style="margin-top:8px">Options ledger: army scale ×${r.applied.army_scale_factor}, domain ${esc(r.applied.domain_focus)}.</p>`:""}
     ${prog}
     ${packOk?"":`<p class="notice" style="margin-top:16px">Three Kingdoms or the battle pack builder is missing. Check the first step.</p>`}
     ${errorBox()}
@@ -167,16 +199,19 @@ const V={
     <details class="more"><summary>Roll details</summary><p class="muted">Seed <code>${r.seed}</code>, mode ${esc(r.mode||S.mode)}.</p></details>`;
   },
   battle(){
+    const packWarn=S.packMismatch?`<p class="notice" role="alert" style="margin-top:16px">The installed battle pack doesn't match this run. <button class="btn-quiet btn-sm" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button></p>`:"";
     return `<h2>Fight in Three Kingdoms</h2>
     <p class="lede">The battle is ready. Follow these steps, then come back for the result.</p>
-    <ol class="howto panel">
+    <ol class="howto panel parchment">
       <li>${S.launched?"Three Kingdoms is starting with only the <b>crusader_wars_2</b> battle pack on.":`<button class="btn-quiet btn-sm" data-action="launch">Launch Three Kingdoms</button>`}</li>
-      <li>Three Kingdoms opens the battle by itself. If it stops at a menu: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
+      <li>Three Kingdoms opens the <b>CRUSADER WARS II</b> lobby by itself (also under <b>Battle</b> in its main menu). Check both armies and press <b>FIGHT</b>. If the lobby doesn't appear: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
       <li>Fight until one army breaks. Stay on the results screen for a few seconds, and don't press Rematch.</li>
     </ol>
+    ${packWarn}
     ${errorBox()}
     <div class="actions">
       <button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Get the result</button>
+      ${S.error&&/roster differs|already running/i.test(S.error)?`<button class="btn-quiet" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button>`:""}
     </div>`;
   },
   result(){
@@ -184,29 +219,103 @@ const V={
     if(!r) return `<h2>Result</h2><p class="lede">No result yet.</p>
       <div class="actions"><button class="btn-primary" data-action="toBattle">Back to the fight</button></div>`;
     const won=r.player_outcome==="victory";
+    const mode=S.config?S.config.show_mode:"tactical";
+    const battle=r.battle||"the battle";
+    const sub=mode==="dramatic"
+      ?`${won?`Your side held the field at ${battle}.`:`Your side broke at ${battle}.`}`
+      :(won?"Your side held the field.":"Your side broke first.");
+    if(mode==="minimal")
+      return `<h2>Result</h2>
+      <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${esc(sub)}</small></p>
+      <p class="muted">${r.sides.map(s=>`${esc(s.role)}: ${fmt(s.men)} fought, ${fmt(s.lost)} lost.`).join(" ")}</p>
+      <p class="muted">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
+      ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+      ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
+      ${errorBox()}
+      <div class="actions">
+        <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+        <button class="btn-quiet" data-action="restart">Fight another battle</button>
+        ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
+      </div>`;
     const rows=r.sides.map((s,i)=>`<tr><td>${esc(s.role)}${i===r.player_side?" (you)":""}${r.winner===i?" · won":""}</td>
       <td class="num">${fmt(s.men)}</td><td class="num">${fmt(s.lost)}</td><td class="num">${fmt(s.men-s.lost)}</td></tr>`).join("");
     return `<h2>Result</h2>
-    <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${won?"Your side held the field.":"Your side broke first."}</small></p>
+    <p class="banner ${won?"win":"loss"}">${won?"Victory":"Defeat"}<small>${esc(sub)}</small></p>
     <div class="panel"><table>
       <thead><tr><th>Side</th><th class="num">Fought</th><th class="num">Lost</th><th class="num">Left</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
     <p class="muted" style="margin-top:14px">The result is saved in the run folder. Writing the losses into your CK3 save is off in this build.</p>
     ${S.removed?`<p class="notice ok" style="margin-top:16px">Battle pack removed. The game's own files were never touched.</p>`:""}
+    ${S.returnedToCk3?`<p class="notice ok" style="margin-top:16px">Three Kingdoms is closed and CK3 is starting. In CK3, press <b>Continue</b>${S.ck3Continue&&S.ck3Continue.desc?` — <i>${esc(S.ck3Continue.desc)}</i>`:""} to go back to your save.</p>`:""}
     ${errorBox()}
     <div class="actions">
-      <button class="btn-primary" data-action="restart">Fight another battle</button>
+      <button class="btn-primary" data-action="returnCk3" ${S.busy?"disabled":""}>Return to CK3</button>
+      <button class="btn-quiet" data-action="restart">Fight another battle</button>
       ${S.installed&&!S.removed?`<button class="btn-quiet" data-action="removeProbe" ${S.busy?"disabled":""}>Remove battle pack</button>`:""}
     </div>`;
   }
 };
 
-/* ---- actions ---- */
+/* ---- options panel: edits the ledger through bridge.get_config/save_config ----
+   One row per ledger key; cut_3d_voice is formally UNDEFINED (canon, turn-2 §4)
+   and deliberately has no row. */
+const OPT_FIELDS=[
+  {key:"show_mode", label:"Presentation", kind:"seg", options:["dramatic","tactical","minimal"],
+   desc:"How the result reads: dramatic adds the CK3 battle name, tactical shows the full table, minimal one line."},
+  {key:"army_scale_factor", label:"Army scale", kind:"number",
+   desc:"Multiplies both CK3 armies before staging; Three Kingdoms army caps still apply. Above 0, up to 10."},
+  {key:"domain_focus", label:"Domain", kind:"seg", options:["wei","shu","wu","custom"],
+   desc:"Faction focus for unit rolls: the other factions' unique units drop out. Custom keeps the whole pool."},
+  {key:"auto_battle_report", label:"Automatic battle report", kind:"toggle",
+   desc:"After the fight, advance to the result by yourself instead of waiting for the button."},
+  {key:"enable_tw3k_screenshots", label:"Three Kingdoms screenshots", kind:"toggle",
+   desc:"Request battle screenshots into the run folder. Only the request is recorded today; no capture backend yet."},
+  {key:"injectivity_strict", label:"Strict unit mapping", kind:"toggle",
+   desc:"Treat a non-injective config/slots.registry.json as an error instead of a warning."},
+];
+let settingsDraft=null;
+
+function settingsOverlay(){return document.getElementById("settings-overlay");}
+
+function setSettingsStatus(message, isErr){
+  const el=document.getElementById("settings-status");
+  el.textContent=message||"";
+  el.classList.toggle("err", !!isErr);
+}
+
+/* Read the free-form controls (number, toggles) into the draft; segmented
+   buttons write the draft directly. */
+function collectSettings(){
+  if(!settingsDraft) return;
+  const num=document.getElementById("set-army_scale_factor");
+  if(num){
+    const raw=String(num.value).trim();
+    settingsDraft.army_scale_factor=raw===""?null:Number(raw);
+  }
+  for(const f of OPT_FIELDS) if(f.kind==="toggle")
+    settingsDraft[f.key]=!!document.getElementById("set-"+f.key).checked;
+}
+
+function renderSettingsBody(){
+  document.getElementById("settings-body").innerHTML=OPT_FIELDS.map(f=>{
+    const v=settingsDraft[f.key];
+    const control=f.kind==="seg"
+      ?`<div class="seg-sm">${f.options.map(o=>
+          `<button data-action="optSeg" data-key="${f.key}" data-value="${o}" aria-pressed="${v===o}">${o}</button>`).join("")}</div>`
+      :f.kind==="number"
+      ?`<div class="num-row"><input id="set-${f.key}" type="number" min="0.1" max="10" step="0.1" value="${v}"></div>`
+      :`<div class="toggle-row"><span class="toggle-chip"><input id="set-${f.key}" type="checkbox" ${v?"checked":""}><span class="track"></span><span class="thumb"></span></span></div>`;
+    return `<div class="sfield"><span class="sfield-label">${f.label}</span>${control}<span class="sfield-desc">${f.desc}</span></div>`;
+  }).join("");
+}
+
 window.cw2.on("install",p=>{S.install[p.index]={label:p.label,status:p.status}; if(STEPS[S.view].id==="roster") render();});
 
 const A={
   async recheck(){S.error=null;
     try{S.health=await call("get_health");
+      const c=await call("get_config");
+      S.config=c.config; S.configPath=c.path; S.configSha=c.sha256;
       log(`checked: ck3_mod=${S.health.ck3_mod} cw1=${S.health.cw1_installed} pack_ready=${S.health.gates.probe}`);}
     catch(e){S.error=fail(e);} render();},
   async installMod(){S.busy=true; S.error=null; render();
@@ -225,6 +334,37 @@ const A={
   async launchCk3(){
     try{await call("launch_ck3"); log("CK3 launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
+  async openSettings(){
+    setSettingsStatus("", false);
+    try{
+      const r=await call("get_config");
+      if(!r.config||!Object.keys(r.config).length){
+        settingsDraft=null;
+        document.getElementById("settings-body").innerHTML=
+          `<p class="notice" role="alert">The options ledger is not available (${esc(r.path||"not found")}). Fix it on disk and press Check again.</p>`;
+      }else{
+        settingsDraft=Object.fromEntries(OPT_FIELDS.map(f=>[f.key, r.config[f.key]]));
+        renderSettingsBody();
+      }
+      settingsOverlay().classList.add("open");
+      log(`options opened (ledger: ${r.path})`);
+    }catch(e){S.error=fail(e); render();}
+  },
+  closeSettings(){settingsOverlay().classList.remove("open");},
+  async setSkin(b){applySkin(b.dataset.skin);
+    try{await call("set_skin",b.dataset.skin); log(`look: ${b.dataset.skin}`);}
+    catch(e){log(`look not saved: ${err(e)}`);}},
+  async saveSettings(){
+    if(!settingsDraft) return;
+    collectSettings();
+    try{
+      const r=await call("save_config", settingsDraft);
+      S.config=r.config; S.configPath=r.path; S.configSha=r.sha256;
+      log(`options saved: sha256=${r.sha256}`);
+      A.closeSettings(); render(); armResultWatch();
+    }catch(e){setSettingsStatus(err(e), true);}
+  },
+  optSeg(b){collectSettings(); settingsDraft[b.dataset.key]=b.dataset.value; renderSettingsBody();},
   async toEncounter(_,save=null){go(1); S.enc=null; S.roster=null; render();
     try{S.enc=await call("get_encounter",save); log(`CK3 save ${S.enc.save_name}: battle ${S.enc.combat_id} of ${S.enc.battles.length}`);}
     catch(e){S.error=fail(e);} render();},
@@ -243,7 +383,10 @@ const A={
       log(`installed ${r.pack} sha256=${r.sha256}`); log(`run folder: ${r.run}`);}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async toBattle(){go(3);},
+  async toBattle(){S.packMismatch=false;
+    try{const v=await call("verify_pack"); if(v.match===false){S.packMismatch=true; log(`pack check: ${v.reason}`);}
+    }catch(e){log(`pack check skipped: ${err(e)}`);}
+    go(3);},
   async launch(){
     try{await call("launch_3k"); S.launched=true; log("3K launch requested via Steam");}
     catch(e){S.error=fail(e);} render();},
@@ -253,21 +396,38 @@ const A={
       S.busy=false; go(4); return;}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
+  async returnCk3(){S.busy=true;S.error=null;render();
+    try{const r=await call("return_to_ck3"); S.returnedToCk3=true; S.ck3Continue=r.continue||null;
+      log(`returned to CK3: ${r.note}${S.ck3Continue&&S.ck3Continue.desc?` — continue "${S.ck3Continue.desc}"`:""}`);}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();},
   async removeProbe(){S.busy=true;S.error=null;render();
     try{const r=await call("remove_probe"); S.removed=true;
       log(`removed ${r.removed}${r.run?" (run: "+r.run+")":""}`);
       await A.recheck();}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async restart(){Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
-      install:[],installed:false,launched:false,removed:false,result:null,error:null});
+  async restart(){clearInterval(resultTimer); resultTimer=null;
+    Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
+      install:[],installed:false,launched:false,removed:false,result:null,error:null,packMismatch:false,returnedToCk3:false,ck3Continue:null});
     await A.recheck();},
   /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
   async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
     await A.toEncounter(null,sig.save); if(!S.enc) return;
     await A.toRoster(); if(!S.roster) return;
     await A.install(); if(!S.installed) return;
-    go(3); await A.launch();}
+    go(3); await A.launch();},
+  /* Recovery: resend the current roster and relaunch 3K in one click. */
+  async resendAndRelaunch(){S.busy=true;S.error=null;S.packMismatch=false;render();
+    log("resend: removing old pack, reinstalling, relaunching");
+    try{await call("remove_probe");}catch(e){log(`resend remove: ${err(e)}`);}
+    try{const r=await call("prepare_and_install",S.roster); S.installed=true;
+      log(`resend installed ${r.pack} sha256=${r.sha256}`);}
+    catch(e){S.error=fail(e); S.busy=false; render(); return;}
+    S.launched=false;
+    try{await call("launch_3k"); S.launched=true; log("resend: 3K relaunched");}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render();}
 };
 
 let watching=false;
@@ -280,10 +440,16 @@ async function watch(){
 }
 
 document.addEventListener("click",async ev=>{
+  if(ev.target&&ev.target.id==="settings-overlay"){await A.closeSettings(); return;}
   const g=ev.target.closest("[data-go]"); if(g&&!g.disabled){go(+g.dataset.go);return;}
   const b=ev.target.closest("[data-action]"); if(b&&!b.disabled&&A[b.dataset.action]) await A[b.dataset.action](b);
 });
+document.addEventListener("keydown",ev=>{
+  if(ev.key==="Escape"&&settingsOverlay().classList.contains("open")) A.closeSettings();
+});
 
-window.addEventListener("pywebviewready",()=>{log("Python bridge ready"); render(); A.recheck(); setInterval(watch,3000);});
+window.addEventListener("pywebviewready",async ()=>{log("Python bridge ready");
+  try{applySkin((await call("get_skin")).skin);}catch(e){log(`look: ${err(e)}`);}
+  render(); A.recheck(); setInterval(watch,3000);});
 log("launcher started; waiting for the Python bridge...");
 render();
