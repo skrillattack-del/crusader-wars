@@ -22,14 +22,17 @@ in `dev/tools/rpfm/` (git-ignored). There is no build step.
    sides and rolls 3K units (`dev/battle_math/scale.py`, `roll.py`). Each side
    gets up to 3 generals, each leading up to 6 units.
 3. **Battle pack** (`dev/spikes/g1_3k_io/probe.py`): stages that roll on the
-   Records Battle of Xingyang map (`battle.xml`), adds the battle script
-   (`probe.lua`) that trims each card to its rolled size and logs the battle,
-   and adds the in-game lobby: its script (`frontend_lobby.lua`), layout and art
-   (`lobby/`). Everything is packed with RPFM into `crusader_wars_2.pack`.
+   Battle of Xingyang map — the Records XML for Records mode, the game's own
+   `_romance` Xingyang XML for Romance mode (hero generals, 1 man each) — adds
+   the battle script (`probe.lua`) that trims each card to its rolled size and
+   logs the battle, and adds the in-game lobby: its script
+   (`frontend_lobby.lua`), layout and art (`lobby/`). Everything is packed with
+   RPFM into `crusader_wars_2.pack`.
 4. **3K**: starts with only that pack enabled. The lobby adds
    Battle → **CRUSADER WARS II** to the main menu and opens itself once for a
    fresh battle, showing both CK3 commanders and the staged roll. **FIGHT**
-   clicks Battle → Historical Battle → Xingyang → Start.
+   clicks Battle → Historical Battle → Xingyang → Start, ticking or unticking
+   the Romance checkbox to match the run's mode.
 5. **Result**: `read_result` checks the run's battle log against `run.json` and
    shows who won and each side's losses (a unit wiped out in 3K disappears from
    its results capture, so it is read back as fully lost). **Return to CK3**
@@ -50,8 +53,11 @@ lobby logs every step to that run's `frontend.log`; 3K's own mod loader writes
   counted as battle losses.
 - Units that are smaller than 80 men in 3K keep their size, so a side can come
   out smaller than rolled: 1,023 men instead of 1,503 in the test.
-- Every battle uses the Xingyang map and generic generals. Romance mode is not
-  staged yet.
+- Every battle uses the Xingyang map and generic generals (Romance rolls the
+  generic heroes `3k_main_hero_{metal,wood}_generic`; the native Romance
+  Xingyang XML ships no generic earth hero). Romance staging is built and
+  verified against the installed game files, but no Romance battle has been
+  fought live yet.
 
 **Layout:** `dev/app` launcher, `dev/battle_math` army scaling and rolls,
 `dev/spikes/*` the pack builder, CK3 save reader and extractor, `dev/mod` the

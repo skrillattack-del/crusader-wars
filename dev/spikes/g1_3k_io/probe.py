@@ -1,4 +1,4 @@
-"""Build the crusader_wars_2 battle pack: a rolled roster staged on the Records Xingyang map."""
+"""Build the crusader_wars_2 battle pack: a rolled roster staged on the native Xingyang map, in Records or Romance mode."""
 from __future__ import annotations
 import argparse
 import copy
@@ -8,6 +8,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 import uuid
@@ -19,9 +20,24 @@ import lobby  # the in-game lobby's twui layout and art (lobby/lobby.py)
 GAME = Path(r'C:\Program Files (x86)\Steam\steamapps\common\Total War THREE KINGDOMS')
 PACK_NAME = 'crusader_wars_2.pack'
 BATTLE = 'script/battle/historical_battle/historical_battle_xinyang'
+# The game ships a Romance variant of the same battle next to the Records one; the
+# historical-battles screen's checkbox_romance_mode selects it. battles_tables has one
+# row (3k_main_historical_battle_xinyang) pointing at the Records XML, and the engine
+# derives the _romance folder from the same row (observed in data.pack, 2026-09-29).
+BATTLE_ROMANCE = f'{BATTLE}_romance'
+# Records stages on the Records XML (generals with bodyguards, game_mode historical);
+# Romance stages on the _romance XML (single hero units, game_mode romance).
+MODES = {'records': {'entry': BATTLE, 'label': 'Records', 'game_mode': 'historical',
+                     'sources': ('historical_battle_xinyang', 'historical_battle_red_cliff')},
+         'romance': {'entry': BATTLE_ROMANCE, 'label': 'Romance', 'game_mode': 'romance',
+                     'sources': ('historical_battle_xinyang_romance',)}}
 # 3K's frontend loader (script/frontend_mod_scripting.lua) runs every Lua file here.
 # The lobby script adds BATTLE > CRUSADER WARS II and opens the staged battle on FIGHT.
 LOBBY = 'script/frontend/mod/cw2_lobby.lua'
+# Loc keys of the battles row both modes share (local_en.pack:text/db/battles__.loc);
+# a uniquely named loc file overrides just these keys while the pack is installed.
+BATTLE_RECORD = '3k_main_historical_battle_xinyang'
+LOC = 'text/db/cw2_battle__.loc'
 ROW = 6          # unit cards per formation row
 SPACING = 30.0   # metres between cards, across and between rows
 CARD_WIDTH = '25.00'
@@ -109,7 +125,27 @@ def lobby_card(roster, run_id):
                       'generals': [g.get('name') for g in side.get('generals') or []],
                       'units': list(units.values())})
     return {'run_id': run_id, 'battle': roster.get('battle') or 'CK3 battle', 'date': roster.get('date'),
-            'season': roster.get('season'), 'mode': 'Records', 'seed': roster.get('seed'), 'sides': sides}
+            'season': roster.get('season'), 'mode': MODES[roster.get('mode', 'records')]['label'],
+            'seed': roster.get('seed'), 'sides': sides}
+
+def loc_table(entries):
+    """A 3K .loc file: BOM, 'LOC', version 1, count, then (key, text, tooltip flag) in UTF-16 LE."""
+    out = bytearray(b'\xff\xfeLOC\x00' + struct.pack('<ii', 1, len(entries)))
+    for key, text in entries:
+        for value in (key, text):
+            data = value.encode('utf-16-le')
+            out += struct.pack('<H', len(data) // 2) + data
+        out += b'\x00'
+    return bytes(out)
+
+def battle_texts(card):
+    """3K's name, description and loading text for the staged battle: the CK3 battle's."""
+    who = ' against '.join(s.get('commander') or s.get('role') or 'Side' for s in card['sides'])
+    when = ', '.join(x for x in (card.get('date'), card.get('season')) if x)
+    about = f"{card['battle']}{f' ({when})' if when else ''}: {who}. Crusader Wars 2, {card['mode']} mode."
+    return [(f'battles_localised_name_{BATTLE_RECORD}', card['battle']),
+            (f'battles_description_{BATTLE_RECORD}', about),
+            (f'battles_loading_screen_text_{BATTLE_RECORD}', about)]
 
 def lobby_script(run_id, battle_log, frontend_log, card, template=None):
     """frontend_lobby.lua bound to one run: its logs, the lobby layout and its battle card."""
@@ -119,24 +155,27 @@ def lobby_script(run_id, battle_log, frontend_log, card, template=None):
             .replace('@@OUTPUT_PATH@@', path(battle_log))
             .replace('@@FRONTEND_LOG@@', path(frontend_log))
             .replace('@@LAYOUT@@', lobby.LAYOUT_PATH.removesuffix('.twui.xml'))
+            .replace('@@ROMANCE@@', 'true' if (card or {}).get('mode') == 'Romance' else 'false')
             .replace('@@LOBBY@@', _lua(card)))
 
 def generate(native, output, lua_template, roster=None, lobby_template=None):
-    """Stage `roster` (bridge.roll_roster's result) on the natively installed Records Xingyang map."""
+    """Stage `roster` (bridge.roll_roster's result) on the native Xingyang map, in the roster's mode."""
     roster = roster or DEFAULT_ROSTER
-    if roster.get('mode', 'records') != 'records':
-        raise ValueError('Romance battles are not staged yet; roll the armies in Records mode.')
+    mode = roster.get('mode', 'records')
+    if mode not in MODES:
+        raise ValueError(f'Unknown mode {mode!r}; use records or romance.')
+    mode_spec = MODES[mode]
     sides = roster.get('sides') or []
     if len(sides) != 2 or not all(s.get('generals') for s in sides):
         raise ValueError('The roster needs two sides, each led by at least one general.')
-    source = native / BATTLE / 'battle.xml'
+    source = native / mode_spec['entry'] / 'battle.xml'
     root = ET.parse(source).getroot()
     general_sources = {}
-    for name in ('historical_battle_xinyang', 'historical_battle_red_cliff'):
+    for name in mode_spec['sources']:
         path = native / 'script/battle/historical_battle' / name / 'battle.xml'
         for unit in ET.parse(path).getroot().iter('unit'):
             kind = unit.find('unit_type')
-            if kind is not None and unit.findtext('general/game_mode') == 'historical':
+            if kind is not None and unit.findtext('general/game_mode') == mode_spec['game_mode']:
                 general_sources.setdefault(kind.get('type'), unit)
     run_id = uuid.uuid4().hex
     alliances = root.findall('alliance')[:2]
@@ -166,7 +205,7 @@ def generate(native, output, lua_template, roster=None, lobby_template=None):
             if men <= 0:
                 raise ValueError(f'{card.get("name", key)} has no men.')
             if is_general and key not in general_sources:
-                raise ValueError(f'{key} is not a Records general in the native battles.')
+                raise ValueError(f'{key} is not a {mode_spec["label"]} general in the native battles.')
             unit = ET.Element('unit', script_name=f'cw2_{side}_{n}')
             ET.SubElement(unit, 'unit_type', type=key)
             ET.SubElement(unit, 'retinue', id=str(g))
@@ -193,7 +232,7 @@ def generate(native, output, lua_template, roster=None, lobby_template=None):
             alliance.remove(victory)
         ET.SubElement(ET.SubElement(alliance, 'victory_condition'), 'kill_or_rout_enemy')
     root.find('battle_description/battle_script').set('prepare_for_fade_in', 'false')
-    stage = output / 'pack' / BATTLE
+    stage = output / 'pack' / mode_spec['entry']
     stage.mkdir(parents=True, exist_ok=True)
     ET.indent(root)
     ET.ElementTree(root).write(stage / 'battle.xml', encoding='utf-8', xml_declaration=True)
@@ -203,7 +242,8 @@ def generate(native, output, lua_template, roster=None, lobby_template=None):
     if log.exists():
         log.unlink()
     trim = '{' + ', '.join(f'[{_lua_string(u["script_name"])}] = {u["target_men"]}' for u in expected) + '}'
-    lua = lua_template.read_text(encoding='utf-8').replace('@@RUN_ID@@', run_id).replace('@@BATTLE@@', BATTLE)
+    lua = (lua_template.read_text(encoding='utf-8').replace('@@RUN_ID@@', run_id)
+           .replace('@@BATTLE@@', mode_spec['entry']))
     # JSON quoting yields Lua-compatible escaping for an ASCII Windows path.
     lua = lua.replace('@@OUTPUT_PATH@@', str(log).replace('\\', '/').replace('"', '\\"'))
     lua = lua.replace('@@TRIM@@', trim)
@@ -213,9 +253,11 @@ def generate(native, output, lua_template, roster=None, lobby_template=None):
                           lobby_template or lua_template.parent / 'frontend_lobby.lua')
     (output / 'pack' / LOBBY).parent.mkdir(parents=True, exist_ok=True)
     (output / 'pack' / LOBBY).write_text(script, encoding='utf-8')
+    (output / 'pack' / LOC).parent.mkdir(parents=True, exist_ok=True)
+    (output / 'pack' / LOC).write_bytes(loc_table(battle_texts(card)))
     lobby.stage(output / 'pack')
     manifest = {'schema': 1, 'kind': 'g1_runtime_unverified', 'run_id': run_id,
-                'mode': 'Records', 'entry': BATTLE, 'source_sha256': digest(source),
+                'mode': mode_spec['label'], 'entry': mode_spec['entry'], 'source_sha256': digest(source),
                 'log_path': str(log), 'sides': staged, 'expected_units': expected, 'lobby': card}
     (output / 'run.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
     return manifest
@@ -228,10 +270,12 @@ def build(game, cli, output, native=None, roster=None):
     if (output / 'run.json').exists():
         raise ValueError('Choose a fresh output directory; existing run evidence is immutable.')
     if native is None:
+        mode = (roster or DEFAULT_ROSTER).get('mode', 'records')
         native = output / 'native'
-        run_cli(cli, 'extract', '--pack-path', game / 'data/data.pack',
-                '--file-path', f'{BATTLE}/battle.xml;{native}',
-                '--file-path', f'script/battle/historical_battle/historical_battle_red_cliff/battle.xml;{native}')
+        extract = ['extract', '--pack-path', game / 'data/data.pack']
+        for name in MODES[mode]['sources']:
+            extract += ['--file-path', f'script/battle/historical_battle/{name}/battle.xml;{native}']
+        run_cli(cli, *extract)
     manifest = generate(Path(native), output, HERE / 'probe.lua', roster)
     pack = output / PACK_NAME
     run_cli(cli, 'create', '--pack-path', pack)
@@ -239,7 +283,8 @@ def build(game, cli, output, native=None, roster=None):
     # panics in this old build; validate the newly created header instead.
     if pack.read_bytes()[:8] != b'PFH5\x03\x00\x00\x00':
         raise ValueError('RPFM did not create the expected PFH5 mod pack.')
-    files = [f'{BATTLE}/battle.xml', f'{BATTLE}/battle_script.lua', LOBBY, lobby.LAYOUT_PATH, *lobby.ART]
+    entry = manifest['entry']
+    files = [f'{entry}/battle.xml', f'{entry}/battle_script.lua', LOBBY, LOC, lobby.LAYOUT_PATH, *lobby.ART]
     for name in files:
         run_cli(cli, 'add', '--pack-path', pack, '--file-path', f'{output / "pack" / name};{name}')
     listed = run_cli(cli, 'list', '--pack-path', pack).splitlines()
@@ -280,6 +325,7 @@ def read_result(output):
     if len(starts) != 1 or not finals or events.index(starts[0]) >= events.index(finals[-1]):
         raise ValueError('Need exactly one start and one result; rebuild for each battle attempt.')
     expected = {u['script_name']: u for u in manifest['expected_units']}
+    deployed = next((e for e in events if e.get('phase') == 'deployed'), None)
     start_counts = {}
     for event in (starts[0], finals[-1]):
         if event.get('battle') != manifest['entry']:
@@ -315,17 +361,25 @@ def read_result(output):
             match = expected[unit['script_name']]
             if unit['unit_type'] != match['unit_type'] or unit['alliance'] != match['alliance'] or unit['army'] != 1:
                 raise ValueError('Unit type, side or army mismatch.')
-            initial, alive = unit['initial'], unit['survivors']
             if type(unit.get('routing')) is not bool:
                 raise ValueError('Missing routing state.')
+            if not is_start:
+                # Later captures' own 'initial' is keyed by list position, which shifts when
+                # 3K drops a dead unit (run 20260929-103647); the baseline is by name.
+                unit['initial'] = start_counts[unit['script_name']]
+            initial, alive = unit['initial'], unit['survivors']
             if type(initial) is not int or type(alive) is not int or not 0 <= alive <= initial or initial <= 0:
                 raise ValueError('Invalid soldier counts.')
             if is_start:
                 if alive != initial:
                     raise ValueError('Initial capture is inconsistent.')
                 start_counts[unit['script_name']] = initial
-            elif initial != start_counts[unit['script_name']]:
-                raise ValueError('Starting count changed between captures.')
+        if is_start and deployed is not None:
+            # The trim to rolled card sizes lands at deployment: that capture is the real starting strength.
+            for unit in deployed.get('units') or []:
+                name, alive = unit.get('script_name'), unit.get('survivors')
+                if name in start_counts and type(alive) is int and 0 < alive <= start_counts[name]:
+                    start_counts[name] = alive
     won = finals[-1].get('player_won')
     source = finals[-1].get('result_source') or finals[-1].get('phase')
     if source == 'complete':

@@ -71,6 +71,7 @@ and three scenario families under `script/battle/dynasty_battle/` (`dynasty_arid
 `dynasty_subtropical`, and `dynasty_temperate`). Its first alliance is replaced from the
 lobby selection at runtime.
 
-CW2 currently overrides only the Records Xingyang historical battle and assumes that
-scenario's two-alliance slot mapping. Dynasty Mode should remain out of scope until it
-has a dedicated roster-injection, start, result, and replay/capture probe.
+CW2 overrides the Records Xingyang historical battle (Records mode) and its `_romance`
+variant (Romance mode), assuming that scenario's two-alliance slot mapping. Dynasty Mode
+should remain out of scope until it has a dedicated roster-injection, start, result, and
+replay/capture probe.

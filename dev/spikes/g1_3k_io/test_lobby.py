@@ -53,6 +53,7 @@ MOCK_FRONTEND = '''
         function c:SimulateLClick()
             clicks[#clicks + 1] = self.id
             if self.on_click then self.on_click(self) end
+            if click_events then listeners.FrontendScreenTransition() end
         end
         return c
     end
@@ -63,10 +64,15 @@ MOCK_FRONTEND = '''
         for _, row in ipairs(rows) do
             list[#list + 1] = type(row) == 'table' and comp(row[1], {}, nil, row[2]) or comp(row)
         end
-        local romance = comp('checkbox_romance_mode', {}, 'selected')
-        romance.on_click = function(self) self.state = 'active' end
+        if late_rows then late, list = list, {} end
+        local info_kids = {comp('button_start_battle')}
+        if not romance_missing then
+            local romance = comp('checkbox_romance_mode', {}, romance_state or 'selected')
+            romance.on_click = function(self) self.state = (self.state == 'selected') and 'active' or 'selected' end
+            info_kids[#info_kids + 1] = romance
+        end
         root.kids = {comp('historical_battles', {
-            comp('battle_info', {comp('button_start_battle'), romance}),
+            comp('battle_info', info_kids),
             comp('list_box', list)})}
         root.kids[1].parent = root
     end
@@ -81,7 +87,17 @@ MOCK_FRONTEND = '''
     core = {get_ui_root=function() return root end,
             add_listener=function(self, name, event, condition, callback) listeners[event] = callback end}
     real_timer = {register_repeating=function(name, ms) end}
-    function tick() listeners.RealTimeTrigger({string='cw2_lobby_tick'}) end
+    function tick()
+        if late then
+            late_rows = late_rows - 1
+            if late_rows <= 0 then
+                local box = find_id(root, 'list_box')
+                for _, row in ipairs(late) do box:Adopt(row) end
+                late = nil
+            end
+        end
+        listeners.RealTimeTrigger({string='cw2_lobby_tick'})
+    end
     function press(id) listeners.ComponentLClickUp({string=id}) end
     function find_id(node, id)
         if node.id == id then return node end
@@ -117,8 +133,12 @@ class LobbyTests(unittest.TestCase):
         self.frontend_log = self.root / 'frontend.log'
 
     def start(self, rows=('3k_main_historical_battle_xiapi', '3k_main_historical_battle_xinyang'),
-              timer=True, broken_layout=False):
+              timer=True, broken_layout=False, mode='records', checkbox='selected', late_rows=0,
+              click_events=False):
         lua = LuaRuntime()
+        lua.execute(f'romance_state = "{checkbox}"; romance_missing = '
+                    + ('true' if checkbox == 'missing' else 'false'))
+        lua.execute(f'late_rows = {late_rows or "nil"}; click_events = {"true" if click_events else "false"}')
         lua.execute(MOCK_FRONTEND)
         layout = lobby.LAYOUT_PATH.removesuffix('.twui.xml')
         lua.execute(f'lobby_layout = "{layout}"; lobby_ids = {{'
@@ -129,7 +149,7 @@ class LobbyTests(unittest.TestCase):
             lua.execute('real_timer = nil')
         lua.execute('rows = {' + ', '.join(f'{{"{r[0]}", "{r[1]}"}}' if isinstance(r, tuple) else f'"{r}"'
                                            for r in rows) + '}')
-        card = probe.lobby_card(ROSTER, 'run1')
+        card = probe.lobby_card({**ROSTER, 'mode': mode}, 'run1')
         lua.execute(probe.lobby_script('run1', self.battle_log, self.frontend_log, card))
         self.lua = lua
         return lua
@@ -187,7 +207,37 @@ class LobbyTests(unittest.TestCase):
         self.ticks(30)
         self.assertEqual(self.clicks(), ['btn_new_battle', 'button_historical_battle', '3k_main_historical_battle_xinyang',
                                          'checkbox_romance_mode', 'button_start_battle'])
+        self.assertEqual(self.lua.eval('find_id(root, "checkbox_romance_mode").state'), 'active')
         self.assertIn('battle requested for run run1', self.log())
+
+    def test_fight_leaves_romance_on_for_a_romance_run(self):
+        # A Romance run stages the _romance Xingyang XML; the checkbox must stay on.
+        self.start(mode='romance')  # the mock checkbox starts selected (on)
+        self.ticks(1)
+        self.lua.execute('press("cw2_btn_fight")')
+        self.ticks(30)
+        self.assertEqual(self.clicks(), ['btn_new_battle', 'button_historical_battle', '3k_main_historical_battle_xinyang',
+                                         'button_start_battle'])
+        self.assertEqual(self.lua.eval('find_id(root, "checkbox_romance_mode").state'), 'selected')
+
+    def test_fight_ticks_romance_on_when_the_screen_left_it_off(self):
+        self.start(mode='romance', checkbox='active')
+        self.ticks(1)
+        self.lua.execute('press("cw2_btn_fight")')
+        self.ticks(30)
+        self.assertEqual(self.clicks(), ['btn_new_battle', 'button_historical_battle', '3k_main_historical_battle_xinyang',
+                                         'checkbox_romance_mode', 'button_start_battle'])
+        self.assertEqual(self.lua.eval('find_id(root, "checkbox_romance_mode").state'), 'selected')
+
+    def test_a_romance_run_without_the_checkbox_starts_nothing(self):
+        # Without the checkbox the engine would load the Records battle this run
+        # did not stage, so the lobby stops rather than start the wrong battle.
+        self.start(mode='romance', checkbox='missing')
+        self.ticks(1)
+        self.lua.execute('press("cw2_btn_fight")')
+        self.ticks(30)
+        self.assertNotIn('button_start_battle', self.clicks())
+        self.assertIn('tick Romance and open Xingyang by hand', self.log())
 
     def test_back_closes_and_the_menu_entry_reopens(self):
         self.start()
@@ -241,6 +291,24 @@ class LobbyTests(unittest.TestCase):
         # historical_battles.twui.xml labels each template_battle row "NAME (KEY)".
         self.start(rows=(('template_battle_0', 'BATTLE OF XIAPI (3K_MAIN_HISTORICAL_BATTLE_XIAPI)'),
                          ('template_battle_1', 'BATTLE OF XINGYANG (3K_MAIN_HISTORICAL_BATTLE_XINYANG)')))
+        self.ticks(1)
+        self.lua.execute('press("cw2_btn_fight")')
+        self.ticks(30)
+        self.assertEqual(self.clicks()[2:], ['template_battle_1', 'checkbox_romance_mode', 'button_start_battle'])
+
+    def test_fight_survives_click_events_and_a_late_battle_list(self):
+        # Live run 20260929-095044: clicks fire UI events synchronously and the list fills
+        # after the screen opens; FIGHT gave up and the stock battle was fought instead.
+        self.start(late_rows=4, click_events=True)
+        self.ticks(1)
+        self.lua.execute('press("cw2_btn_fight")')
+        self.ticks(40)
+        self.assertEqual(self.clicks(), ['btn_new_battle', 'button_historical_battle', '3k_main_historical_battle_xinyang',
+                                         'checkbox_romance_mode', 'button_start_battle'])
+        self.assertNotIn('no Xingyang row', self.log())
+
+    def test_finds_the_row_renamed_to_the_ck3_battle(self):
+        self.start(rows=(('template_battle_0', 'BATTLE OF XIAPI'), ('template_battle_1', 'BATTLE OF HASTINGS')))
         self.ticks(1)
         self.lua.execute('press("cw2_btn_fight")')
         self.ticks(30)

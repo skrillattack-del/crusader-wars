@@ -20,8 +20,10 @@ MOCK_ENV = '''
     alive = 100
     men = {}
     routing = {false, false}
+    unit_lists = {}
     for a=1,2 do
         local units = {}
+        unit_lists[a] = units
         for i=0,2 do
             local name = 'cw2_' .. (a==1 and 'attacker' or 'defender') .. '_' .. i
             units[#units+1] = {name=function() return name end,
@@ -78,6 +80,16 @@ class LuaLoggerTests(unittest.TestCase):
             self.assertEqual(start['phase'], 'start')
             self.assertEqual((men['cw2_attacker_0'], men['cw2_defender_2']), (21, 39))
             self.assertEqual((men['cw2_attacker_1'], men['cw2_defender_1']), (100, 100))  # never grown
+
+    def test_starting_counts_follow_the_unit_when_3k_drops_a_dead_one(self):
+        with tempfile.TemporaryDirectory() as temp:
+            lua, path = load(temp, '{["cw2_defender_0"] = 1}')
+            lua.execute('phases.Deployed(); table.remove(unit_lists[2], 1); routing[2] = true; phases.Complete()')
+            complete = [json.loads(line) for line in path.read_text().splitlines()][2]
+            men = {u['script_name']: u['initial'] for u in complete['units']}
+            self.assertEqual(complete['phase'], 'complete')
+            self.assertNotIn('cw2_defender_0', men)
+            self.assertEqual((men['cw2_defender_1'], men['cw2_defender_2']), (100, 100))
 
 @unittest.skipIf(LuaRuntime is None, 'Install lupa to run the Lua 5.1 harness')
 class LuaResultFallbackTests(unittest.TestCase):

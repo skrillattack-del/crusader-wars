@@ -46,7 +46,7 @@ def main():
     window = webview.create_window('Crusader Wars 2', str(index), js_api=bridge,
                                    width=1000, height=780, min_size=(720, 560))
     bridge.attach(window)
-    webview.start()
+    webview.start(icon=str(HERE / 'ui' / 'cw2.ico'))
 
 
 if __name__ == '__main__':

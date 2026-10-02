@@ -27,11 +27,11 @@ local function emit(phase, player_won, result_source)
             for u = 1, units:count() do
                 local unit = units:item(u);
                 local name = unit:name();
-                local key = tostring(a) .. ':' .. tostring(r) .. ':' .. tostring(u);
-                if phase == 'start' then captured[key] = unit:number_of_men_alive(); end;
+                -- By name: 3K drops dead units from the list, shifting positions. The trim lands at deployment.
+                if phase == 'start' or phase == 'deployed' then captured[name] = unit:number_of_men_alive(); end;
                 table.insert(rows, '{"alliance":' .. a .. ',"army":' .. r .. ',"index":' .. u ..
                     ',"script_name":' .. quote(name) .. ',"unit_type":' .. quote(unit:type()) ..
-                    ',"initial":' .. tostring(captured[key] or -1) ..
+                    ',"initial":' .. tostring(captured[name] or -1) ..
                     ',"survivors":' .. unit:number_of_men_alive() ..
                     ',"routing":' .. tostring(unit:is_routing()) .. '}');
             end;

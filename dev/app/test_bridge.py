@@ -325,6 +325,41 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual((signal['save'], signal['battle']), (str(path), 'Battle of Muluya'))
         self.assertIsNone(bridge.poll_battle()['save'])  # reported once
 
+    def test_encounter_takes_the_button_battle_its_name_sides_and_people(self):
+        # The block CK3 logged for Battle of Bouillon (2026-09-29), army IDs moved onto
+        # the fixture's battle 500; the save alone would pick 502 and name nobody.
+        import os
+        bridge, path = self.write_save()
+        saved = time.time() - 10
+        os.utime(path, (saved, saved))
+        stamp = f'[{datetime.fromtimestamp(saved - 3):%H:%M:%S}][D][jomini_effect_impl.cpp:450]: file: x line: 1 '
+        lines = ['(CW2_MainParticipants:effect): PLAYER_CHARACTER:83460',
+                 '(CW2_MainParticipants:effect): PLAYER_SIDE:Defender',
+                 '(CW2_Armies:effect): ID:1002|||NAME:1st Army of Bouillon|||OWNER_ID:56588',
+                 '(CW2_Armies:effect): ID:1001|||NAME:1st Army of Liege|||OWNER_ID:83460',
+                 '(CW2_Battle:effect): BATTLE_NAME:Battle of Bouillon',
+                 '(CW2_Defender_Characters:effect): ID:83465|||NAME:Alarich|||PROWESS:22|||MARTIAL:7|||TYPE:Knight',
+                 '(CW2_Defender_Characters:effect): ID:83460|||NAME:Count John-Matux of Liege|||PROWESS:21'
+                 '|||MARTIAL:15|||TYPE:Commander',
+                 '(CW2_Attacker_Characters:effect): ID:56588|||NAME:Count Serakone of Bouillon|||PROWESS:9'
+                 '|||MARTIAL:9|||TYPE:Commander']
+        logs = bridge.saves.parent / 'logs'
+        logs.mkdir(exist_ok=True)
+        (logs / 'debug.log').write_text(''.join(stamp + line + '\n' for line in lines), encoding='utf-8')
+        encounter = bridge.get_encounter(save=str(path))
+        self.assertEqual((encounter['combat_id'], encounter['battle']), ('500', 'Battle of Bouillon'))
+        attacker, defender = encounter['sides']
+        self.assertEqual((attacker['name'], attacker['yours']), ('1st Army of Bouillon', False))
+        self.assertEqual((defender['name'], defender['yours']), ('1st Army of Liege', True))
+        self.assertEqual(defender['commander'],
+                         {'id': '83460', 'name': 'Count John-Matux of Liege', 'martial': 15, 'prowess': 21})
+        self.assertEqual([k['name'] for k in defender['knights']], ['Alarich'])
+        roster = bridge.roll_roster(encounter, seed=3)
+        self.assertEqual(roster['battle'], 'Battle of Bouillon')
+        self.assertEqual([s['yours'] for s in roster['sides']], [False, True])
+        self.assertEqual(roster['sides'][1]['generals'][0]['name'], 'Count John-Matux of Liege')
+        self.assertEqual(bridge.get_encounter(save=str(path), combat_id='502')['battle'], None)
+
     def test_poll_battle_ignores_saves_the_button_did_not_trigger(self):
         import os
         bridge, path = self.write_save()
@@ -351,7 +386,8 @@ class BridgeTests(unittest.TestCase):
         romance = bridge.roll_roster(encounter, 1702901, 'romance')
         self.assertEqual([s['generals'][0]['kind'] for s in romance['sides']], ['hero', 'hero'])
         self.assertEqual([s['men'] for s in romance['sides']], [340, 421])
-        self.assertIn('Romance battles are not staged yet', romance['note'])
+        self.assertIn('Romance Xingyang', romance['note'])
+        self.assertNotIn('not staged', romance['note'])
         self.assertIn('Unknown mode', bridge.roll_roster(encounter, 1, 'arcade')['error'])
         self.assertIn('Pick a CK3 battle', bridge.roll_roster(None)['error'])
 
@@ -362,6 +398,18 @@ class BridgeTests(unittest.TestCase):
     def test_prepare_needs_a_rolled_roster(self):
         for roster in (None, {}, {'sides': [{}]}):
             self.assertIn('Roll the armies first', self.bridge.prepare_and_install(roster)['error'])
+
+    def test_prepare_builds_the_rolled_roster(self):
+        # The rolled roster is what gets staged; the build must receive it.
+        (self.game / 'Three_Kingdoms.exe').write_bytes(b'exe')
+        seen = {}
+        def fake_build(game, cli, output, native=None, roster=None):
+            seen['roster'] = roster
+            raise RuntimeError('stop after the build step')
+        with mock.patch.object(probe, 'build', fake_build):
+            result = self.bridge.prepare_and_install(self.ROSTER)
+        self.assertIn('stop after the build step', result['error'])
+        self.assertEqual(seen['roster'], self.ROSTER)
 
     def test_prepare_refuses_while_3k_runs(self):
         bridge = Bridge(base=self.root, game=self.game,
@@ -679,6 +727,39 @@ class BridgeTests(unittest.TestCase):
 
     # ---- return to CK3 ----
 
+    def test_launch_3k_closes_ck3_first_for_a_button_battle(self):
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        tasklist, popen = FakeTasklist(['ck3.exe']), FakePopen()
+        kill = FakeTaskkill(tasklist)
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill, popen=popen)
+        launched = bridge.launch_3k(close_ck3=True)
+        self.assertTrue(launched['ck3_closed'])
+        self.assertEqual(kill.calls, [['taskkill', '/IM', 'ck3.exe']])
+        self.assertEqual(len(popen.calls), 1)
+
+    def test_launch_3k_leaves_ck3_alone_unless_asked_and_never_starts_beside_a_stuck_ck3(self):
+        (self.game / 'data' / probe.PACK_NAME).write_bytes(b'pack')
+        tasklist, popen = FakeTasklist(['ck3.exe']), FakePopen()
+        kill = FakeTaskkill(tasklist, stubborn=['ck3.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist, taskkill=kill, popen=popen)
+        self.assertFalse(bridge.launch_3k()['ck3_closed'])
+        self.assertEqual(kill.calls, [])
+        with mock.patch.object(bridge_module, 'CK3_CLOSE_GRACE', 0):
+            self.assertIn('Crusader Kings III refused to close', bridge.launch_3k(close_ck3=True)['error'])
+        self.assertEqual(len(popen.calls), 1)  # only the first launch
+
+    def test_battle_status_waits_for_3k_to_leave_its_results_screen(self):
+        run = self.make_run()
+        tasklist = FakeTasklist(['Three_Kingdoms.exe'])
+        bridge = Bridge(base=self.root, game=self.game, tasklist=tasklist)
+        bridge.session.update(output=str(run))
+        self.assertEqual(bridge.battle_status()['battle_over'], False)  # still on the results screen
+        (run / 'frontend.log').write_text('10:45:28 CW2 lobby loaded for run run1 (already fought)\n')
+        self.assertTrue(bridge.battle_status()['battle_over'])
+        (run / 'runtime.jsonl').unlink()
+        tasklist.names = []
+        self.assertEqual(bridge.battle_status()['battle_over'], False)  # closed without fighting
+
     def test_close_3k_is_a_noop_when_three_kingdoms_is_not_running(self):
         kill = FakeTaskkill(FakeTasklist())
         bridge = Bridge(base=self.root, game=self.game, tasklist=FakeTasklist(), taskkill=kill)
@@ -751,11 +832,12 @@ class BridgeTests(unittest.TestCase):
 
     def test_ui_assets(self):
         text = INDEX.read_text(encoding='utf-8')
-        self.assertIn('pywebviewready', text)
-        self.assertIn('removeProbe', text)
+        script = (INDEX.parent / 'app.js').read_text(encoding='utf-8')
+        self.assertIn('pywebviewready', script)
+        self.assertIn('removeProbe', script)
         self.assertIn('<title>Crusader Wars 2 launcher</title>', text)
         for absent in ('MockBridge', 'simCk3', 'fonts.googleapis'):
-            self.assertNotIn(absent, text, f'{absent} should not ship in the app UI')
+            self.assertNotIn(absent, text + script, f'{absent} should not ship in the app UI')
 
     def test_ui_preserves_header_glyphs(self):
         text = INDEX.read_text(encoding='utf-8')

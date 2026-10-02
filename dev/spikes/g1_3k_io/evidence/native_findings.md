@@ -143,3 +143,65 @@ late engine results that contradict the recorded outcome. The third live run
 `victory_countdown` and `complete` but no `result`, because battle timers stop
 at `Complete`. Packs from runs before this fix must not be replayed; remove
 them and prepare a fresh run.
+
+## Romance Xingyang spike (2026-09-29)
+
+Extracted from the installed `data.pack` (rpfm_cli, evidence under
+`evidence/romance_native/`) to find how the game stages a Romance historical
+battle. Findings:
+
+- `script/battle/historical_battle/historical_battle_xinyang_romance/battle.xml`
+  exists next to the Records one: same two-alliance/army/unit structure, same
+  map and `battle_db_record` (`3k_main_historical_battle_xinyang`), plus a
+  `battle_description/game_mode` element reading `romance`.
+- Romance generals are **hero unit types** carrying `<general>` metadata whose
+  `game_mode` is `romance` (Records uses `3k_main_general_*` with
+  `game_mode` = `historical`): the native file stages
+  `3k_main_hero_earth_cao_cao` plus generic heroes
+  `3k_main_hero_{metal,wood,fire,water}_generic`. There is no generic earth
+  hero in that XML, so CW2's Romance roll draws metal/wood heroes
+  (`roll.py: HERO_GENERALS`). The hero `<general>` metadata has the same
+  children as Records (`name`, `star_rating`, `commander_type`, `commander_id`,
+  `portrait`, `game_mode`, `equipped_ceos`, `art_set_key`), so the staging code
+  clones it unchanged.
+- `battles_tables` (extracted from `database.pack`) has **one row per
+  historical battle** — no `_romance` rows. The engine derives the `_romance`
+  folder from the same `3k_main_historical_battle_xinyang` row when the
+  historical-battles screen's `checkbox_romance_mode` is ticked (its tooltip:
+  "When selected, Play a Custom Battle in Romance of the Three Kingdoms Mode.
+  When unselected, you will play in Records of the Three Kingdoms Mode").
+  Live confirmation of that derivation is still pending (no Romance fight yet).
+- Script chaining: the Records `battle_script.lua` is a 13-line loader whose
+  package path points into the `_romance` folder (see the 23 Sep note above),
+  while the `_romance/battle_script.lua` loads its own
+  `battle_script_behaviour.lua`. A Romance run therefore overrides
+  `historical_battle_xinyang_romance/{battle.xml, battle_script.lua}` and must
+  not touch the Records files, and vice versa.
+- Hero cards are single entities: `probe.lua`'s trim (`alive > target` guard)
+  is a no-op for a 1-man hero card, so no special-casing is needed.
+
+## Romance implementation and verification (same day)
+
+`probe.py` gained a `MODES` table (Records/Romance entry path, `game_mode`,
+label, source battles); `generate()` stages the rolled roster on the mode's
+native Xingyang XML, sourcing general metadata from units whose
+`general/game_mode` matches, and records the real mode/entry in `run.json`.
+`frontend_lobby.lua` gained a `@@ROMANCE@@` flag: FIGHT ticks or unticks the
+Romance checkbox to match the run's mode, and stops (with instructions) rather
+than start the wrong battle if the checkbox cannot be found on a Romance run.
+`bridge.prepare_and_install` now forwards the rolled roster to
+`probe.build` (previously it silently built the canned 6-card Records roster).
+
+Verified without launching the game:
+
+- Full suites: `dev/battle_math` 14 OK, `dev/spikes/g1_3k_io` 47 OK (five new
+  Romance tests: XML staging path, hero metadata, lobby checkbox on/off/missing,
+  wrong-mode general rejection), launcher UI smoke 23/23.
+- `evidence/build_romance_check.py` builds a real Romance pack from the
+  installed `data.pack` with the real RPFM CLI: entry
+  `historical_battle_xinyang_romance`, hero generals staged at 1 man,
+  `battle_script.lua` reporting the romance path, lobby bound with
+  `local ROMANCE = true;`, Records path untouched, PFH5 pack listed and hashed.
+
+Still pending: a live Romance fight (tick the Romance checkbox in-game, confirm
+the engine loads the staged `_romance` XML, read the result back).

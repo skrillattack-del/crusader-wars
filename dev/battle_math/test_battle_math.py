@@ -91,6 +91,9 @@ class RollTests(unittest.TestCase):
         self.assertEqual((attacker.men, attacker.card_men[0], attacker.units), (340, 1, 5))
         generals = roll({}, {}, attacker, defender, 1, mode='romance')[0]
         self.assertEqual((generals[0]['kind'], generals[0]['men']), ('hero', 1))
+        self.assertTrue(all(g['key'] in MODES['romance']['keys'] for side in
+                            roll({}, {}, attacker, defender, 1, mode='romance') for g in side))
+        self.assertTrue(all(g['key'].startswith('3k_main_hero_') for g in generals))
         self.assertEqual(army_cap(general_size=size), 1443)
         with self.assertRaises(ValueError): roll({}, {}, attacker, defender, 1, mode='arcade')
 

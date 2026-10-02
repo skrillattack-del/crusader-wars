@@ -1,0 +1,208 @@
+ID|Name|Source|Status|Role|AgeFrame|Typing|BSTBand|Rank|Signature|Counterplay|Bridge
+DS-001|Tanjiro Kamado|Demon Slayer S1–Infinity Castle|MAIN|PROTAG|I Body antenna|Breath/Water-Solar|430–560|Veteran–Elite|Total Concentration; Water forms; Sun echo|Stamina drain; rhythm break; area pressure|Solar purity; Nezuko bond
+DS-002|Nezuko Kamado|Demon Slayer S1–Infinity Castle|MAIN|BRIDGE|I Flesh severance mitigated|Blood/Demon-Solar|380–520|Hunter–Veteran|Restraint; explosive demon art; sun tolerance|Contain blast; holy steel; bond pressure|Human-demon bridge
+DS-003|Zenitsu Agatsuma|Demon Slayer S1–Ent District|MAIN|PROTAG|I Nervous overdrive|Breath/Thunder|390–500|Hunter–Veteran|Thunderclap; sleep-state speed|Predictability feints; stamina|Thunder lineage
+DS-004|Inosuke Hashibira|Demon Slayer S1–Swordsmith|MAIN|PROTAG|I Feral self-form|Breath/Beast|400–510|Hunter–Veteran|Beast Breathing; pain tolerance|Misdirection; control; poison|Beast instinct bridge
+DS-005|Kyojuro Rengoku|Mugen Train|MAIN|BOSS/ALLY|I Body as furnace|Breath/Flame|560–610|Master|Flame sweeps; willpower|Exhaustion; water/ice; dream control|Flame lineage
+DS-006|Giyu Tomioka|Demon Slayer S1|MAIN|ALLY/BOSS|I Stillness|Breath/Water|540–580|Elite–Master|Dead Calm; water domain|Tempo overwhelm; steam; terrain|Water discipline
+DS-007|Shinobu Kocho|Demon Slayer S1–Infinity|MAIN|ALLY|I Scientific body|Breath/Insect-Poison|500–545|Elite|Wisteria poison; thrust speed|Brute force; antidote pressure; isolate|Medical bridge
+DS-008|Kanao Tsuyuri|Demon Slayer S1–Infinity|MAIN|ALLY|I Decision reflex|Breath/Flower|480–545|Veteran–Elite|Flower forms; coin read|Feints; decision pressure|Discipline recovery
+DS-009|Tengen Uzui|Entertainment District|MAIN|ALLY|I Sensory flash|Breath/Sound-Explosion|550–590|Elite–Master|Sound clones; explosive tags|Silence; illusion; range|Sound veil
+DS-010|Makio; Suma; Hinatsuru|Entertainment District|MAIN|SUPPORT|I Twin support|Breath/Sound|430–490 group|Veteran|Coordination; distraction|Split focus; noise control|Team rhythm
+DS-011|Muichiro Tokito|Swordsmith Village|MAIN|ALLY|I Decoy ecology|Breath/Mist-Clone|560–605|Master|Mist; clone fog|Clear fog; true-target scan|Clone fossil
+DS-012|Mitsuri Kanroji|Swordsmith Village|MAIN|ALLY|I Flexible muscle|Breath/Love-Whip|550–595|Master|Whip; high STA|Bind; poison; endurance contest|Body elasticity
+DS-013|Genya Shinazugawa|Swordsmith Village|MAIN|ALLY|I Devour amplification|Breath/Beast-Demon|480–545|Veteran–Elite|Demonic ingestion; gun|Transformation lag; holy steel|Blood bridge
+DS-014|Sanemi Shinazugawa|Hashira Training–Infinity|MAIN|ALLY|I Reckless wind|Breath/Wind-Storm|570–615|Master|Wind forms; pain immunity|Space traps; drain|Storm discipline
+DS-015|Gyomei Himejima|Hashira Training–Infinity|MAIN|ALLY|I Sacred heavy|Breath/Stone-Flail|590–635|Master–Calamity|Flail; rock; faith|Mobility exploit; ranged|Faith/steel bridge
+DS-016|Kagaya Ubuyashiki|Demon Slayer main|MAIN|SUPPORT|I Command sacrifice|Word/Solar-Leadership|350–420|Hunter|Morale; strategy; self-destruct|Assassination; confusion|Speaker authority
+DS-017|Urokodaki; Sakonji; mentor line|Demon Slayer S1/Mugen|MAIN|MENTOR|I Transmission|Breath/Water-Flame|480–545 group|Veteran–Elite|Forms; training|Noncombat pressure|Lineage
+DS-018|Tamayo|Demon Slayer S1–Infinity|MAIN|BRIDGE|I Demon scientist|Blood/Medical-Cure|500–560|Elite|Cure research; blood art|Bind; sunlight; deception|Cure/alchemy bridge
+DS-019|Yushiro|Demon Slayer S1–Infinity|MAIN|ALLY|I Loyal construct|Blood/Illusion|470–525|Veteran|Illusion; speed|True sight; area|Illusion service
+DS-020|Muzan Kibutsuji|Demon Slayer all|MAIN|ANTAG/BOSS|I Flesh severance|Blood/Demon-Solar|640–685|Calamity fossil|Regen; mind control; demon creation|Sunlight field; fire; seal regen; focus core|Dracula parallel
+DS-021|Hand Demon; Kyogai; Rui|Demon Slayer S1|MAIN|BOSS|I Early demon arts|Blood/Beast-Sound-Ice|360–530 group|Hunter–Veteran|Claws; dream drum; ice cocoon|Fire; wisteria; anchor cut|Demon ecology
+DS-022|Spider Family; Lower Moons|Demon Slayer S1|MAIN|BOSS|I Pack ecology|Blood/Beast-Poison-Thread|380–500 group|Initiate–Veteran|Ambush; bombs; threads|Separation; fire; area|Minor demon swarm
+DS-023|Kaigaku|Demon Slayer S1/[uh]|MAIN/[uh]|ANTAG|I Fallen student|Breath/Thunder-Demon|500–560|Elite|Thunder demon art|Moral hesitation; holy; speed|Breath corruption
+DS-024|Enmu|Mugen Train|MAIN|BOSS|I Oneiric parasite|Blood/Dream-Sleep|520–570|Elite|Dream merge; ship control|Wake anchors; pain; fire|Dream status
+DS-025|Akaza|Mugen Train–Infinity|MAIN|BOSS/BRIDGE|I Boundless Combat Soul|Blood/Martial-Demon|620–665|Calamity fossil|Compass Needle; Destructive Death|Disrupt battle spirit; seal regen; sunlight|Sukuna bridge
+DS-026|Daki; Gyutaro|Entertainment District|MAIN|BOSS|I Twin anchor|Blood/Obi-Sickle-Poison|540–605 group|Elite–Master|Obi clones; poison rage|Burn belts; split twin; range|Twin boss logic
+DS-027|Nakime|Infinity Castle [uh]|MAIN/[uh]|BOSS|I Castle gate|Blood/Biwa-Space|580–630|Master|Spatial biwa; summon|Silence; target biwa; disrupt space|Domain ancestor
+DS-028|Hantengu; Gyokko; Zohakuten|Swordsmith Village|MAIN|BOSS|I Fossil mutation|Blood/Clone-Jade-Wood|540–640 group|Elite–Master|Emotion clones; jade; forest|Identify true body; fire; roots|Clone ecology
+DS-029|Kokushibo; Doma|Infinity Castle [uh]|MAIN/[uh]|BOSS|I Upper Moon apex|Blood/Moon-Ice-Blade|645–690 group|Calamity fossil|Moon blades; ice cult; regen|Sunlight; anchor; range|Demon king war
+DS-030|Muzan Final Form|Infinity Castle Part 3 [uh]|MAIN/FUTURE|BOSS|I Sunrise survival|Blood/Demon-Solar|680–720|Calamity–Disaster|Cellular swarm; sunlight timer|Sustained daylight; purification; attrition|Age closure
+CV-001|Trevor Belmont|Castlevania S1–S4|MAIN|PROTAG|II Ritual protocol|Steel/Word-Belmont|480–545|Veteran–Elite|Vampire Killer; subweapons|Relic authentication; blood pressure|Belmont line
+CV-002|Sypha Belnades|Castlevania S1–S4|MAIN|PROTAG|II Language constrains energy|Word/Elemental-Speaker|490–555|Elite|Ice/fire/lightning; flight|Silence; false name risk|Belnades
+CV-003|Alucard|Castlevania S1–S4/Nocturne echoes|MAIN|BRIDGE|II Dual-boot access|Blood/Nocturne-Steel|600–650|Master–Calamity|Night Veil; shapeshift; guns|Hollowing; holy seal; spirit stability|Muzan/Dracula/Avatar bridge
+CV-004|Dracula|Castlevania S1/S4|MAIN|ANTAG/BOSS|II Spirit severance|Nocturne/Blood-Spirit|650–695|Calamity fossil|Castle domain; night creatures; summons|Break castle anchor; solar/holy; banishment|Domain ancestor
+CV-005|Isaac|Castlevania S2–S4|MAIN|ANTAG/BRIDGE|II Righteous grief|Word/Engineering-Dark|520–585|Elite–Master|Machines; magic cannon|Sabotage; morale; range|Seal/tech bridge
+CV-006|Hector|Castlevania S2–S4|MAIN|ANTAG/BRIDGE|II Necromancer|Blood/Summoning-Forge|510–575|Elite|Army summons; forge|Isolate summons; fire; seal|Beast/summon bridge
+CV-007|Bishop|Castlevania S1|MAIN|BOSS|II False faith|Word/Religious-Fanatic|470–535|Veteran–Elite|Preaching buff; fire|Truth disruption; silence|Dogma field
+CV-008|Carmilla|Castlevania S2|MAIN|ANTAG/BOSS|II Aristocratic vampirism|Blood/Nocturne-Coven|590–640|Master–Calamity|Mist; thralls; curse|Silver; sunlight; break coven links|Coven politics
+CV-009|Stefan|Castlevania S2|MAIN|BOSS|II Corrupted lover|Blood/Nocturne|480–540|Elite|Vampire seduction|Holy water; emotional anchor|Tragic thrall
+CV-010|Saint Germain|Castlevania S3–S4|MAIN|BRIDGE|II Formula breaker|Word/Alchemy-Time|540–600|Master|Alchemy; temporal hints|Disrupt formula; steel|Science bridge
+CV-011|Death|Castlevania S4|MAIN|BOSS/BRIDGE|II Inevitability field|Nocturne/Void-Scythe|680–725|Calamity–Disaster|Reaping; death loop|Banish; anchor; vow; not kill|Curse domain bridge
+CV-012|Lisa / memory of Lisa|Castlevania S1|MAIN|SUPPORT|II Burned wisdom|Word/Healing-Faith|350–420|Hunter|Legacy; mercy|Noncombat|Moral anchor
+CV-013|God / Black Church [uh]|Castlevania S3–S4|MAIN/[uh]|ENV/BOSS|II Distant authority|Word/Void-Faith|720+|Disaster/Illegal|Doctrine field|Doubt; relic; autonomy|Forbidden theology
+CV-014|Richter Belmont|Nocturne S1 [uh]|MAIN/[uh]|PROTAG|II Late Belmont|Steel/Word-Solar|540–600|Master|Whip; moon phase|Curse buildup; possession|Nocturne
+CV-015|Maria Renard|Nocturne S1 [uh]|MAIN/[uh]|PROTAG|II Spirit fox affinity|Spirit/Fox-Nocturne|520–585|Elite|Foxfire; spirit negotiation|Silence; holy disruption|Avatar spirit bridge
+CV-016|Drolta Tzuentes [uh]|Nocturne [uh]|MAIN/[uh]|ANTAG/BOSS|II Servant ritual|Blood/Nocturne-Cult|560–615|Master|Blood ritual|Silver; interruption|Cult bridge
+CV-017|Elizabeth Bathory [uh]|Nocturne [uh]|MAIN/[uh]|ANTAG/BOSS|II Nobility curse|Blood/Nocturne-Bloodbath|620–670|Calamity|Blood domain; mirror curse|Purification; break anchors|Blood domain
+CV-018|Night Creatures; Castle Domain|Castlevania/Nocturne|MAIN|ENV/BOSS|II Haunted loop|Nocturne/Blood-Beast|field 520–680|Master–Calamity|Spatial shifts; respawn|Anchor destruction; banishment; sunrise|Proto-domain
+CV-019|Church / Inquisition / Silver Seal|Castlevania/Nocturne|MAIN|ENV|II Institutional faith|Word/Steel-Solar|400–500 squads|Veteran|Seals; relics; rites|Corruption; doubt; false authority|Capture system
+CV-020|Alchemy Constructs / Golems|Castlevania S3/Nocturne|MAIN|ENV/BOSS|II Artificial servants|Steel/Word-Alchemy|480–565|Elite|Constructs; formulas|Water; disruption; sabotage|Mecha bridge
+CV-021|Taka / Nightfall|Nightfall short|SIDE|BRIDGE|II Experimental blood tech|Steel/Blood-Tech|450–525|Veteran|Blood devices|Sabotage; holy|Optional gothic bioweapon
+AV-001|Aang|ATLA Books 1–3|MAIN|PROTAG|III Spirit negotiation|Bend/Air-Spirit|520–625|Elite–Master|Four elements; Avatar State|Sever spirit link; drain STA; overwhelm consensus|Root access
+AV-002|Katara|ATLA Books 1–3|MAIN|PROTAG|III Fluid adapt|Bend/Water-Healing|480–565|Elite|Water whip; healing; blood risk|Freeze; earth absorb; range pressure|Healing bridge
+AV-003|Sokka|ATLA Books 1–3|MAIN|PROTAG/HUMAN|III Nonbender command|Steel/Tactic-Word|380–465|Hunter–Veteran|Plans; boomerang; meteorite sword|Protect him; chaos; speed blitz|Operator archetype
+AV-004|Zuko|ATLA Books 1–3|MAIN|PROTAG/ANTAG|III Directed anger|Bend/Fire-Redemption|500–585|Elite|Fire; lightning redirect|Water; earth cover; feints|Redemption arc
+AV-005|Iroh|ATLA Books 1–3|MAIN|ALLY/BOSS|III Dragon wisdom|Bend/Fire-Spirit|560–625|Master|Static; dragon fire|Drain; isolation; spirit confusion|Spirit-fire bridge
+AV-006|Toph Beifong|ATLA Books 2–3|MAIN|PROTAG|III Seismic will|Bend/Earth-Metal|520–605|Master|Metalbending; seismic sense|Mobility; gas; lightning; range|Terrain control
+AV-007|Bumi|ATLA Books 2–3|MAIN|ALLY|III Jovial defense|Bend/Earth-Neutral|500–575|Elite|Earth; seismic|Surprise; mobility|Neutral state
+AV-008|Appa; Momo|ATLA Books 1–3|MAIN|BEAST/BRIDGE|III Sky bison; lemur|Beast/Air-Spirit|450–545 Appa; 300–380 Momo|Veteran; Initiate|Flight; sensitivity|Grounding; nets; spirit lures|Spirit ecology
+AV-009|Suki|ATLA Books 2–3|MAIN|ALLY|III Warrior raid|Steel/Tactic-Kyoshi|430–505|Veteran|Fans; ambush|Range; deception|Kyoshi defense
+AV-010|Mai; Ty Lee|ATLA Books 2–3|MAIN|ANTAG/ALLY|III Precision acrobat|Steel/Chi-Poison|420–505 group|Veteran|Knives; chi blocking|Area control; protect|Nonbender specialists
+AV-011|Azula|ATLA Books 2–3|MAIN|ANTAG/BOSS|III Perfection fracture|Bend/Fire-Lightning|560–625|Master|Blue lightning; Agni Kai|Water; earth; psychological pressure|Lightning discipline
+AV-012|Zhao|ATLA Book 1|MAIN|ANTAG|III Spirit bargaining|Word/Spirit-Politics|450–535|Elite|Assassination; moon theft|Expose; banish; team|Speaker corruption
+AV-013|Long Feng; Dai Li|ATLA Book 2|MAIN|ANTAG/ENV|III Information control|Word/Control-Earth|400–525 group|Veteran–Elite|Tunnels; propaganda|Truth; chaos; infiltration|Control state
+AV-014|Ozai|ATLA Book 3|MAIN|BOSS|III Solar apocalypse|Bend/Fire-Comet|620–685|Calamity fossil|Comet fire; lightning|Comet timer; water/earth; Avatar counter|Comet field
+AV-015|Sozin spirit / comet echo|ATLA Book 3|SIDE|ENV/BOSS|III Historical haunt|Nocturne/Fire-Ancestor|500–585|Master|Possession; fire|Purification; banish|Ancestral echo
+AV-016|Fire Nation; Earth Kingdom; Water Tribe armies|ATLA/TLOK|MAIN|ENV|III War logistics|Steel/Fire-Earth-Water|280–465 groups|Initiate–Veteran|Numbers; terrain|Guerrilla; morale; sealing|Institutional war
+AV-017|Air Nomads; past lives|ATLA Book 3|MAIN|BRIDGE/ENV|III Extinct lineage|Bend/Air-Spirit|400–585|varied|Meditation; spirit guidance|Corruption; trauma; possession|Avatar cycle
+AV-018|Raava|ATLA Book 3/TLOK Book 2|MAIN|BRIDGE|III Avatar spirit|Spirit/Solar-Light|680–725|Calamity–Disaster|Light; bond|Vaatu corruption; severance; balance|Spirit polarity
+AV-019|Vaatu|TLOK Book 2|MAIN|ANTAG/BOSS|III Dark root|Spirit/Nocturne-Void|680–735|Calamity–Disaster|Vines; corruption|Raava light; pruning; portal control|Spirit entropy
+AV-020|Unalaq|TLOK Book 2|MAIN|ANTAG/BOSS|III Dark Avatar|Bend/Water-Spirit|580–645|Master–Calamity|Spirit vines; fusion|Disrupt portal; Raava; isolation|Possession bridge
+AV-021|Korra|TLOK Books 1–3|MAIN|PROTAG|III Industrial avatar|Bend/Multi-Spirit|560–655|Master–Calamity|All elements; Avatar State|Spirit possession; chi poison; overwhelm|Bridge to industry
+AV-022|Tenzin|TLOK Books 1–3|MAIN|ALLY|III Master airbender|Bend/Air-Spirit|560–625|Master|Air; flight|Grounding; lightning; spirit traps|Air return
+AV-023|Asami|TLOK Books 1–3|MAIN|PROTAG/TECH|III Engineer|Steel/Industry-Future|420–525|Veteran|Mecha; gadgets|Spirit disruption; sabotage|Chakra tech bridge
+AV-024|Mako; Bolin|TLOK Books 1–3|MAIN|PROTAG|III Street team|Bend/Fire-Earth-Lava|480–575 group|Elite|Fire; lava; agility|Water; cooling; earth cover|Urban bending
+AV-025|Jinora|TLOK Books 1–3|MAIN|SUPPORT|III Astral projection|Bend/Air-Spirit|450–545|Veteran|Spirit projection|Body vulnerability; seals|Spirit mediation
+AV-026|Amon|TLOK Book 1|MAIN|ANTAG/BOSS|III Masked bloodbending|Word/Fluid-Equality|520–595|Master|Bloodbending; mask|Remove mask; fire/air; range|Equality field
+AV-027|Tarrlok|TLOK Book 1|MAIN|ANTAG|III Bloodbending|Bend/Blood-Shadow|510–585|Elite|Shadow clones|Light; water purity; isolate|Blood shadow
+AV-028|Zaheer; Red Lotus|TLOK Book 1|MAIN|BOSS|III Freedom terror|Bend/Air-Plasma-Water-Lava|540–635 group|Master|Gas; flight; combo terrain|Divide; seal; industrial counter|Anarchist field
+AV-029|Kuvira|TLOK Book 3|MAIN|ANTAG/BOSS|III Empire|Steel/Magnet-Spirit Energy|600–665|Master–Calamity|Spirit cannon; mecha|Disrupt power source; infiltration; Avatar counter|Spirit industry
+AV-030|Varrick; Zhu Li|TLOK Books 2–3|MAIN|ALLY/CHAOS|III Inventor/logistics|Steel/Chemistry-Tactic|380–495 group|Veteran|Explosives; strategy|Dampen; order; misdirection|Industrial chaos
+AV-031|Spirit World ecology|TLOK Book 2|MAIN|ENV|III Thin veil|Spirit/Nocturne-Bend|varies|varied|Possession; corruption|Purification; boundary rites|Nocturne bridge
+AV-032|Netflix live-action cast|Netflix TLA|RETELL|ASSET|III Parallel adaptation|Bend/Fire-Water-Earth-Air|same bands|parallel|Visual assets only|Not mainline|Retell pool
+NR-001|Naruto Uzumaki|Naruto–The Last|MAIN|PROTAG|IV Internal infra|Chakra/Wind-Beast|560–685|Master–Calamity|Rasengan; clones; sage; Kurama|Seal network disruption; sensory blind; attrition|Jinchuriki bridge
+NR-002|Sasuke Uchiha|Naruto–The Last|MAIN|PROTAG/ANTAG|IV Cursed circuit|Chakra/Lightning-Void|570–695|Master–Calamity|Chidori; Amaterasu; Susanoo|Drain; spatial unpredictability; team focus|Void echo
+NR-003|Sakura Haruno|Naruto–The Last|MAIN|PROTAG|IV Controlled burst|Chakra/Medical-Strength|480–575|Elite|Healing; super strength|Burst pressure; poison; protect|Medical bridge
+NR-004|Kakashi Hatake|Naruto–Shippuden|MAIN|ALLY/MENTOR|IV Adaptive doctrine|Chakra/Lightning-Copy|560–625|Master|Raikiri; copy; dogs|Stamina drain; genjutsu counter|Copy lineage
+NR-005|Rock Lee|Naruto Part I|MAIN|ALLY|IV Body age survivor|Breath/Chakra-Gate|480–605|Elite–Master|Taijutsu; gates|Range; genjutsu; gate cooldown|Breath bridge
+NR-006|Might Guy|Shippuden War|MAIN|ALLY/BOSS|IV Eight gates|Chakra/Gate-Body|600–705|Master–Calamity|Gate forms; Evening Twilight|Attrition; seal meridians; distance|Somatic ceiling
+NR-007|Neji Hyuga|Naruto Part I|MAIN|ALLY/ANTAG|IV Destiny strike|Chakra/Byakugan-Soft Fist|520–595|Master|Tenketsu; Byakugan|Range; unpredictable; blind spots|Eye lineage
+NR-008|Tenten|Naruto Part I|MAIN|ALLY|IV Equipment|Steel/Tool-Scroll|430–505|Veteran|Weapons; scrolls|Suppress inventory|Tool logistics
+NR-009|Gaara|Naruto–Shippuden|MAIN|ANTAG/ALLY|IV Shukaku vessel|Chakra/Sand-Beast|560–635|Master–Calamity|Sand defense; partial beast|Water; wind; seal beast|Tailed beast bridge
+NR-010|Kankuro; Temari|Naruto–Shippuden|MAIN|ALLY|IV Sibling support|Chakra/Puppet-Wind|470–575 group|Elite|Puppets; wind cutter|Fire; range; cut strings|Sand support
+NR-011|Shikamaru Nara|Naruto–The Last|MAIN|ALLY/HUMAN|IV Commander|Chakra/Shadow-Tactic|420–525|Veteran|Shadow possession; plans|Light; chaos; speed blitz|Operator
+NR-012|Choji; Ino; Kiba; Shino|Naruto–Shippuden|MAIN|ALLY|IV Squad utility|Chakra/Expansion-Mind-Beast-Insect|420–555 group|Veteran–Elite|Varied|Divide; area denial; poison|Konoha utility
+NR-013|Hinata; Hanabi Hyuga|Naruto–The Last|MAIN|ALLY|IV Protector|Chakra/Byakugan-Gentle|470–565 group|Elite|Rotation; gentle fist|Range; lightning; feints|Hyuga line
+NR-014|Hiruzen Sarutobi|Naruto Part I|MAIN|ALLY/BOSS|IV Professor|Chakra/Elemental-Old|580–645|Master|All elements; Enma|Drain; youth advantage; seal|Old institution
+NR-015|Jiraiya|Shippuden Pain|MAIN|ALLY/BOSS|IV Natural echo|Chakra/Toad-Sage|600–665|Master–Calamity|Sage; toads|Water; stealth; seal network|Sage bridge
+NR-016|Tsunade|Shippuden|MAIN|ALLY|IV Hokage|Chakra/Medical-Strength|580–655|Master–Calamity|Creation Regen; strength|Bleed; poison; stamina|Medical state
+NR-017|Orochimaru|Naruto–Shippuden|MAIN|ANTAG/BOSS|IV Immortality quest|Chakra/Snake-Poison-Forbidden|620–685|Calamity|Snakes; regen; Edo|Fire; sealing; purge|Flesh severance echo
+NR-018|Kabuto Yakushi|Shippuden War|MAIN|ANTAG|IV Spy|Chakra/Medical-Sage|540–615|Master|Snake surgery; sage|Perception; lightning; seal|Forbidden science
+NR-019|Itachi Uchiha|Shippuden|MAIN|ANTAG/BRIDGE|IV Sacrifice|Chakra/Fire-Illusion|620–685|Calamity|Tsukuyomi; Amaterasu; Susanoo|Drain; physical overload; break illusion|Illusion bridge
+NR-020|Kisame Hoshigaki|Shippuden|MAIN|ANTAG/BOSS|IV Beast hunter|Chakra/Water-Shark|600–665|Master–Calamity|Samehada; water prison|Lightning; fire; seal|Tailed beast hunter
+NR-021|Deidara|Shippuden|MAIN|BOSS|IV Art burst|Chakra/Explosion-Clay|540–605|Master|Clay birds; C0|Rain; range; stealth|Explosion ecology
+NR-022|Sasori|Shippuden|MAIN|BOSS|IV Immortal puppet|Chakra/Puppet-Scarlet|560–625|Master|Hundred puppets; core|Fire; cut strings; protect core|Puppet fossil
+NR-023|Kakuzu; Hidan|Shippuden|MAIN|BOSS|IV Elemental hearts; immortality|Chakra/Earth-Grudge; Curse/Ritual|560–645 group|Master–Calamity|Masks; threads; curse ritual|Lightning; seal hearts; contain blood|Ritual bridge
+NR-024|Pain / Nagato|Shippuden Pain Arc|MAIN|BOSS|IV God cycle|Chakra/Gravity-Rinnegan|650–715|Calamity|Six Paths; Shinra Tensei|Find real body; sage detection; close range|Pain theology
+NR-025|Konan|Shippuden Pain|MAIN|ANTAG/ALLY|IV Rain|Chakra/Paper-Amphibian|560–625|Master|Paper bombs; shikigami|Fire; water; speed|Paper field
+NR-026|Obito Uchiha|Shippuden War|MAIN|ANTAG/BOSS|IV Masked|Chakra/Space-Wood|660–725|Calamity|Kamui; wood; Ten-Tails pressure|Time/space prediction; sealing; drain|Space bridge
+NR-027|Madara Uchiha|Shippuden War|MAIN|BOSS|IV Legend|Chakra/Fire-Illusion-Wood|690–745|Calamity–Disaster|Susanoo; wood; Limbo; Moon Eye|Seal components; range; truth-seeing|Ancient apex
+NR-028|Black Zetsu|Shippuden War|MAIN|ANTAG/BRIDGE|IV History manipulator|Chakra/Void-Manipulation|620–685|Calamity|Possession; will of God Tree|Sealing; isolation; light|Kaguya bridge
+NR-029|Kaguya Otsutsuki|Shippuden War|MAIN|BOSS/BRIDGE|IV God Tree|Chakra/Void-Bone|720–785|Disaster fossil|Dimensions; Infinite Tsukuyomi|Seal not kill; dimension anchor; sacrifice|Dark Continent echo
+NR-030|Danzo Shimura|Shippuden Five Kage|MAIN|ANTAG|IV Root|Chakra/Wood-Izanagi|580–645|Master|Root; Kotoamatsukami|Expose; speed; seal arm|Institutional corruption
+NR-031|Sai; Yamato|Shippuden|MAIN|ALLY|IV Support|Chakra/Ink-Wood-Seal|470–625 group|Elite–Master|Ink beasts; wood release|Fire; water; chakra drain|Seal support
+NR-032|Minato; Kushina|Shippuden/flashback|MAIN|BRIDGE|IV Yellow Flash; Adamantine|Chakra/Space-Seal|650–715 group|Calamity|Flying Raijin; sealing chains|Predict teleport; area denial; break seals|Seal lineage
+NR-033|Boruto; Sarada; Mitsuki; Kawaki [uh]|Boruto film/series [uh]|TRANSITION [uh]|PROTAG/ANTAG|IV+ Scientific chakra|Chakra/Scientific-Karma|500–685 group|Elite–Calamity|Karma; scientific tools|Seal disruption; scientific counter|Modern bridge
+NR-034|Land of Snow film: Yukie; Sekien|Naruto Movie 1|SIDE|ALLY/BOSS|IV Artifact escort|Steel/Chakra-Doton|300–555 group|Initiate–Elite|Snow fortress; hidden village|Infiltration; water; protect|Snow dungeon
+NR-035|Gelel film: Hilde; Stone users|Naruto Movie 2|SIDE|BOSS|IV Artifact war|Chakra/Ancient-Stone|500–585|Elite|Stone power|Seal artifact; split|Ancient stone pool
+NR-036|Crescent Moon film: Michiru; Tsukihade|Naruto Movie 3|SIDE|ALLY/BOSS|IV Relic escort|Steel/Kingdom-Relic|380–475|Veteran|Guard tactics|Chaos; speed|Relic tutorial
+NR-037|Shippuden Movie 1: Shion; Muke|Naruto SM1|SIDE|ALLY/BOSS|IV Seal prophecy|Word/Prophecy-Beast|360–565 group|Hunter–Elite|Prophecy; summoned beasts|Protect; exorcise; seal|Prophecy seal
+NR-038|Bonds film: Amari|Naruto SM2|SIDE|ANTAG/ALLY|IV Crystal war|Chakra/Crystal-Flight|500–585|Elite|Crystal wings|Dampen crystal; earth|Crystal terrain
+NR-039|Will of Fire film: Hiruko|Naruto SM3|SIDE|BOSS|IV Bloodline leech|Chakra/Kekkei-Theft|540–615|Master|Kekkei absorption|Isolate; seal; fire|Bloodline theft
+NR-040|Lost Tower film: Sora; Mukade|Naruto SM4|SIDE|ALLY/BOSS|IV Time distortion|Chakra/Time-Tower|420–635 group|Veteran–Master|Time chakra|Anchor present; seal|Time dungeon
+NR-041|Blood Prison film: Yakumo|Naruto SM5|SIDE|ALLY/BOSS|IV Prison raid|Chakra/Three-Tails-Frame|480–565|Elite|Partial beast|Seal; truth; escape|Escape raid
+NR-042|Road to Ninja film: Menma; Tohsuke|Naruto SM6|ALT/SIDE|BOSS/ALT|IV Inverted world|Chakra/Genjutsu-Mirror|560–645 group|Master|Mirror stats|Break genjutsu; real anchors|Mirror arena
+NR-043|The Last film: Toneri; Hanura [uh]|The Last|MAIN-ADJACENT|BOSS|IV Moon tower|Chakra/Lunar-Tenseigan|650–715|Calamity|Tenseigan; meteor|Earth/water; seal; Byakugan|Lunar chakra
+NR-044|Boruto film: Momoshiki; Kinshiki; Urashiki [uh]|Boruto|TRANSITION [uh]|BOSS|IV+ Dimension invaders|Chakra/Void-Absorb|660–745 group|Calamity–Disaster|Absorption; karma; bows|Seal; scientific; sacrifice|Void echo
+HX-001|Gon Freecss|HxH 2011|MAIN|PROTAG|V Personal law|Nen/Enhancer-Beast|520–705|Elite–Disaster|Jajanken; rage aura|Contract backlash; ego; poison|Rage amplifier
+HX-002|Killua Zoldyck|HxH 2011|MAIN|PROTAG|V Assassin freedom|Nen/Transmuter-Electric|540–695|Master–Disaster|Godspeed; Kanmuru; Yo-Yo|Electricity drain; guilt; poison|Electric transmuter
+HX-003|Kurapika|HxH 2011|MAIN|PROTAG|V Vengeance contract|Nen/Conjurer-Chain|540–685|Master|Chain Jail; Stein|Condition violation; aura depletion|Contract specialist
+HX-004|Leorio Paradinight|HxH 2011|MAIN|PROTAG|V Doctor fury|Nen/Emitter-Medical|480–605|Elite|100-ton punch; remote|Range; speed; stamina|Remote emitter
+HX-005|Hisoka Morow|HxH 2011|MAIN|ANTAG/BOSS|V Amusement rule|Nen/Transmuter-Card|620–705|Master–Calamity|Bungee Gum; aura knife|Predictability; contract; emotional bait|Card hunter
+HX-006|Biscuit Krueger|HxH 2011|MAIN|ALLY|V Hidden master|Nen/Enhancer-Transmuter|580–665|Master|Healing; strength|Reveal true form; pressure|Training bridge
+HX-007|Kite|HxH 2011|MAIN|BRIDGE|V Reincarnation scout|Nen/Scanner-Beast|560–645|Master|Crazy Slots; scan|Seal; anti-beast|Soul bridge
+HX-008|Silva; Zeno Zoldyck|HxH 2011|MAIN|BOSS|V Family apex|Nen/Enhancer-Dragon|640–715 group|Calamity|Raw power; dragon rider|Aura drain; strategy; range|Assassin elders
+HX-009|Illumi Zoldyck|HxH 2011|MAIN|ANTAG|V Control|Nen/Conjurer-Needles|580–655|Master|Needle; disguise|Truth; aura scan; contract|Mind control
+HX-010|Milluki; Kalluto|HxH 2011|SIDE|ANTAG|V Siblings|Nen/Conjurer-Tools|500–585 group|Elite|Yo-yo; paper|Speed; fire|Assassin support
+HX-011|Alluka; Nanika [uh]|HxH 2011/[uh]|MAIN/[uh]|BRIDGE|V Forbidden anchor|Void/Wish-Contract|700+|Disaster/Illegal|Wish grant; cost|Strict contract; sacrifice; containment|Dark Continent echo
+HX-012|Chrollo Lucilfer|HxH 2011|MAIN|ANTAG/BOSS|V Skill thief|Nen/Specialist-Book|640–715|Calamity|Skill Hunt; Bandit|Seal book; isolate stolen skills|Ability archaeology
+HX-013|Uvogin|HxH 2011|MAIN|BOSS|V Raw impact|Nen/Enhancer-Bullet|640–695|Calamity|Big Bang Impact|Aura depletion; kiting|Bullet enhancer
+HX-014|Nobunaga Hazama|HxH 2011|MAIN|BOSS|V Dagger geometry|Nen/Sword-Enhancer|580–645|Master|Sword; aura|Range; control|Sword geometry
+HX-015|Feitan Portor|HxH 2011|MAIN|BOSS|V Flame punishment|Nen/Transmuter-Pain|600–675|Master|Pain burner; speed|Water; stun; contract|Pain transmuter
+HX-016|Machi Komacine|HxH 2011|MAIN|BOSS|V Control repair|Nen/Emitter-Thread|590–655|Master|Thread; repair|Cut; fire; range|Thread emitter
+HX-017|Troupe mid-tier: Shalnark; Franklin; Pakunoda; Bonolenov; Kortopi; Phinks|HxH 2011|MAIN|BOSS|V Rule specialists|Nen/Conjurer-Emitter-Reader|540–645 group|Elite–Master|Phone; guns; memory; sound; clones; razor|Misinfo; silence; true-target; range|Contract swarm
+HX-018|Neon Nostrade|HxH 2011|SIDE|SUPPORT|V Fortune|Nen/Precognition-Specialist|420–525|Veteran|Aura prediction|Chaos; misread|Precognition support
+HX-019|Genthru|HxH 2011|MAIN|BOSS|V Greed bomb|Nen/Bomber-Countdown|580–645|Master|Boom; countdown|Disarm; speed; seal|Countdown bomber
+HX-020|Bombzara; Little; Greed Island game masters|HxH 2011|SIDE|BOSS|V Fixed rules|Nen/Beast-Game|520–605 group|Elite|Game rules|Exploit rule; contract|Rule dungeon
+HX-021|Meruem|HxH 2011 Chimera Ant|MAIN|BOSS/BRIDGE|V Aura apex|Nen/Enhancer-King|740–785|Disaster fossil|Aura; throne; ego|Blue rose poison; isolation; contract sacrifice|Nen ceiling
+HX-022|Neferpitou|HxH 2011|MAIN|BOSS|V Cat predator|Nen/Enhancer-Doctor|680–745|Disaster|Doctor Black Blue; Carnage|Range; poison; seal|Doctor blast
+HX-023|Shaiapouf|HxH 2011|MAIN|BOSS|V Butterfly deception|Nen/Manipulator-Miasma|670–735|Disaster|Miasma; clones|Fire; vacuum; truth|Miasma manipulator
+HX-024|Menthuthuyoupi|HxH 2011|MAIN|BOSS|V Self-damage panda|Nen/Transmuter-Rage|680–745|Disaster|Rage blasts|Containment; aura drain|Rage transmuter
+HX-025|Netero|HxH 2011|MAIN|BOSS/BRIDGE|V Human ceiling|Nen/Enhancer-100 Arms|720–765|Disaster|100 Arms; Zero; prayer|Time limit; range; ego bait|Human apex
+HX-026|Chimera Ant officers: Ikalgo; Leol; Cheetu; Zazan; Halkenburg; Gungi; Palm|HxH 2011|MAIN|BOSS/ENV|V Ant law|Nen/Beast-Contract-Ecology|540–665 group|Elite–Master|Nen beasts; instincts|Anti-beast; contracts; terrain|Nen beast ecology
+HX-027|Beyond Netero|HxH 2011 Election/Dark Continent|MAIN|BRIDGE/BOSS|V/VII Forbidden bid|Nen/Contract-Expedition|680–745|Disaster|Secret; expedition law|Contract exposure; isolation|Dark Continent bridge
+HX-028|Pariston; Light; Bungee; Ziggart|HxH 2011 Election|MAIN|ANTAG/ENV|V Association law|Nen/Specialist-Politics|560–715 group|Master–Calamity|Legal aura; secrets|Loopholes; exile; truth|Institutional Nen
+HX-029|Phantom Rouge film: Sara|HxH Movie 1|SIDE|BOSS|V Cursed gem|Nen/Gem-Curse|580–655|Master|Gem possession|Purification; seal; break gem|Curse bridge
+HX-030|The Last Mission film: Kasiot|HxH Movie 2|SIDE|BOSS|V Rule mission|Nen/Game-Ghost|560–635|Master|Ghost mission rules|Exploit rule; contract|Mission arena
+HX-031|1999 anime / OVAs|HxH 1999|RETELL|ASSET|V Archival tone|Nen/Darker-Archive|same bands|parallel|Archival assets only|Not mainline|Retell pool
+JK-001|Yuji Itadori|JJK S1–Shinjuku [uh]|MAIN|PROTAG|VI Emotional entropy|Curse/Hand-to-Hand-Vessel|560–725|Elite–Disaster|Black Flash; Cleave; Sukuna vessel|Soul separation; domain pressure; attrition|Sukuna vessel
+JK-002|Megumi Fushiguro|JJK S1–Shinjuku [uh]|MAIN|PROTAG|VI Shadow contract|Curse/Ten Shadows-Summon|540–705|Elite–Disaster|Shikigami; Domain|Light; seal shadows; overwhelm|Ten Shadows
+JK-003|Nobara Kugisaki|JJK S1–Shibuya|MAIN|PROTAG|VI Voodoo speaker|Curse/Straw-Hammer-Resonance|500–655|Master|Nail; hammer; straw doll|Range; armor; dispel|Resonance curse
+JK-004|Satoru Gojo|JJK S1–Shinjuku [uh]|MAIN|BOSS/BRIDGE|VI Rule optimization|Curse/Limitless-Six Eyes|780–825|Anomaly fossil|Infinity; Hollow Purple; Domain|Domain clash; shutdown; cursed tool; binding vow|Limitless apex
+JK-005|Kento Nanami|JJK S1–Shibuya|MAIN|ALLY|VI Precision labor|Curse/Ratio-Executor|620–695|Calamity|7:3; sword|Unpredictability; emotional bait|Ratio executor
+JK-006|Maki Zenin|JJK S1–Culling [uh]|MAIN|ALLY|VI Heaven constraints|Curse/Weapon-Blank|600–685|Calamity|Invisible; weapons|Sensory; cursed tools; range|Blank body
+JK-007|Toge Inumaki|JJK S1–Shibuya|MAIN|ALLY|VI Speaker descendant|Curse/Word-Cursed Speech|580–665|Master|Commands|Silence; throat protect; false name|Cursed speech
+JK-008|Panda|JJK S1–Shibuya|MAIN|ALLY|VI Constructed soul|Curse/Corpse-Dead Spirit|600–675|Calamity|Corpse; cores|Burn; seal; dissect|Corpse bridge
+JK-009|Masamichi Yaga|JJK S1|MAIN|SUPPORT|VI Creator law|Curse/Corpse-Maker|560–635|Master|Corpses|Destroy core; legal pressure|Corpse maker
+JK-010|Kinji Hakari|JJK S2–Culling [uh]|MAIN|ALLY/BOSS|VI Infinite restart|Curse/Slot-Gambler|680–745|Disaster|Domain; gambling|Force no jackpot; probability control|Gambler domain
+JK-011|Kirara Mikami|JJK S2–Culling [uh]|MAIN|ALLY|VI Transport|Curse/Paws-Speed|560–645|Master|Cat speed|Area trap; weight|Speed transport
+JK-012|Higuruma Yasuhiro|JJK S2 Culling [uh]|MAIN|BOSS/ALLY|VI Judge rule|Curse/Deadly Sentencing-Domain|670–735|Disaster|Gavel; domain|Legal loophole; range; break verdict|Sentencing domain
+JK-013|Atsuya Kusakabe|JJK S1/0|MAIN|ALLY|VI Simple domain|Curse/Iai-Cut|580–655|Master|Draw cut|Armor; misdirection|Iai cut
+JK-014|Aoi Todo|JJK S1–Shibuya|MAIN|ALLY|VI Swap soul|Curse/Boogie-Woogie-Replace|650–725|Calamity|Clap; soul swap|Predict swap; range; charm resistance|Soul swap
+JK-015|Mai Zenin; Mechamaru; Miwa|JJK S1–Kyoto|MAIN|ALLY/ANTAG|VI Student arsenal|Curse/Construction-Puppet-Slash|500–645 group|Elite–Master|Weapons; puppet; draw|Speed; disarm; cut link|School pool
+JK-016|Kyoto Goodwill: Ryu; Takako; Ogami; Ui Ui|JJK S1|MAIN|ANTAG/ALLY|VI School rivals|Curse/Stone-Space-Targeting-Perception|560–655 group|Master|Varied|Divide; seal; terrain|Kyoto rivals
+JK-017|Ryomen Sukuna|JJK S1–Shinjuku [uh]|MAIN|ANTAG/BOSS/BRIDGE|VI Boundless Combat Soul matured|Curse/Dismantle-Cleave-Domain|790–825|Anomaly fossil|Malevolent Shrine; Domain; Cleave|Finger seal; domain counter; binding vow; soul attack|Akaza payoff
+JK-018|Mahito|JJK S1–Shibuya|MAIN|ANTAG/BOSS|VI Self-evolution|Curse/Idle Transfiguration-Soul|650–725|Disaster|Soul touch; domain|Protect soul; domain clash; reverse curse|Soul transfigurator
+JK-019|Jogo|JJK S1–Shibuya|MAIN|ANTAG/BOSS|VI Pride|Curse/Volcano-Heat|640–705|Calamity|Volcano; domain|Water; containment; humility bait|Volcano curse
+JK-020|Hanami|JJK S1–Shibuya|MAIN|ANTAG/BOSS|VI Nature grudge|Curse/Tree-Photosynthesis|640–705|Calamity|Roots; harden|Fire; salt; urban terrain|Tree curse
+JK-021|Choso|JJK S2 Shibuya|MAIN|ANTAG/ALLY|VI Brother|Curse/Blood-Piercing|630–705|Calamity|Blood arrows; domain|Coagulate; range; emotional truce|Blood lineage
+JK-022|Naoya Zenin|JJK S2 Shibuya|MAIN|ANTAG|VI Clan speed|Curse/Projection-Heaven|580–655|Master|Fly; projection|Freeze timing; area|Projection heaven
+JK-023|Geto Suguru|JJK 0/Hidden Inventory|MAIN|BRIDGE/ANTAG|VI Idealism|Curse/Cursed Spirit Manipulation|680–745|Disaster|Absorb; domain pressure|Exorcise spirits; seal; ideology break|Spirit manipulator
+JK-024|Kenjaku|JJK S2–Shinjuku [uh]|MAIN|BOSS/ARCHAEOLOGIST|VI Historical|Curse/Brain-Transplant-Technique Hoard|740–795|Disaster/Anomaly|Technique steal; Domain; Culling|Expose body; seal technique; vow counter|Technique archaeology
+JK-025|Toji Fushiguro|JJK Hidden Inventory|MAIN|BRIDGE/BOSS|VI Anti-magic|Curse/Heavenly Restricted-Weapon|700–765|Disaster|Invisible; sword; cursed tool|Sensory; ranged; domain pressure|Heavenly restriction
+JK-026|Yuta Okkotsu|JJK 0–Shinjuku [uh]|MAIN|PROTAG/BOSS|VI Grief bond|Curse/Rika-Copy|700–785|Disaster/Anomaly|Rika; copy; domain|Sever bond; overload copy; vow|Rika bond
+JK-027|Riko Amanai|JJK 0|MAIN|BRIDGE/OBJECT|VI Catastrophic object|Curse/Star-Plasma-Vessel|500–600|Elite|Star plasma; bond|Protect; seal; exorcise|Star vessel
+JK-028|JJK 0 curses: Cuu; Inferno; curse users [uh]|JJK 0|MAIN|BOSS/ENV|VI Teen residue|Curse/Emotion-Object|480–605 group|Elite|Varied|Purification; resolve|Emotion objects
+JK-029|Tengen|JJK S2–High School War [uh]|MAIN|ENV/BOSS|VI World maintenance|Curse/Nonhuman-Barrier|760–805|Anomaly|Barrier; star ocean?|Reset logic; binding; isolation|Barrier maintenance
+JK-030|Yorozu; Shinju [uh]|High School War [uh]|FUTURE|BOSS/ENV|VI Reality maintenance|Curse/World-Tree-Reset|800+|Anomaly/Illegal|World reset|Not squad legal; anchor destruction|World reset logic
+JK-031|Cursed Objects; Special Grade fingers|JJK all|MAIN|ENV|VI Corruption|Curse/Object-Vessel|varies|varied|Power corruption|Seal; vow; disposal|Object risk
+JK-032|Cursed Spirits common|JJK all|MAIN|ENV|VI Residue|Curse/Emotion-Beast|280–525 group|Initiate–Elite|Swarm; fear|Exorcism; resolve; domain|Curse ecology
+JK-033|Shibuya Veil; Culling Colonies|JJK S2–S3 [uh]|MAIN|ENV/BOSS|VI Public disaster|Curse/Veil-Domain-Rule|field 700–780|Disaster|Domain clash; rule fields|Break veil; evacuate; counter-domain; exploit rule|Rule field
+DC-001|Dark Continent Ecology|HxH Dark Continent/original|FORBIDDEN|ENV|VII Anti-canon|Void/Anti-Canon|880+ silhouette|Illegal|Rule organisms; typing inversion|Forbidden anchor; retreat; no standard squad|Sheaf obstruction
+DC-002|Expedition Unknown Organisms|HxH Dark Continent|FORBIDDEN|BOSS|VII Unindexed|Void/Beast-Contract|800–880+|Illegal|Nonstandard abilities|Special tools; temporary allies only|Forbidden fauna
+DC-003|Muzan-Echo Flesh Fossil|Original|FORBIDDEN|BOSS|VII Pre-canon biology|Blood/Void-Flesh|820+|Illegal|Cellular canon|Purification; anchor|Flesh severance remnant
+DC-004|Dracula-Echo Spirit Wound|Original|FORBIDDEN|BOSS|VII Pre-canon haunting|Nocturne/Void-Memory|820+|Illegal|Castle loop|Banishment; root access|Spirit severance remnant
+DC-005|Avatar-Echo Root|Original|FORBIDDEN|BRIDGE|VII Unindexed spirit|Spirit/Void-Consensus|840+|Illegal|All dialects|Corruption; legitimacy test|Root access echo
+DC-006|God-Tree Echo|Original|FORBIDDEN|BOSS|VII Lattice origin|Void/Bio-Tree|850+|Illegal|Absorption|Seal; sacrifice|Chakra origin echo
+DC-007|Rule-Beast Echo|Original|FORBIDDEN|BOSS|VII Personality organism|Void/Contract-Beast|830+|Illegal|Conditions|Break contract; no contract|Nen origin echo
+DC-008|Domain-Ecosystem Echo|Original|FORBIDDEN|BOSS|VII Geography as domain|Void/Domain-Ecosystem|860+|Illegal|Auto-hit field|Stabilize; banish|JJK origin echo
+BR-001|Boundless Combat Soul|Akaza→Sukuna|MAIN|BRIDGE|I→VI Soul manifold|Martial/Blood-Curse|620–825|Calamity–Anomaly|Combat absolute recurrence|Disrupt ego; soul-target; domain counter|Persistent homology bridge
+BR-002|Speaker-to-Seal Protocol|Castlevania→Naruto→JJK|MAIN|BRIDGE|II→IV→VI Information constrains energy|Word/Chakra-Curse|500–795|Elite–Anomaly|True names; hand seals; binding vows|Silence; false name; vow exploit|Legal lineage
+BR-003|Breath-to-Chakra Body Circuit|Demon Slayer→Naruto|MAIN|BRIDGE|I→IV Body as antenna to circuit|Breath/Chakra|480–705|Veteran–Calamity|Vital rites; gates; meridians|Drain; seal meridians; range|Somatic firmware
+BR-004|Bending-to-Nen Personalization|Avatar→HxH|MAIN|BRIDGE|III→V Negotiated runtime to personal law|Bend/Nen|520–745|Elite–Disaster|Elemental communion; hatsu|Contract violation; aura depletion|Era frame shift
+BR-005|Dracula Castle-to-Domain Expansion|Castlevania→JJK|MAIN|BRIDGE|II→VI Haunted territory to rule field|Nocturne/Curse|650–825|Calamity–Anomaly|Proto-domain; domain|Anchor destruction; counter-domain|Domain ancestry
+BR-006|Muzan Flesh-to-Blood Contract|Demon Slayer→Castlevania|MAIN|BRIDGE|I→II Biological severance to vampiric covenant|Blood/Nocturne|600–695|Master–Calamity|Regen; curse; sunlight vulnerability|Sunlight field; purification; seal|Flesh/spirit severance
+BR-007|Avatar-to-Sage Root Access|Avatar→Naruto|MAIN|BRIDGE|III→IV Authorized root to unsafe natural communion|Spirit/Chakra|620–725|Master–Disaster|Avatar State; Sage Mode|Corruption; STA drain; seal|Spirit layer internalization
+BR-008|Belmont-to-Jinchuriki Warden Line|Castlevania→Naruto|MAIN|BRIDGE|II→IV Relic hardware to seal software|Steel/Word-Chakra-Seal|480–705|Veteran–Calamity|Whips; relics; seals; vessels|Break seal; possession; corruption|Capture system evolution

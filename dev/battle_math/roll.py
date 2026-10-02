@@ -24,11 +24,13 @@ POOL = {
 }
 TIER_WEIGHTS = {'militia': 0.55, 'line': 0.35, 'elite': 0.10}  # draft; tune in playtests
 GENERALS = ('3k_main_general_earth_generic', '3k_main_general_wood_generic')
+# Romance heroes staged by the native Romance Xingyang battle (probe.py); that XML
+# ships no generic earth hero, so the pool draws metal and wood generics.
+HERO_GENERALS = ('3k_main_hero_metal_generic', '3k_main_hero_wood_generic')
 # Records: each general leads a bodyguard card (21 men in G1 runs 1-3).
-# Romance: each general is a single hero. Untested in our packs: the probe
-# replaces only the Records version of Xingyang.
-MODES = {'records': {'general_size': 21, 'general': 'bodyguard'},
-         'romance': {'general_size': 1, 'general': 'hero'}}
+# Romance: each general is a single hero, staged on the Romance Xingyang map.
+MODES = {'records': {'general_size': 21, 'general': 'bodyguard', 'keys': GENERALS},
+         'romance': {'general_size': 1, 'general': 'hero', 'keys': HERO_GENERALS}}
 PROVEN = {'3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'}
 RETINUE = 6
 CAPTAIN_PROWESS = 5
@@ -87,6 +89,7 @@ def generals_of(commander: dict, knights: list[dict], g: int) -> list[dict]:
 def roll_side(side_spec, side, rng, mode='records', domain_focus='custom'):
     """Fill a scale.StagedSide's unit cards; generals lead six units each, in order."""
     kind = MODES[mode]['general']
+    general_keys = MODES[mode]['keys']
     tiers = list(TIER_WEIGHTS.keys())
     
     commander = side_spec.get('commander')
@@ -108,7 +111,7 @@ def roll_side(side_spec, side, rng, mode='records', domain_focus='custom'):
                           'proven': key in PROVEN})
             unit_idx += 1
         
-        out.append({'key': GENERALS[g % len(GENERALS)], 'role': 'Commander' if g == 0 else 'Knight',
+        out.append({'key': general_keys[g % len(general_keys)], 'role': 'Commander' if g == 0 else 'Knight',
                     'name': gen['name'], 'prowess': gen['prowess'],
                     'kind': kind, 'men': side.card_men[g], 'units': units})
     return out

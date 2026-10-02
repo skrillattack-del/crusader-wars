@@ -40,7 +40,8 @@ const STEPS=[
 const S={view:0, reached:0, sealed:false, busy:false, mode:"records", cw1Hint:false,
   health:null, enc:null, roster:null, install:[], installed:false,
   launched:false, removed:false, result:null, error:null, packMismatch:false, returnedToCk3:false, ck3Continue:null,
-  config:null, configPath:null, configSha:null};
+  config:null, configPath:null, configSha:null,
+  stage:null, sideOpen:null, watchResult:null, tkRunning:null, launchedAt:null};
 
 function log(msg){const el=document.getElementById("log");
   el.textContent+=`[${new Date().toLocaleTimeString("en-CA",{hour12:false})}] ${msg}\n`;el.scrollTop=el.scrollHeight;}
@@ -77,21 +78,104 @@ function go(i){S.view=i; S.reached=Math.max(S.reached,i); S.error=null; render()
 
 /* auto_battle_report: on the Fight step, poll the 3K battle log and advance by
    ourselves; off (or no ledger), the player presses Get the result. */
-let resultTimer=null;
+let resultTimer=null, liveTimer=null, liveTicks=0;
+const watchOn=()=>S.watchResult!=null?S.watchResult:!!(S.config&&S.config.auto_battle_report===true);
 function armResultWatch(){
   clearInterval(resultTimer); resultTimer=null;
-  if(STEPS[S.view].id!=="battle"||!S.config||S.config.auto_battle_report!==true) return;
-  resultTimer=setInterval(pollResult,4000);
+  clearInterval(liveTimer); liveTimer=null;
+  if(STEPS[S.view].id!=="battle"||!S.launched) return;
+  liveTimer=setInterval(liveTick,1000);
+  if(watchOn()) resultTimer=setInterval(pollResult,4000);
 }
+const elapsed=()=>{const s=Math.max(0,Math.floor((Date.now()-(S.launchedAt||Date.now()))/1000));
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;};
+/* Every second: the clock. Every fifth: is Three Kingdoms still running? */
+async function liveTick(){
+  const clock=document.getElementById("fight-clock");
+  if(clock) clock.textContent=elapsed();
+  if(++liveTicks%5) return;
+  try{const h=await call("get_health");
+    if(h.tk_running!==S.tkRunning){S.tkRunning=h.tk_running;
+      log(`Three Kingdoms ${h.tk_running?"is running":"is not running"}`);
+      if(STEPS[S.view].id==="battle"&&!S.busy) render();}}
+  catch(e){/* status only; the next tick retries */}
+}
+/* After launch: watch for the end of the battle. Once Three Kingdoms leaves its results
+   screen (or closes), read the result, close 3K and start CK3 again. */
 async function pollResult(){
   if(S.busy||STEPS[S.view].id!=="battle") return;
-  try{const r=await call("read_result"); S.result=r;
-    log(`result arrived on its own: outcome=${r.player_outcome}`);
-    go(4);}
-  catch(e){/* the battle is still running; stay on the Fight step */}
+  let status;
+  try{status=await call("battle_status");}catch(e){return;}
+  if(!status.battle_over) return;
+  clearInterval(resultTimer); resultTimer=null;
+  try{S.result=await call("read_result");
+    log(`battle over: outcome=${S.result.player_outcome}`);}
+  catch(e){S.error=fail(e); render(); return;}
+  go(4);
+  await A.returnCk3();
 }
 const errorBox=()=>S.error?`<p class="notice" role="alert" style="margin-top:16px">${esc(S.error)}</p>`:"";
 const check=(state,text,fix="")=>`<li><span class="dot ${state}" aria-label="${state==="bad"?"Needs fixing":state==="warn"?"Warning":"Ready"}"></span><span>${text}</span>${fix}</li>`;
+const flowGlyph=kind=>({
+  pack:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9M8 5.2l8 4.5"/></svg>`,
+  play:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>`,
+  swords:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M9 18l-4-4M7 17l-3 3M3 19l2 2"/></svg>`,
+  file:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></svg>`,
+  back:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8 4 13l5 5"/><path d="M5 13h8a6 6 0 0 1 6 6M19 5v6"/></svg>`,
+  eye:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>`,
+  list:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 12 4 4 8-9"/></svg>`,
+  x:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>`
+}[kind]||"");
+const statusMark=state=>`<span class="fight-status-mark">${state==="done"?flowGlyph("check"):state==="error"?flowGlyph("x"):""}</span>`;
+const FIGHT_STAGES=[["pack","Build pack","Prepare battle data"],["play","Launch 3K","Start the game"],
+  ["swords","Fight battle","You play in 3K"],["file","Read result","Detect outcome"],["back","Return to CK3","Sync the result"]];
+const fightStates=()=>[S.installed?"done":"current", S.launched?"done":S.installed?"current":"pending",
+  S.launched?"current":"pending", S.launched&&S.busy?"current":"pending", "pending"];
+
+/* The CK3 matchup: both sides as buttons that open their army, over a strength bar. */
+function matchup(){
+  const r=S.roster; if(!r||!r.sides||r.sides.length!==2) return "";
+  const total=r.sides.reduce((n,s)=>n+(s.men||0),0)||1;
+  const side=(s,i)=>`<button class="fm-side ${i?"d":"a"}" data-action="toggleSide" data-side="${i}" aria-expanded="${S.sideOpen===i}">
+    <span class="fm-role">${esc(s.role)}${s.yours?" · your army":""}</span>
+    <span class="fm-name">${esc(s.commander&&s.commander.name||s.name||s.role)}</span>
+    <span class="fm-men">${fmt(s.men)} men · ${s.cards} unit cards</span></button>`;
+  const open=S.sideOpen!=null?r.sides[S.sideOpen]:null;
+  let units="";
+  if(open){
+    const kinds=new Map();
+    for(const g of open.generals||[]) for(const u of g.units||[]){
+      const k=kinds.get(u.name)||{cards:0,men:0}; k.cards+=1; k.men+=u.men; kinds.set(u.name,k);}
+    units=`<ul class="fm-units" aria-label="${esc(open.role)} army">${(open.generals||[]).map(g=>
+      `<li class="gen"><span>${esc(g.name||"General")} <small>${g.kind==="hero"?"hero":"general"}</small></span><span class="num">${fmt(g.men)}</span></li>`).join("")}${
+      [...kinds].map(([n,k])=>`<li><span>${esc(n)}${k.cards>1?` ×${k.cards}`:""}</span><span class="num">${fmt(k.men)}</span></li>`).join("")}</ul>`;
+  }
+  return `<div class="fight-matchup">
+    ${r.battle?`<p class="fm-title">${esc(r.battle)}${r.date?` · ${esc(r.date)}`:""}${r.season?` · ${esc(r.season)}`:""}</p>`:""}
+    ${side(r.sides[0],0)}<span class="fm-vs" aria-hidden="true">vs</span>${side(r.sides[1],1)}
+    <div class="fm-bar" role="img" aria-label="Strength ${fmt(r.sides[0].men)} against ${fmt(r.sides[1].men)}"><span style="width:${((r.sides[0].men||0)/total*100).toFixed(1)}%"></span></div>
+    ${units}</div>`;
+}
+
+/* The panel under the stage tracker: what the selected stage is doing and what you can do there. */
+function stageDetail(i,name,mode){
+  const r=S.roster||{}, watching=watchOn();
+  const btn=(action,label,off=false)=>`<button class="btn-quiet btn-sm" data-action="${action}" ${S.busy||off?"disabled":""}>${label}</button>`;
+  const [title,body,actions]=[
+    ["Battle pack", `<b>${name}</b>, ${mode} mode, seed ${esc(r.seed??"-")}: ${(r.sides||[]).map(s=>`${fmt(s.men)} men`).join(" against ")} staged in <b>crusader_wars_2</b>.`,
+      btn("viewArmies","View armies")],
+    ["Launch Three Kingdoms", !S.launched?`One click starts Three Kingdoms with only the battle pack.${S.roster&&S.roster.battle?" CK3 closes first; its battle save is already on disk.":""}`
+      :S.tkRunning===false?"Three Kingdoms is not running. Relaunch it to fight this battle."
+      :S.tkRunning?"Three Kingdoms is running with the battle pack.":"Launch requested through Steam.",
+      S.launched?btn("resendAndRelaunch","Resend and relaunch"):btn("launch","Launch")],
+    ["Fight the battle", `<b>In Three Kingdoms:</b> the CRUSADER WARS II lobby opens by itself. Review both armies and press <b>FIGHT</b>. Fight until one army breaks, stay on the results screen for a few seconds, and don't press Rematch.<br>If the lobby doesn't open: <b>Battle › Historical Battle › ${name}</b> (it replaces Xingyang; Romance box ${mode==="Romance"?"ticked":"<b>unticked</b>"}) <b>› Start</b>.`, ""],
+    ["Read the result", watching?"CW2 checks for the result every few seconds and moves on by itself.":"Press Check now once the results screen shows in Three Kingdoms.",
+      `<button class="switch" data-action="toggleAutoWatch" aria-pressed="${watching}">Watch automatically</button>${btn("readResult","Check now",!S.launched)}`],
+    ["Return to CK3", watching?"When you leave the Three Kingdoms results screen, CW2 reads the result, closes Three Kingdoms and starts CK3. Press Continue in CK3 to resume."
+      :"After the result is read, Return to CK3 closes Three Kingdoms and starts CK3 on your save.", ""]][i];
+  return `<div class="fight-detail" aria-live="polite"><div><h3>${title}</h3><p>${body}</p></div>${actions?`<div class="fight-detail-actions">${actions}</div>`:""}</div>`;
+}
 
 /* ---- screens ---- */
 const V={
@@ -181,7 +265,7 @@ const V={
     const prog=S.install.length?`<ul class="progress">${S.install.map(x=>x?`<li data-s="${x.status}"><span class="dot"></span>${esc(x.label)}</li>`:"").join("")}</ul>`:"";
     const packOk=S.health&&S.health.gates&&S.health.gates.probe;
     return `<h2>Your armies</h2>
-    <p class="lede">Both CK3 armies, rebuilt from Three Kingdoms units at the same scale${r.scale<1?` (1 in 3K stands for ${(1/r.scale).toFixed(1)} in CK3)`:" (man for man)"}.</p>
+    <p class="lede">${r.battle?`<b>${esc(r.battle)}</b>: both`:"Both"} CK3 armies, rebuilt from Three Kingdoms units at the same scale${r.scale<1?` (1 in 3K stands for ${(1/r.scale).toFixed(1)} in CK3)`:" (man for man)"}.</p>
     <div class="seg" role="group" aria-label="Battle mode">${modes.map(([m,t,d])=>
       `<button data-action="setMode" data-mode="${m}" aria-pressed="${S.mode===m}" ${S.installed||S.busy?"disabled":""}><b>${t}</b><small>${d}</small></button>`).join("")}</div>
     <div class="cols">${col(r.sides[0])}${col(r.sides[1])}</div>
@@ -200,19 +284,39 @@ const V={
   },
   battle(){
     const packWarn=S.packMismatch?`<p class="notice" role="alert" style="margin-top:16px">The installed battle pack doesn't match this run. <button class="btn-quiet btn-sm" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button></p>`:"";
-    return `<h2>Fight in Three Kingdoms</h2>
-    <p class="lede">The battle is ready. Follow these steps, then come back for the result.</p>
-    <ol class="howto panel parchment">
-      <li>${S.launched?"Three Kingdoms is starting with only the <b>crusader_wars_2</b> battle pack on.":`<button class="btn-quiet btn-sm" data-action="launch">Launch Three Kingdoms</button>`}</li>
-      <li>Three Kingdoms opens the <b>CRUSADER WARS II</b> lobby by itself (also under <b>Battle</b> in its main menu). Check both armies and press <b>FIGHT</b>. If the lobby doesn't appear: <b>Battle</b> &rsaquo; <b>Historical Battle</b> &rsaquo; <b>Battle of Xingyang</b> (Records mode) &rsaquo; <b>Start</b>.</li>
-      <li>Fight until one army breaks. Stay on the results screen for a few seconds, and don't press Rematch.</li>
-    </ol>
+    const mode=S.roster&&S.roster.mode==="romance"?"Romance":"Records";
+    const name=esc(S.roster&&S.roster.battle||"CK3 battle");
+    const auto=watchOn();
+    const states=fightStates();
+    const launchState=states[1];
+    const waitState=S.error?"error":S.launched?"current":"pending";
+    const selected=S.stage??Math.max(0,states.indexOf("current"));
+    const primary=!S.launched
+      ?`<button class="btn-primary" data-action="launch" ${S.busy?"disabled":""}>${flowGlyph("play")}<span>Launch battle</span></button>`
+      :`<button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>${flowGlyph("file")}<span>${S.busy?"Reading result…":"Check for result"}</span></button>`;
+    return `<section class="fight-screen" aria-labelledby="fight-title">
+    <h2 id="fight-title">Launch and fight in Three Kingdoms</h2>
+    <p class="lede">CW2 has prepared this battle. Launch Three Kingdoms, fight, and the launcher will bring the outcome home.</p>
+    ${matchup()}
+    <div class="fight-stage">
+      <ol class="fight-flow" aria-label="Battle round trip">${FIGHT_STAGES.map(([icon,title,copy],i)=>`<li class="${states[i]}">
+        <button data-action="pickStage" data-stage="${i}" aria-pressed="${selected===i}"><span class="fight-flow-icon">${flowGlyph(icon)}</span><strong>${title}</strong><small>${copy}</small></button></li>`).join("")}</ol>
+      ${stageDetail(selected,name,mode)}
+      <ul class="fight-status" aria-label="Launch status">
+        <li class="done">${statusMark("done")}<span class="fight-status-copy"><strong>Battle pack ready</strong><small>Armies, generals and battle data prepared.</small></span><span class="fight-status-state">Ready</span></li>
+        <li class="done">${statusMark("done")}<span class="fight-status-copy"><strong>Three Kingdoms profile armed</strong><small>CW2 will start with only its battle pack enabled.</small></span><span class="fight-status-state">Ready</span></li>
+        <li class="${S.launched&&S.tkRunning===false?"error":launchState}">${statusMark(S.launched&&S.tkRunning===false?"error":launchState)}<span class="fight-status-copy"><strong>${S.launched?"Three Kingdoms launched":"Three Kingdoms ready to launch"}</strong><small>${!S.launched?"One click starts the staged battle.":S.tkRunning===false?"Three Kingdoms is not running. Relaunch it from the Launch 3K stage.":"The CRUSADER WARS II lobby opens on the main menu; press FIGHT there."}</small></span><span class="fight-status-state">${!S.launched?"Ready":S.tkRunning===false?"Not running":S.tkRunning?"Running":"Started"}</span></li>
+        <li class="${waitState}">${statusMark(waitState)}<span class="fight-status-copy"><strong>Waiting for battle result</strong><small>${S.error?"The result was not ready; keep fighting or use the recovery action below.":S.launched?`${auto?"CW2 is watching the battle automatically":"Finish the battle, then check for the result"} · <span id="fight-clock">${elapsed()}</span> since launch`:"Begins after Three Kingdoms launches."}</small></span><span class="fight-status-state">${S.error?"Needs attention":S.launched?(auto?"Watching":"Waiting"):"Pending"}</span></li>
+      </ul>
+    </div>
+    <div class="fight-actions">${primary}
+      <button class="btn-quiet" data-action="toggleBattleGuide" aria-expanded="${selected===2}">${flowGlyph("eye")}<span>Battle instructions</span></button>
+      <button class="btn-quiet" data-action="openLogs">${flowGlyph("list")}<span>Open logs</span></button>
+    </div>
     ${packWarn}
     ${errorBox()}
-    <div class="actions">
-      <button class="btn-primary" data-action="readResult" ${S.busy?"disabled":""}>Get the result</button>
-      ${S.error&&/roster differs|already running/i.test(S.error)?`<button class="btn-quiet" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button>`:""}
-    </div>`;
+    ${S.error&&/roster differs|already running/i.test(S.error)?`<div class="actions"><button class="btn-quiet" data-action="resendAndRelaunch" ${S.busy?"disabled":""}>Resend and relaunch</button></div>`:""}
+    </section>`;
   },
   result(){
     const r=S.result;
@@ -388,8 +492,18 @@ const A={
     }catch(e){log(`pack check skipped: ${err(e)}`);}
     go(3);},
   async launch(){
-    try{await call("launch_3k"); S.launched=true; log("3K launch requested via Steam");}
-    catch(e){S.error=fail(e);} render();},
+    S.busy=true; S.error=null; render();
+    try{const r=await call("launch_3k", !!(S.roster&&S.roster.battle));
+      Object.assign(S,{launched:true,launchedAt:Date.now(),tkRunning:null,stage:null});
+      log(r.ck3_closed?"CK3 closed after its battle save; Three Kingdoms is starting":"Three Kingdoms is starting");}
+    catch(e){S.error=fail(e);}
+    S.busy=false; render(); armResultWatch();},
+  toggleBattleGuide(){S.stage=S.stage===2?null:2; render();},
+  pickStage(b){S.stage=+b.dataset.stage; render();},
+  toggleSide(b){const i=+b.dataset.side; S.sideOpen=S.sideOpen===i?null:i; render();},
+  viewArmies(){go(2);},
+  toggleAutoWatch(){S.watchResult=!watchOn(); log(`result watch ${S.watchResult?"on":"off"}`); render(); armResultWatch();},
+  openLogs(){const drawer=document.getElementById("activity-drawer"); drawer.open=true; drawer.scrollIntoView({block:"end",behavior:"smooth"});},
   async readResult(){S.busy=true;S.error=null;render();
     try{S.result=await call("read_result");
       log(`result outcome=${S.result.player_outcome} source=${S.result.result_source}`);
@@ -407,9 +521,10 @@ const A={
       await A.recheck();}
     catch(e){S.error=fail(e);}
     S.busy=false; render();},
-  async restart(){clearInterval(resultTimer); resultTimer=null;
+  async restart(){clearInterval(resultTimer); resultTimer=null; clearInterval(liveTimer); liveTimer=null;
     Object.assign(S,{view:0,reached:0,sealed:false,roster:null,enc:null,cw1Hint:false,
-      install:[],installed:false,launched:false,removed:false,result:null,error:null,packMismatch:false,returnedToCk3:false,ck3Continue:null});
+      install:[],installed:false,launched:false,removed:false,result:null,error:null,packMismatch:false,returnedToCk3:false,ck3Continue:null,
+      stage:null,sideOpen:null,watchResult:null,tkRunning:null,launchedAt:null});
     await A.recheck();},
   /* The CK3 button saved a battle: take it straight to Three Kingdoms, stopping at the first error. */
   async autoFight(sig){log(`CK3 battle button: ${sig.battle} (${sig.save_name})`);
@@ -425,9 +540,9 @@ const A={
       log(`resend installed ${r.pack} sha256=${r.sha256}`);}
     catch(e){S.error=fail(e); S.busy=false; render(); return;}
     S.launched=false;
-    try{await call("launch_3k"); S.launched=true; log("resend: 3K relaunched");}
+    try{await call("launch_3k"); Object.assign(S,{launched:true,launchedAt:Date.now(),tkRunning:null}); log("resend: 3K relaunched");}
     catch(e){S.error=fail(e);}
-    S.busy=false; render();}
+    S.busy=false; render(); armResultWatch();}
 };
 
 let watching=false;

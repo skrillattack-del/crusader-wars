@@ -1,5 +1,5 @@
 /* DOM-stub smoke test for dev/app/ui/index.html.
-   Loads the real inline script, fakes the pywebview bridge, and drives the
+   Loads the real launcher script, fakes the pywebview bridge, and drives the
    whole player flow end to end. Run: node index.smoke.cjs */
 'use strict';
 const fs = require('fs');
@@ -7,13 +7,15 @@ const path = require('path');
 const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-const match = html.match(/<script>([\s\S]*)<\/script>/);
-if (!match) throw new Error('no inline script found in index.html');
+const scriptTag = html.match(/<script\s+src=["']([^"']+)["']><\/script>/);
+if (!scriptTag) throw new Error('no launcher script found in index.html');
+const launcherScript = fs.readFileSync(path.join(__dirname, scriptTag[1]), 'utf8');
 
 const els = {};
 function el(id) {
   if (!els[id]) els[id] = {innerHTML: '', textContent: '', scrollTop: 0, scrollHeight: 1,
-    style: {}, classList: {toggle() {}}, focus() {}, appendChild() {}, addEventListener() {}};
+    style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}, focus() {}, appendChild() {},
+    addEventListener() {}, setAttribute() {}, scrollIntoView() {}, open: false};
   return els[id];
 }
 const docHandlers = {};
@@ -22,8 +24,8 @@ const winHandlers = {};
 global.window = global;
 global.addEventListener = (type, fn) => { winHandlers[type] = fn; };
 
-let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false;
-let signal = null, tkLaunches = 0;
+let readAttempts = 0, seed = 1702900, ck3Launches = 0, lastMode = null, modInstalled = false, cw1Pages = 0, inPlayset = false, lastRoster = null;
+let signal = null, tkLaunches = 0, battleOver = false, ck3Returns = 0, lastCloseCk3 = null;
 const side = (role, fighting, initial, armies, yours) => ({role, name: `${role} · army ${armies}`,
   army_ids: [armies], fighting, initial, yours});
 const battles = {
@@ -52,15 +54,18 @@ const api = {
   async get_encounter(save, id) { return encounter(id || '1728053261'); },
   async roll_roster(enc, s, mode) { seed += 1; lastMode = mode; const hero = mode === 'romance';
     return {ok: true, seed, mode, deterministic: false, scale: 1,
-      note: 'This build fights 1 general + 2 units a side in 3K.' + (hero ? ' Romance battles are not staged yet.' : ''),
+      note: `The next build fights exactly this roll in 3K (${hero ? 'Romance Xingyang: generals are single heroes' : 'Records Xingyang'}).`,
       sides: [{role: 'Attacker', fighting: 340.09, men: 340, trim: 1, cards: 5, retinue: 4, generals: [general(hero,
                 [u('Jian Swordguards', 'line', 80), u('Ji Militia', 'militia', 80), u('Raider Cavalry', 'line', 80), u('Axe Band', 'militia', 79)])]},
               {role: 'Defender', fighting: 421.48, men: 421, trim: 0, cards: 6, retinue: 5, generals: [general(hero,
                 [u('Pearl Dragons', 'elite', 80), u('Archer Militia', 'militia', 80), u('Ji Militia', 'militia', 80),
                  u('Spear Warriors', 'militia', 80), u('Sabre Cavalry', 'line', 80)])]}]}; },
-  async prepare_and_install() { return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
+  async prepare_and_install(roster) { lastRoster = roster; return {ok: true, pack: 'crusader_wars_2.pack', sha256: '9f2c', run: 'C:/runs/x',
     removed_previous: 'C:/dist/runs/old'}; },
-  async launch_3k() { tkLaunches += 1; return {ok: true, pid: null}; },
+  async launch_3k(closeCk3) { tkLaunches += 1; lastCloseCk3 = closeCk3; return {ok: true, pid: null, ck3_closed: !!closeCk3}; },
+  async battle_status() { return {ok: true, fought: battleOver, tk_running: true, battle_over: battleOver}; },
+  async return_to_ck3() { ck3Returns += 1; return {ok: true, was_running: true, forced: false, note: 'closed gently',
+    continue: {title: 'autosave_exit', desc: 'Playing as Count John-Matux of Liege'}}; },
   async poll_battle() { const s = signal; signal = null; return s || {ok: true, save: null}; },
   async read_result() {
     readAttempts += 1;
@@ -72,7 +77,7 @@ const api = {
   async remove_probe() { return {ok: true, removed: 'crusader_wars_2.pack', was_installed: true, run: 'C:/runs/x'}; }
 };
 window.pywebview = {api};
-vm.runInThisContext(match[1]);
+vm.runInThisContext(launcherScript);
 
 let passed = 0, failed = 0;
 function expect(label, condition, detail) {
@@ -114,17 +119,34 @@ async function click(action, data = {}) {
   expect('armies list units and men', main().includes('Your armies') && main().includes('Pearl Dragons') && main().includes('340 men · 5 unit cards'));
   expect('Records is the default mode', lastMode === 'records' && main().includes('general and bodyguard, 21 men'));
   await click('setMode', {mode: 'romance'});
-  expect('Romance shows hero generals', lastMode === 'romance' && main().includes('<span>hero</span>') && main().includes('Romance battles are not staged yet'));
+  expect('Romance shows hero generals', lastMode === 'romance' && main().includes('<span>hero</span>') && main().includes('Romance Xingyang'));
   await click('setMode', {mode: 'records'});
   await click('reroll');
   expect('Shuffle draws new units', seed === firstSeed + 3);
   await click('install');
+  expect('Send to Three Kingdoms sends the rolled roster', lastRoster && lastRoster.mode === 'records' && lastRoster.sides.length === 2);
   expect('Send to Three Kingdoms installs the pack', main().includes('Next: fight') && log().includes('installed crusader_wars_2.pack')
     && log().includes('replaced the previous battle pack'));
   await click('toBattle');
-  expect('fight screen is a step-by-step checklist', main().includes('crusader_wars_2') && main().includes('Launch Three Kingdoms') && main().includes('Get the result'));
+  expect('fight screen is a complete launch dashboard', main().includes('Battle pack ready') && main().includes('Launch battle') && main().includes('Waiting for battle result'));
+  await click('toggleBattleGuide');
+  expect('battle instructions expand in place', main().includes('In Three Kingdoms:') && main().includes('Historical Battle'));
+  await click('pickStage', {stage: '0'});
+  expect('picking a stage shows its details', main().includes('<h3>Battle pack</h3>') && main().includes(`seed ${seed}`)
+    && main().includes('data-stage="0" aria-pressed="true"'));
+  await click('toggleSide', {side: '1'});
+  expect('a side of the matchup opens its army', main().includes('aria-label="Defender army"') && main().includes('Pearl Dragons'));
+  await click('toggleSide', {side: '1'});
+  expect('and closes again', !main().includes('aria-label="Defender army"'));
+  await click('pickStage', {stage: '3'});
+  await click('toggleAutoWatch');
+  expect('the result watch switches on the screen', main().includes('aria-pressed="true">Watch automatically') && log().includes('result watch on'));
+  await click('toggleAutoWatch');
+  await click('openLogs');
+  expect('Open logs expands the activity drawer', els['activity-drawer'].open === true);
   await click('launch');
-  expect('after launch the checklist says so', main().includes('Three Kingdoms is starting.'));
+  expect('after launch the dashboard advances', main().includes('Three Kingdoms launched') && main().includes('Check for result')
+    && main().includes('id="fight-clock"') && main().includes('data-stage="2" aria-pressed="true"'));
   await click('readResult');
   expect('no battle yet reads as plain language', main().includes('No battle has been fought with this pack yet'));
   await click('readResult');
@@ -139,7 +161,14 @@ async function click(action, data = {}) {
   await watch();
   await settle();
   expect('the CK3 button save goes straight to Three Kingdoms', tkLaunches === launchesBefore + 1
-    && main().includes('Three Kingdoms is starting.') && log().includes('CK3 battle button: Battle of Muluya'));
+    && main().includes('Three Kingdoms launched') && log().includes('CK3 battle button: Battle of Muluya'));
+  await pollResult();
+  expect('the Fight step waits while 3K shows its results screen', main().includes('Three Kingdoms launched') && ck3Returns === 0);
+  battleOver = true;
+  await pollResult();
+  await settle();
+  expect('leaving the results screen reads the result and returns to CK3', ck3Returns === 1
+    && main().includes('Victory') && main().includes('Playing as Count John-Matux of Liege'));
   console.log(`\nsmoke ${passed}/${passed + failed} ok`);
   process.exit(failed ? 1 : 0);
 })().catch(error => { console.error('smoke crashed:', error); process.exit(1); });

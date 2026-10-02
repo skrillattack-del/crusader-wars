@@ -11,7 +11,8 @@
 --      main.twui.xml               btn_new_battle
 --      new_battle.twui.xml         button_historical_battle
 --      historical_battles.twui.xml list_box row for Xingyang (the screen opens on Xiapi),
---                                  checkbox_romance_mode off (the pack replaces Records only),
+--                                  checkbox_romance_mode set to match the run's mode
+--                                      (Romance runs stage the _romance Xingyang XML),
 --                                  button_start_battle
 -- The frontend's UI calls, timer and event names are not in any pack, so every engine
 -- call is guarded and every step is logged to the run folder. If the lobby cannot be
@@ -21,9 +22,11 @@ local battle_log = "@@OUTPUT_PATH@@";
 local log_path = "@@FRONTEND_LOG@@";
 local LAYOUT = "@@LAYOUT@@";
 local CARD = @@LOBBY@@;
+local ROMANCE = @@ROMANCE@@;
 local TICK_MS = 500;
 local FIGHT_TICKS = 240;     -- two minutes to reach the battle after FIGHT
 local COOLDOWN_TICKS = 3;    -- let a screen transition finish after a click
+local ROW_WAIT_TICKS = 10;   -- the battle list fills a moment after its screen opens
 local MENU_ID = "cw2_menu_entry";
 local MENU_LABEL = "CRUSADER WARS II";
 local UNIT_ROWS = 6;
@@ -33,6 +36,8 @@ local ticks, cooldown = 0, 0;
 local has_timer = false;
 local fighting, fight_done = false, false;
 local row_clicked = false;
+local row_wait = 0;
+local stepping = false;
 local auto_opened = false;
 local menu_entry, lobby = nil, nil;
 local SEARCH_EVERY = 4;       -- full UI-tree searches for the menu run every 4th tick at most
@@ -265,9 +270,14 @@ end;
 local function xinyang_row(root)
     local list = find(root, "list_box");
     if not list then return nil; end;
+    -- The pack renames Xingyang to the CK3 battle, so either name marks the row.
+    local names = {"xinyang", string.lower(CARD.battle or "")};
     for _, row in ipairs(children(list)) do
         -- Rows are built from template_battle and labelled "NAME (KEY)".
-        if string.find(string.lower(tostring(id_of(row)) .. " " .. label(row)), "xinyang", 1, true) then return row; end;
+        local text = string.lower(tostring(id_of(row)) .. " " .. label(row));
+        for _, name in ipairs(names) do
+            if name ~= "" and string.find(text, name, 1, true) then return row; end;
+        end;
     end;
     return nil;
 end;
@@ -286,6 +296,8 @@ local function historical_screen(root, start)
     if not row_clicked then
         local row = xinyang_row(root);
         if not row then
+            row_wait = row_wait + 1;
+            if row_wait < ROW_WAIT_TICKS then return; end;
             dump_tree("no Xingyang row in list_box");
             stop_fight("stopped: will not start another battle; open Xingyang by hand");
             return;
@@ -295,8 +307,15 @@ local function historical_screen(root, start)
         return;
     end;
     local box = find(root, "checkbox_romance_mode");
-    if box and visible(box) and romance_on(box) then
-        click(box, "romance checkbox off");
+    if ROMANCE and (not box or not visible(box)) then
+        -- Without the checkbox the engine would load the Records battle this run
+        -- did not stage, so no CW2 result would ever be logged.
+        dump_tree("no romance checkbox on the historical-battles screen");
+        stop_fight("stopped: this run fights in Romance mode; tick Romance and open Xingyang by hand");
+        return;
+    end;
+    if box and visible(box) and romance_on(box) ~= ROMANCE then
+        click(box, ROMANCE and "romance checkbox on" or "romance checkbox off");
         return;
     end;
     click(start, "button_start_battle");
@@ -322,7 +341,7 @@ end;
 local function fight()
     if fought() then log("FIGHT ignored: run " .. run_id .. " was already fought"); return; end;
     close_lobby();
-    fighting, ticks, cooldown, row_clicked = true, 0, 0, false;
+    fighting, ticks, cooldown, row_clicked, row_wait = true, 0, 0, false, 0;
     log("FIGHT: opening the staged battle for run " .. run_id);
 end;
 
@@ -345,7 +364,11 @@ local function step()
 end;
 
 local function safe_step()
+    -- SimulateLClick fires UI events synchronously; a nested step would act on a half-built screen.
+    if stepping then return; end;
+    stepping = true;
     local ok, err = pcall(step);
+    stepping = false;
     if not ok then log("error: " .. tostring(err)); end;
 end;
 

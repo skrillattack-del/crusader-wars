@@ -47,7 +47,7 @@ class ResultValidationTests(unittest.TestCase):
         variants = []
         for field, value in [('run_id', 'foreign'), ('player_won', None)]:
             event = copy.deepcopy(self.final); event[field] = value; variants.append([self.start, event])
-        for field, value in [('survivors', 101), ('survivors', -1), ('initial', 90), ('unit_type', 'foreign'), ('alliance', 2), ('script_name', 'u1')]:
+        for field, value in [('survivors', 101), ('survivors', -1), ('unit_type', 'foreign'), ('alliance', 2), ('script_name', 'u1')]:
             event = copy.deepcopy(self.final); event['units'][0][field] = value; variants.append([self.start, event])
         variants.extend([[self.start], [self.final, self.start], [self.start, self.final, self.start, self.final]])
         for events in variants:
@@ -131,6 +131,26 @@ class ResultValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'extra: stranger'):
             probe.read_result(self.root)
 
+    def test_a_dead_hero_does_not_shift_starting_counts(self):
+        # Run 20260929-103647 (Battle of Bouillon): the defender hero died and dropped out of
+        # the list, so the logger's position-keyed 'initial' shifted onto the next units.
+        for unit in self.start['units']:
+            unit['initial'] = unit['survivors'] = 1 if unit['script_name'] == 'u3' else 80
+        deployed = copy.deepcopy(self.start)
+        deployed['phase'] = 'deployed'
+        for unit in deployed['units']:
+            if unit['script_name'] != 'u3': unit['survivors'] = 75  # trimmed to the rolled card
+        self.final['units'] = [u for u in self.final['units'] if u['script_name'] != 'u3']
+        shifted = [1, 80, 80]
+        for unit in self.final['units']:
+            unit['survivors'] = 60 if unit['alliance'] == 1 else 2
+            if unit['alliance'] == 2: unit['initial'] = shifted.pop(0)
+        self.write([self.start, deployed, self.final])
+        units = {u['script_name']: u for u in probe.read_result(self.root)['units']}
+        self.assertEqual((units['u0']['initial'], units['u0']['survivors']), (75, 60))
+        self.assertEqual((units['u4']['initial'], units['u4']['survivors']), (75, 2))
+        self.assertEqual((units['u3']['initial'], units['u3']['survivors']), (1, 0))
+
     def test_rejects_duplicate_units_in_a_capture(self):
         self.final['units'].append(copy.deepcopy(self.final['units'][0]))
         self.write([self.start, self.final])
@@ -157,12 +177,12 @@ class ResultValidationTests(unittest.TestCase):
         self.assertEqual(native.read_bytes(), b'native pack untouched')
 
 GENERAL = ('<general><name>1</name><commander_type>commanding_general</commander_type>'
-           '<commander_id>0</commander_id><game_mode>historical</game_mode></general>')
+           '<commander_id>0</commander_id><game_mode>{game_mode}</game_mode></general>')
 
-def native_unit(kind, x, y, radians, general=False):
+def native_unit(kind, x, y, radians, general=False, game_mode='historical'):
     return (f'<unit script_name="n"><unit_type type="{kind}"/><retinue id="0"/>'
             f'<position x="{x}" y="{y}"/><orientation radians="{radians}"/><width metres="20"/>'
-            f'<unit_experience level="5"/>{GENERAL if general else ""}</unit>')
+            f'<unit_experience level="5"/>{GENERAL.format(game_mode=game_mode) if general else ""}</unit>')
 
 def native_battle(armies):
     alliances = ''.join(f'<alliance><army><faction>f</faction>{"".join(units)}</army>'
@@ -183,6 +203,14 @@ class GenerateTests(unittest.TestCase):
             {'key': '3k_main_general_earth_generic', 'name': 'Captain 1', 'men': 21,
              'units': [{'key': 'unit_c', 'name': 'C', 'men': 39}]}]}]}
 
+    ROMANCE_ROSTER = {'mode': 'romance', 'sides': [
+        {'role': 'Attacker', 'name': 'Gharb', 'fighting': 3785.0, 'generals': [
+            {'key': '3k_main_hero_metal_generic', 'name': 'Captain 1', 'men': 1,
+             'units': [{'key': 'unit_a', 'name': 'A', 'men': 80}, {'key': 'unit_b', 'name': 'B', 'men': 75}]}]},
+        {'role': 'Defender', 'name': 'Kru', 'fighting': 152.0, 'generals': [
+            {'key': '3k_main_hero_wood_generic', 'name': 'Captain 1', 'men': 1,
+             'units': [{'key': 'unit_c', 'name': 'C', 'men': 39}]}]}]}
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -198,15 +226,22 @@ class GenerateTests(unittest.TestCase):
             [native_unit('3k_main_general_earth_liu_bei', 0, 0, 0, True),
              native_unit('3k_main_general_earth_generic', 0, 0, 0, True)],
             [native_unit('3k_main_general_wood_generic', 0, 0, 0, True)]]))
+        (battles / 'historical_battle_xinyang_romance').mkdir(parents=True)
+        (battles / 'historical_battle_xinyang_romance/battle.xml').write_text(native_battle([
+            [native_unit('3k_main_hero_earth_cao_cao', -400, -150, 0.74, True, 'romance'),
+             native_unit('u', -380, -140, 0.74)],
+            [native_unit('3k_main_hero_metal_generic', 100, 350, 3.87, True, 'romance'),
+             native_unit('3k_main_hero_wood_generic', 120, 300, 3.87, True, 'romance'),
+             native_unit('u', 140, 320, 3.87)]]))
         self.output = self.root / 'out'
         self.output.mkdir()
 
     def generate(self, roster):
         return probe.generate(self.native, self.output, probe.HERE / 'probe.lua', roster)
 
-    def staged_armies(self):
+    def staged_armies(self, entry=probe.BATTLE):
         import xml.etree.ElementTree as ET
-        root = ET.parse(self.output / 'pack' / probe.BATTLE / 'battle.xml').getroot()
+        root = ET.parse(self.output / 'pack' / entry / 'battle.xml').getroot()
         return [alliance.findall('army') for alliance in root.findall('alliance')]
 
     def test_stages_the_rolled_roster(self):
@@ -239,6 +274,36 @@ class GenerateTests(unittest.TestCase):
             p = unit.find('position')
             return ((float(p.get('x')) - enemy[0]) ** 2 + (float(p.get('y')) - enemy[1]) ** 2) ** 0.5
         self.assertGreater(min(map(distance, attacker[:2])), max(map(distance, attacker[2:])))
+
+    def test_stages_a_romance_roster_on_the_romance_xingyang_path(self):
+        manifest = self.generate(self.ROMANCE_ROSTER)
+        self.assertEqual((manifest['mode'], manifest['entry']), ('Romance', probe.BATTLE_ROMANCE))
+        self.assertFalse((self.output / 'pack' / probe.BATTLE).exists())  # the Records path is untouched
+        armies = self.staged_armies(probe.BATTLE_ROMANCE)
+        attacker, defender = (a[0].findall('unit') for a in armies)
+        # Heroes are general units of their own: single men, romance metadata.
+        self.assertEqual(attacker[0].find('unit_type').get('type'), '3k_main_hero_metal_generic')
+        self.assertEqual(attacker[0].findtext('general/game_mode'), 'romance')
+        self.assertEqual(attacker[0].findtext('general/commander_type'), 'commanding_general')
+        self.assertEqual(attacker[0].findtext('general/commander_id'), '0')
+        self.assertTrue(all(u.find('general') is None for u in attacker[1:]))
+        self.assertEqual([u['target_men'] for u in manifest['expected_units']],
+                         [1, 80, 75, 1, 39])
+        self.assertTrue(all(u['general'] == (i in (0, 3)) for i, u in enumerate(manifest['expected_units'])))
+        # The battle script is staged at the romance entry and reports it as the battle.
+        script = (self.output / 'pack' / probe.BATTLE_ROMANCE / 'battle_script.lua').read_text(encoding='utf-8')
+        self.assertNotIn('@@', script)
+        self.assertIn(f'"{probe.BATTLE_ROMANCE}"', script)
+        # The in-game lobby ticks the Romance checkbox for this run.
+        self.assertEqual(manifest['lobby']['mode'], 'Romance')
+        lobby_script = (self.output / 'pack' / probe.LOBBY).read_text(encoding='utf-8')
+        self.assertIn('local ROMANCE = true;', lobby_script)
+
+    def test_records_runs_leave_the_romance_checkbox_off(self):
+        manifest = self.generate(self.ROSTER)
+        self.assertEqual((manifest['mode'], manifest['entry']), ('Records', probe.BATTLE))
+        lobby_script = (self.output / 'pack' / probe.LOBBY).read_text(encoding='utf-8')
+        self.assertIn('local ROMANCE = false;', lobby_script)
 
     def test_battle_script_trims_every_card_to_its_rolled_size(self):
         manifest = self.generate(self.ROSTER)
@@ -301,6 +366,27 @@ class GenerateTests(unittest.TestCase):
                          sum(len(g['units']) for g in roster['sides'][1]['generals']))
         self.assertIn('[\"battle\"] = \"Battle of \\\"Hastings\\\"\"', probe._lua(card))
 
+    def test_the_staged_battle_takes_the_ck3_battle_name(self):
+        import struct
+        roster = dict(copy.deepcopy(self.ROSTER), battle='Battle of Bouillon', date='867.4.12', season='Spring')
+        roster['sides'][0]['commander'] = {'name': 'Count John-Matux of Liege'}
+        self.generate(roster)
+        data = (self.output / 'pack' / probe.LOC).read_bytes()
+        self.assertEqual(data[:6], b'\xff\xfeLOC\x00')
+        count, pos, rows = struct.unpack_from('<i', data, 10)[0], 14, {}
+        for _ in range(count):
+            key_len = struct.unpack_from('<H', data, pos)[0]
+            key = data[pos + 2:pos + 2 + 2 * key_len].decode('utf-16-le')
+            pos += 2 + 2 * key_len
+            text_len = struct.unpack_from('<H', data, pos)[0]
+            rows[key] = data[pos + 2:pos + 2 + 2 * text_len].decode('utf-16-le')
+            pos += 3 + 2 * text_len
+        self.assertEqual(pos, len(data))
+        self.assertEqual(rows['battles_localised_name_3k_main_historical_battle_xinyang'], 'Battle of Bouillon')
+        self.assertEqual(rows['battles_description_3k_main_historical_battle_xinyang'],
+                         'Battle of Bouillon (867.4.12, Spring): Count John-Matux of Liege against Defender. '
+                         'Crusader Wars 2, Records mode.')
+
     def test_default_roster_is_the_g1_three_cards(self):
         manifest = self.generate(None)
         self.assertEqual([u['unit_type'] for u in manifest['expected_units']],
@@ -308,9 +394,15 @@ class GenerateTests(unittest.TestCase):
                           '3k_main_unit_water_archer_militia', '3k_main_general_earth_liu_bei',
                           '3k_main_unit_wood_ji_militia', '3k_main_unit_water_archer_militia'])
 
-    def test_refuses_romance_and_unknown_generals(self):
-        with self.assertRaisesRegex(ValueError, 'Romance'):
+    def test_refuses_unknown_modes_and_generals(self):
+        with self.assertRaisesRegex(ValueError, 'Unknown mode'):
+            self.generate(dict(self.ROSTER, mode='arcade'))
+        # Records general keys are not heroes: staging them in Romance must fail.
+        with self.assertRaisesRegex(ValueError, 'not a Romance general'):
             self.generate(dict(self.ROSTER, mode='romance'))
+        # Hero keys from the native Romance battle are not Records generals.
+        with self.assertRaisesRegex(ValueError, 'not a Records general'):
+            self.generate(dict(self.ROMANCE_ROSTER, mode='records'))
         roster = copy.deepcopy(self.ROSTER)
         roster['sides'][1]['generals'][0]['key'] = '3k_main_general_fire_nobody'
         with self.assertRaisesRegex(ValueError, 'not a Records general'):
